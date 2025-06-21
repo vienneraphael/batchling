@@ -1,0 +1,58 @@
+name: CI
+permissions:
+  contents: read
+  actions: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pre-commit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install Python dependencies
+        run: uv sync --locked --dev
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+  run-tests:
+    name: Run Python Tests
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install Python dependencies
+        run: uv sync --locked --dev
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv
+
+      - name: Run pytest
+        run: uv run pytest --cov=src
