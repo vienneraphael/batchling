@@ -8,6 +8,7 @@ requires-python = ">=3.12,<4.0"
 dependencies = [
     "httpx>=0.28.1",
     "openai>=1.90.0",
+    "platformdirs>=4.3.8",
     "python-dotenv>=1.1.1",
     "sqlalchemy>=2.0.41",
 ]

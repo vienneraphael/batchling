@@ -93,6 +93,7 @@ pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
 platformdirs==4.3.8
     # via
+    #   batchling
     #   jupyter-core
     #   virtualenv
 pluggy==1.6.0
