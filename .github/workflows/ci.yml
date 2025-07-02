@@ -56,3 +56,5 @@ jobs:
 
       - name: Run pytest
         run: uv run pytest --cov=src
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
