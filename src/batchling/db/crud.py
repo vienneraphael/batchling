@@ -74,3 +74,45 @@ def get_experiment(db: Session, experiment_id: int) -> Experiment:
         The experiment
     """
     return db.query(Experiment).filter(Experiment.id == experiment_id).first()
+
+
+def update_experiment(
+    db: Session,
+    experiment_id: int,
+    **kwargs: dict,
+) -> Experiment:
+    """Update an experiment
+
+    Parameters
+    ----------
+    db : Session
+        The database session
+    experiment_id : int
+        The id of the experiment
+    **kwargs : dict
+        The fields to update
+
+    Returns
+    -------
+    Experiment
+        The updated experiment
+    """
+    db.query(Experiment).filter(Experiment.id == experiment_id).update(kwargs)
+    db.commit()
+    db.refresh(db.query(Experiment).filter(Experiment.id == experiment_id).first())
+    return db.query(Experiment).filter(Experiment.id == experiment_id).first()
+
+
+def delete_experiment(db: Session, experiment_id: int) -> bool:
+    """Delete an experiment
+
+    Parameters
+    ----------
+    db : Session
+        The database session
+    experiment_id : int
+        The id of the experiment
+    """
+    db.query(Experiment).filter(Experiment.id == experiment_id).delete()
+    db.commit()
+    return True
