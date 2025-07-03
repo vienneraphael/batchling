@@ -15,6 +15,8 @@ class Experiment(Base):
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
     model = Column(String, nullable=False)
+    base_url = Column(String, nullable=True)
+    api_key = Column(String, nullable=True)
     response_format = Column(JSON, nullable=True)
     input_file_path = Column(String, nullable=True)
     input_file_id = Column(String, nullable=True)
