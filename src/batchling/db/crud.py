@@ -76,6 +76,26 @@ def get_experiment(db: Session, experiment_id: int) -> Experiment:
     return db.query(Experiment).filter(Experiment.id == experiment_id).first()
 
 
+def get_experiments(db: Session, limit: int = 10, offset: int = 0) -> list[Experiment]:
+    """Get all experiments
+
+    Parameters
+    ----------
+    db : Session
+        The database session
+    limit : int
+        The limit of the experiments
+    offset : int
+        The offset of the experiments
+
+    Returns
+    -------
+    list[Experiment]
+        The list of experiments
+    """
+    return db.query(Experiment).limit(limit).offset(offset).all()
+
+
 def update_experiment(
     db: Session,
     experiment_id: int,
