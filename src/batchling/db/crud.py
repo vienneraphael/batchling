@@ -1,3 +1,4 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from batchling.db.models import Experiment
@@ -73,10 +74,13 @@ def get_experiment(db: Session, experiment_id: int) -> Experiment:
     Experiment
         The experiment
     """
-    return db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    stmt = select(Experiment).where(Experiment.id == experiment_id)
+    return db.execute(stmt).scalar_one_or_none()
 
 
-def get_experiments(db: Session, limit: int = 10, offset: int = 0) -> list[Experiment]:
+def get_experiments(
+    db: Session, limit: int | None = None, offset: int | None = None
+) -> list[Experiment]:
     """Get all experiments
 
     Parameters
@@ -93,7 +97,8 @@ def get_experiments(db: Session, limit: int = 10, offset: int = 0) -> list[Exper
     list[Experiment]
         The list of experiments
     """
-    return db.query(Experiment).limit(limit).offset(offset).all()
+    stmt = select(Experiment).limit(limit).offset(offset)
+    return db.execute(stmt).scalars().all()
 
 
 def update_experiment(
@@ -117,10 +122,11 @@ def update_experiment(
     Experiment
         The updated experiment
     """
-    db.query(Experiment).filter(Experiment.id == experiment_id).update(kwargs)
+    stmt = select(Experiment).where(Experiment.id == experiment_id)
+    db.execute(stmt).update(kwargs)
     db.commit()
-    db.refresh(db.query(Experiment).filter(Experiment.id == experiment_id).first())
-    return db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    db.refresh(db.execute(stmt).scalar_one())
+    return db.execute(stmt).scalar_one()
 
 
 def delete_experiment(db: Session, experiment_id: int) -> bool:
@@ -133,6 +139,7 @@ def delete_experiment(db: Session, experiment_id: int) -> bool:
     experiment_id : int
         The id of the experiment
     """
-    db.query(Experiment).filter(Experiment.id == experiment_id).delete()
+    stmt = select(Experiment).where(Experiment.id == experiment_id)
+    db.execute(stmt).delete()
     db.commit()
     return True
