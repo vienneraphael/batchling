@@ -12,6 +12,6 @@ wheels/
 # Other
 .env
 *.ipynb
-TODO.txt
+TODO.md
 .coverage
 profile_reports/
