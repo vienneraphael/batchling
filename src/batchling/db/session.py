@@ -6,6 +6,8 @@ from platformdirs import user_data_dir
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from batchling.db.models import Base
+
 APP_NAME = "batchling"
 APP_AUTHOR = "batchling"
 
@@ -23,3 +25,7 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def init_db() -> None:
+    Base.metadata.create_all(bind=engine)
