@@ -2,7 +2,7 @@ import copy
 import json
 
 import httpx
-from openai import NOT_GIVEN, Client, DefaultHttpxClient, NotGiven
+from openai import Client, DefaultHttpxClient
 from pydantic import BaseModel
 
 from batchling.file_utils import write_jsonl_file
@@ -38,7 +38,7 @@ def batch_create_chat_completion(
     custom_id: str,
     messages: list[dict],
     model: str,
-    response_format: BaseModel | NotGiven = NOT_GIVEN,
+    response_format: BaseModel | None = None,
 ) -> str | None:
     """
     Captures the full API request (as built by the SDK) when calling the beta chat
@@ -106,7 +106,7 @@ def write_input_batch_file(
     custom_id: str,
     model: str,
     messages: list[dict],
-    response_format: BaseModel | NotGiven = NOT_GIVEN,
+    response_format: BaseModel | None = None,
     placeholders: list[dict] | None = None,
 ) -> None:
     """Create the batch file

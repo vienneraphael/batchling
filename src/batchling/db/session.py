@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
@@ -15,6 +16,7 @@ engine = create_engine(f"sqlite:///{db_file_path}", echo=False, future=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 
 
+@contextmanager
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:

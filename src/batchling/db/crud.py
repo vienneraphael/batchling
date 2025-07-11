@@ -6,14 +6,18 @@ from batchling.db.models import Experiment
 
 def create_experiment(
     db: Session,
-    name: str,
-    description: str,
+    id: int,
     model: str,
-    response_format: dict,
-    input_file_path: str,
-    input_file_id: str,
-    status: str,
-    batch_id: str,
+    name: str | None = None,
+    description: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
+    template_messages: list[dict] | None = None,
+    response_format: dict | None = None,
+    input_file_path: str | None = None,
+    input_file_id: str | None = None,
+    status: str | None = None,
+    batch_id: str | None = None,
 ) -> Experiment:
     """Create an experiment
 
@@ -21,12 +25,20 @@ def create_experiment(
     ----------
     db : Session
         The database session
+    id : int
+        The id of the experiment
     name : str
         The name of the experiment
     description : str
         The description of the experiment
     model : str
         The model to use for the experiment
+    base_url : str
+        The base url of the experiment
+    api_key : str
+        The api key of the experiment
+    template_messages : list[dict]
+        The template messages of the experiment
     response_format : dict
         The response format of the experiment
     input_file_path : str
@@ -44,9 +56,13 @@ def create_experiment(
         The created experiment
     """
     experiment = Experiment(
+        id=id,
         name=name,
         description=description,
         model=model,
+        base_url=base_url,
+        api_key=api_key,
+        template_messages=template_messages,
         response_format=response_format,
         input_file_path=input_file_path,
         input_file_id=input_file_id,
