@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -55,10 +57,13 @@ def create_experiment(
     Experiment
         The created experiment
     """
+    now = datetime.now()
     experiment = Experiment(
         id=id,
         name=name,
         description=description,
+        created_at=now,
+        updated_at=now,
         model=model,
         base_url=base_url,
         api_key=api_key,
@@ -139,6 +144,7 @@ def update_experiment(
         The updated experiment
     """
     stmt = select(Experiment).where(Experiment.id == experiment_id)
+    kwargs["updated_at"] = datetime.now()
     db.execute(stmt).update(kwargs)
     db.commit()
     db.refresh(db.execute(stmt).scalar_one())
