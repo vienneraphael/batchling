@@ -15,6 +15,7 @@ def create_experiment(
     base_url: str | None = None,
     api_key: str | None = None,
     template_messages: list[dict] | None = None,
+    placeholders: list[dict] | None = None,
     response_format: dict | None = None,
     input_file_path: str | None = None,
     input_file_id: str | None = None,
@@ -41,6 +42,8 @@ def create_experiment(
         The api key of the experiment
     template_messages : list[dict]
         The template messages of the experiment
+    placeholders : list[dict]
+        The placeholders of the experiment
     response_format : dict
         The response format of the experiment
     input_file_path : str
@@ -68,6 +71,7 @@ def create_experiment(
         base_url=base_url,
         api_key=api_key,
         template_messages=template_messages,
+        placeholders=placeholders,
         response_format=response_format,
         input_file_path=input_file_path,
         input_file_id=input_file_id,
