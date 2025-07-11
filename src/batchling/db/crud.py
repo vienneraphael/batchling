@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from batchling.db.models import Experiment
@@ -80,7 +80,7 @@ def create_experiment(
     return experiment
 
 
-def get_experiment(db: Session, experiment_id: str) -> Experiment:
+def get_experiment(db: Session, experiment_id: str) -> Experiment | None:
     """Get an experiment
 
     Parameters
@@ -126,7 +126,7 @@ def update_experiment(
     db: Session,
     experiment_id: str,
     **kwargs: dict,
-) -> Experiment:
+) -> Experiment | None:
     """Update an experiment
 
     Parameters
@@ -143,12 +143,11 @@ def update_experiment(
     Experiment
         The updated experiment
     """
-    stmt = select(Experiment).where(Experiment.id == experiment_id)
     kwargs["updated_at"] = datetime.now()
-    db.execute(stmt).update(kwargs)
+    stmt = update(Experiment).where(Experiment.id == experiment_id).values(**kwargs)
+    db.execute(stmt)
     db.commit()
-    db.refresh(db.execute(stmt).scalar_one())
-    return db.execute(stmt).scalar_one()
+    return get_experiment(db=db, experiment_id=experiment_id)
 
 
 def delete_experiment(db: Session, experiment_id: str) -> bool:
@@ -161,7 +160,7 @@ def delete_experiment(db: Session, experiment_id: str) -> bool:
     experiment_id : str
         The id of the experiment
     """
-    stmt = select(Experiment).where(Experiment.id == experiment_id)
-    db.execute(stmt).delete()
+    stmt = delete(Experiment).where(Experiment.id == experiment_id)
+    db.execute(stmt)
     db.commit()
     return True
