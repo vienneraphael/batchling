@@ -29,3 +29,7 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+
+
+def destroy_db() -> None:
+    Base.metadata.drop_all(bind=engine)
