@@ -6,7 +6,7 @@ from batchling.db.models import Experiment
 
 def create_experiment(
     db: Session,
-    id: int,
+    id: str,
     model: str,
     name: str | None = None,
     description: str | None = None,
@@ -25,7 +25,7 @@ def create_experiment(
     ----------
     db : Session
         The database session
-    id : int
+    id : str
         The id of the experiment
     name : str
         The name of the experiment
@@ -75,14 +75,14 @@ def create_experiment(
     return experiment
 
 
-def get_experiment(db: Session, experiment_id: int) -> Experiment:
+def get_experiment(db: Session, experiment_id: str) -> Experiment:
     """Get an experiment
 
     Parameters
     ----------
     db : Session
         The database session
-    experiment_id : int
+    experiment_id : str
         The id of the experiment
 
     Returns
@@ -119,7 +119,7 @@ def get_experiments(
 
 def update_experiment(
     db: Session,
-    experiment_id: int,
+    experiment_id: str,
     **kwargs: dict,
 ) -> Experiment:
     """Update an experiment
@@ -128,7 +128,7 @@ def update_experiment(
     ----------
     db : Session
         The database session
-    experiment_id : int
+    experiment_id : str
         The id of the experiment
     **kwargs : dict
         The fields to update
@@ -145,14 +145,14 @@ def update_experiment(
     return db.execute(stmt).scalar_one()
 
 
-def delete_experiment(db: Session, experiment_id: int) -> bool:
+def delete_experiment(db: Session, experiment_id: str) -> bool:
     """Delete an experiment
 
     Parameters
     ----------
     db : Session
         The database session
-    experiment_id : int
+    experiment_id : str
         The id of the experiment
     """
     stmt = select(Experiment).where(Experiment.id == experiment_id)

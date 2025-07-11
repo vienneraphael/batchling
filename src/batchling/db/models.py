@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, Integer, String
+from sqlalchemy import JSON, DateTime, Enum, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from batchling.experiment import ExperimentStatus
@@ -13,7 +13,7 @@ class Base(DeclarativeBase):
 class Experiment(Base):
     __tablename__ = "experiments"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str | None] = mapped_column(String, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
