@@ -54,7 +54,6 @@ class Experiment(BaseModel):
     status: ExperimentStatus = Field(
         default=ExperimentStatus.CREATED, description="status of the experiment"
     )
-    batch_id: str | None = Field(default=None, description="batch id")
     batch: Batch | None = Field(default=None, init=False, description="batch object")
 
     @field_validator("input_file_path")
