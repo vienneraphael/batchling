@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, String
+from sqlalchemy import JSON, Boolean, DateTime, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -18,11 +18,11 @@ class Experiment(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     model: Mapped[str] = mapped_column(String, nullable=False)
     base_url: Mapped[str | None] = mapped_column(String, nullable=True)
-    api_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    api_key_name: Mapped[str] = mapped_column(String, nullable=False)
     template_messages: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     placeholders: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     response_format: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     input_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
     input_file_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    status_value: Mapped[str | None] = mapped_column(String, nullable=False)
+    is_setup: Mapped[bool] = mapped_column(Boolean, nullable=False)
     batch_id: Mapped[str | None] = mapped_column(String, nullable=True)

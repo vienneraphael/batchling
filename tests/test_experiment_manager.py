@@ -70,7 +70,7 @@ def test_update_experiment_with_invalid_status(
     mock_experiment.setup()
     with pytest.raises(
         ValueError,
-        match="Can only update experiments with status: created. Found: setup",
+        match="Can only update an experiment in created status. Found: setup",
     ):
         experiment_manager.update_experiment(
             experiment_id=mock_experiment.id, name="em test updated"
@@ -79,5 +79,4 @@ def test_update_experiment_with_invalid_status(
 
 def test_delete_experiment(experiment_manager: ExperimentManager, mock_experiment: Experiment):
     assert experiment_manager.delete_experiment(experiment_id=mock_experiment.id)
-    with pytest.raises(ValueError, match=f"Experiment with id: {mock_experiment.id} not found"):
-        experiment_manager.retrieve(experiment_id=mock_experiment.id)
+    assert experiment_manager.retrieve(experiment_id=mock_experiment.id) is None

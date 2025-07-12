@@ -59,7 +59,7 @@ def test_double_setup(setup_experiment: Experiment):
 
 
 def test_setup(setup_experiment: Experiment):
-    assert setup_experiment.status_value == "setup"
+    assert setup_experiment.is_setup
     assert os.path.exists(setup_experiment.input_file_path)
 
 
@@ -71,8 +71,7 @@ def test_start_without_setup(experiment: Experiment):
         experiment.start()
 
 
-def test_start(mock_client, started_experiment: Experiment):
-    started_experiment.status_value = mock_client.batches.create.return_value.status
+def test_start(started_experiment: Experiment):
     assert started_experiment.batch is not None
     assert started_experiment.input_file is not None
 
@@ -98,6 +97,7 @@ def test_delete(experiment: Experiment):
 
 
 def test_update(experiment: Experiment):
+    experiment.save()
     experiment.update(name="test 1 updated")
     with get_db() as db:
         updated_experiment = get_experiment(db=db, id=experiment.id)

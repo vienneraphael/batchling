@@ -1,5 +1,4 @@
 import pytest
-from dotenv import load_dotenv
 from openai import DefaultHttpxClient
 from pydantic import BaseModel
 
@@ -8,8 +7,6 @@ from batchling.batch_utils import (
     batch_create_chat_completion,
     replace_placeholders,
 )
-
-load_dotenv(override=True)
 
 
 class MockBaseModel(BaseModel):

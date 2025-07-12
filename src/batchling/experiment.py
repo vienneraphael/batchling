@@ -30,9 +30,9 @@ class Experiment(BaseModel):
         default=None,
         description="base url of the used provider. Must be compatible with OAI Batch API. Defaults to OAI base url",
     )
-    api_key: str | None = Field(
-        default=None,
-        description="API key for the used provider, uses OAI key from env variables by default",
+    api_key_name: str = Field(
+        default="OPENAI_API_KEY",
+        description="API key name for the used provider, uses OAI key from env variables by default",
     )
     template_messages: list[dict] | None = Field(
         default=None, description="messages template to use"
@@ -42,16 +42,38 @@ class Experiment(BaseModel):
     )
     response_format: BaseModel | None = Field(default=None, description="response model to use")
     input_file_path: str | None = Field(default=None, description="input file path")
-    input_file: FileObject | None = Field(default=None, init=False, description="input file object")
-    status_value: t.Literal["created", "setup"] = Field(
-        default="created", description="status of the experiment"
-    )
-    batch: Batch | None = Field(default=None, init=False, description="batch object")
+    is_setup: bool = Field(default=False, description="whether the experiment is setup")
+    input_file_id: str | None = Field(default=None, description="input file id")
+    batch_id: str | None = Field(default=None, description="batch id")
     created_at: datetime | None = Field(default=None, description="created at")
     updated_at: datetime | None = Field(default=None, description="updated at")
 
     def model_post_init(self, context):
         init_db()
+
+    @computed_field
+    @cached_property
+    def client(self) -> OpenAI:
+        """Get the client
+
+        Returns:
+            OpenAI: The client
+        """
+        return OpenAI(api_key=os.getenv(self.api_key_name), base_url=self.base_url)
+
+    @computed_field
+    @property
+    def input_file(self) -> FileObject | None:
+        if self.input_file_id is None:
+            return None
+        return self.client.files.retrieve(self.input_file_id)
+
+    @computed_field
+    @property
+    def batch(self) -> Batch | None:
+        if self.batch_id is None:
+            return None
+        return self.client.batches.retrieve(self.batch_id)
 
     @computed_field
     @property
@@ -69,8 +91,10 @@ class Experiment(BaseModel):
         "cancelling",
         "cancelled",
     ]:
-        if self.batch is None:
-            return self.status_value
+        if self.batch_id is None:
+            if self.is_setup:
+                return "setup"
+            return "created"
         return self.batch.status
 
     @field_validator("created_at", "updated_at")
@@ -95,16 +119,6 @@ class Experiment(BaseModel):
                 raise ValueError("input_file_path must be a .jsonl file")
         return value
 
-    @computed_field
-    @cached_property
-    def client(self) -> OpenAI:
-        """Get the client
-
-        Returns:
-            OpenAI: The client
-        """
-        return OpenAI(api_key=self.api_key, base_url=self.base_url)
-
     def write_jsonl_input_file(self) -> None:
         """Create the input file
 
@@ -124,7 +138,10 @@ class Experiment(BaseModel):
         )
 
     def setup(self) -> None:
-        """Setup the experiment
+        """Setup the experiment locally:
+        - write the local input file if it does not exist already
+        - update the experiment status to setup
+        - update the database status and updated_at in the local db
 
         Returns:
             None
@@ -133,50 +150,46 @@ class Experiment(BaseModel):
             raise ValueError(f"Experiment in status {self.status} is not in created status")
         if not os.path.exists(self.input_file_path):
             self.write_jsonl_input_file()
-        self.status_value = "setup"
+        self.is_setup = True
         with get_db() as db:
-            update_experiment(
-                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, is_setup=self.is_setup, updated_at=datetime.now())
 
-    def start(self) -> Batch:
-        """Start the experiment
+    def start(self) -> None:
+        """Start the experiment:
+        - create the input file in the provider
+        - create the batch in the provider
+        - update the database updated_at in the local db
 
         Returns:
-            Batch: The batch object
+            None
         """
         if self.status != "setup":
             raise ValueError(f"Experiment in status {self.status} is not in setup status")
-        self.input_file = self.client.files.create(
+        self.input_file_id = self.client.files.create(
             file=open(self.input_file_path, "rb"), purpose="batch"
-        )
-        self.batch = self.client.batches.create(
-            input_file_id=self.input_file.id,
+        ).id
+        self.batch_id = self.client.batches.create(
+            input_file_id=self.input_file_id,
             endpoint="/v1/chat/completions",
             completion_window="24h",
             metadata={"description": self.description},
-        )
-        self.status_value = "running"
+        ).id
         with get_db() as db:
-            update_experiment(
-                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
-            )
-        return self.batch
+            update_experiment(db=db, id=self.id, updated_at=datetime.now())
 
     def cancel(self) -> None:
-        """Cancel the experiment
+        """Cancel the experiment:
+        - cancel the batch in the provider
+        - update the database updated_at in the local db
 
         Returns:
             None
         """
         if self.status != "running":
             raise ValueError(f"Experiment in status {self.status} is not in running status")
-        self.client.batches.cancel(self.batch.id)
-        self.status_value = "cancelled"
+        self.client.batches.cancel(self.batch_id)
         with get_db() as db:
-            update_experiment(
-                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, updated_at=datetime.now())
 
     def get_results(self) -> HttpxBinaryResponseContent:
         """Get the results of the experiment
@@ -184,6 +197,8 @@ class Experiment(BaseModel):
         Returns:
             HttpxBinaryResponseContent: The results
         """
+        if self.status != "completed":
+            raise ValueError(f"Experiment in status {self.status} has not completed yet")
         return self.client.files.content(self.batch.output_file_id)
 
     def save(self):
@@ -211,14 +226,47 @@ class Experiment(BaseModel):
             )
 
     def delete(self):
+        """Delete:
+        - experiment from the database, if any
+        - local file, if any
+        - provider file, if any
+        - provider batch, if any
+        - provider output file, if any
+
+        Returns:
+            None
+        """
         with get_db() as db:
             delete_experiment(db=db, id=self.id)
+        if os.path.exists(self.input_file_path):
+            os.remove(self.input_file_path)
+        if self.input_file_id:
+            self.client.files.delete(self.input_file_id)
+        if self.batch_id:
+            self.client.batches.delete(self.batch_id)
+            if self.batch.output_file_id:
+                self.client.files.delete(self.batch.output_file_id)
 
-    def update(self, **kwargs):
-        if self.status != "created":
+    def update(self, **kwargs) -> "Experiment":
+        """Update the experiment by updating the database
+
+        Returns:
+            Experiment: The updated experiment
+        """
+        if self.is_setup:
             raise ValueError(
                 f"Can only update an experiment in created status. Found: {self.status}"
             )
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        self.save()
+        if "id" in kwargs:
+            raise ValueError(
+                "id cannot be updated, please delete the experiment and create a new one"
+            )
+        exp_dict = self.model_dump()
+        exp_dict.update(kwargs)
+        # validate model first to avoid updating the database with invalid data
+        Experiment.model_validate(exp_dict)
+        with get_db() as db:
+            db_experiment = update_experiment(db=db, id=self.id, **kwargs)
+        if db_experiment is None:
+            raise ValueError(f"Experiment with id: {self.id} not found")
+        return Experiment.model_validate(db_experiment)

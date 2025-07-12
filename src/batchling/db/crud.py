@@ -13,13 +13,13 @@ def create_experiment(
     name: str | None = None,
     description: str | None = None,
     base_url: str | None = None,
-    api_key: str | None = None,
+    api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
     response_format: dict | None = None,
     input_file_path: str | None = None,
     input_file_id: str | None = None,
-    status_value: str = "created",
+    is_setup: bool = False,
     batch_id: str | None = None,
 ) -> Experiment:
     """Create an experiment
@@ -38,8 +38,8 @@ def create_experiment(
         The model to use for the experiment
     base_url : str
         The base url of the experiment
-    api_key : str
-        The api key of the experiment
+    api_key_name : str
+        The api key name of the experiment
     template_messages : list[dict]
         The template messages of the experiment
     placeholders : list[dict]
@@ -50,8 +50,8 @@ def create_experiment(
         The path to the input file
     input_file_id : str
         The id of the input file
-    status_value : str
-        The status of the experiment
+    is_setup : bool
+        Whether the experiment is setup
     batch_id : str
         The id of the batch
 
@@ -69,13 +69,13 @@ def create_experiment(
         updated_at=now,
         model=model,
         base_url=base_url,
-        api_key=api_key,
+        api_key_name=api_key_name,
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,
         input_file_path=input_file_path,
         input_file_id=input_file_id,
-        status_value=status_value,
+        is_setup=is_setup,
         batch_id=batch_id,
     )
     db.add(experiment)

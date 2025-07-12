@@ -8,8 +8,8 @@ from batchling.file_utils import write_jsonl_file
 @pytest.fixture
 def mock_data():
     return [
-        {"id": 1, "name": "John"},
-        {"id": 2, "name": "Jane"},
+        '{"id": 1, "name": "John"}',
+        '{"id": 2, "name": "Jane"}',
     ]
 
 

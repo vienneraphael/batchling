@@ -15,3 +15,5 @@ wheels/
 TODO.md
 .coverage
 profile_reports/
+.pytest_cache/
+.ruff_cache/
