@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from batchling.experiment import Experiment, ExperimentStatus
@@ -22,6 +24,18 @@ def experiment(tmp_path):
     return experiment
 
 
+@pytest.fixture
+def setup_experiment(experiment: Experiment):
+    experiment.setup()
+    return experiment
+
+
+@pytest.fixture
+def started_experiment(setup_experiment: Experiment):
+    setup_experiment.start()
+    return setup_experiment
+
+
 def test_invalid_input_file_path():
     with pytest.raises(ValueError, match="input_file_path must be a .jsonl file"):
         Experiment(
@@ -33,23 +47,33 @@ def test_invalid_input_file_path():
         )
 
 
-def test_double_setup(experiment: Experiment):
-    experiment.setup()
+def test_double_setup(setup_experiment: Experiment):
     with pytest.raises(ValueError, match="Experiment in status setup is not in created status"):
-        experiment.setup()
+        setup_experiment.setup()
 
 
-def test_setup(experiment: Experiment):
-    experiment.setup()
-    assert experiment.status == ExperimentStatus.SETUP
+def test_setup(setup_experiment: Experiment):
+    assert setup_experiment.status == ExperimentStatus.SETUP
+    assert os.path.exists(setup_experiment.input_file_path)
 
 
-def test_start_without_setup():
+def test_start_without_setup(experiment: Experiment):
     with pytest.raises(ValueError, match="Experiment in status created is not in setup status"):
-        experiment = Experiment(
-            id="experiment-test-1",
-            model="gpt-4o-mini",
-            name="test 1",
-            description="test experiment number 1",
-        )
         experiment.start()
+
+
+def test_start(started_experiment: Experiment):
+    assert started_experiment.status == ExperimentStatus.RUNNING
+    assert started_experiment.batch.id is not None
+    assert started_experiment.batch is not None
+    assert started_experiment.input_file is not None
+
+
+def test_cancel(started_experiment: Experiment):
+    started_experiment.cancel()
+    assert started_experiment.status == ExperimentStatus.CANCELLED
+
+
+def test_cancel_without_start(setup_experiment: Experiment):
+    with pytest.raises(ValueError, match="Experiment in status setup is not in running status"):
+        setup_experiment.cancel()
