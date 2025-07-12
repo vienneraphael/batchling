@@ -23,6 +23,7 @@ class ExperimentStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class Experiment(BaseModel):
@@ -139,7 +140,10 @@ class Experiment(BaseModel):
         Returns:
             None
         """
+        if self.status != ExperimentStatus.RUNNING:
+            raise ValueError(f"Experiment in status {self.status.value} is not in running status")
         self.client.batches.cancel(self.batch.id)
+        self.status = ExperimentStatus.CANCELLED
 
     def get_results(self) -> HttpxBinaryResponseContent:
         """Get the results of the experiment
