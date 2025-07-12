@@ -5,7 +5,6 @@ import pytest
 from batchling.db.session import destroy_db, init_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
-from batchling.status import ExperimentStatus
 
 
 @pytest.fixture
@@ -71,7 +70,7 @@ def test_update_experiment_with_invalid_status(
     mock_experiment.setup()
     with pytest.raises(
         ValueError,
-        match=f"Can only update experiments with status: {ExperimentStatus.CREATED.value}. Found: {ExperimentStatus.SETUP.value}",
+        match="Can only update experiments with status: created. Found: setup",
     ):
         experiment_manager.update_experiment(
             experiment_id=mock_experiment.id, name="em test updated"

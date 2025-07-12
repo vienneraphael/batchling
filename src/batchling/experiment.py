@@ -1,4 +1,5 @@
 import os
+import typing as t
 from datetime import datetime
 from functools import cached_property
 
@@ -17,7 +18,6 @@ from pydantic import (
 from batchling.batch_utils import write_input_batch_file
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
-from batchling.status import ExperimentStatus
 
 
 class Experiment(BaseModel):
@@ -43,8 +43,8 @@ class Experiment(BaseModel):
     response_format: BaseModel | None = Field(default=None, description="response model to use")
     input_file_path: str | None = Field(default=None, description="input file path")
     input_file: FileObject | None = Field(default=None, init=False, description="input file object")
-    status: ExperimentStatus = Field(
-        default=ExperimentStatus.CREATED, description="status of the experiment"
+    status_value: t.Literal["created", "setup"] = Field(
+        default="created", description="status of the experiment"
     )
     batch: Batch | None = Field(default=None, init=False, description="batch object")
     created_at: datetime | None = Field(default=None, description="created at")
@@ -52,6 +52,26 @@ class Experiment(BaseModel):
 
     def model_post_init(self, context):
         init_db()
+
+    @computed_field
+    @property
+    def status(
+        self,
+    ) -> t.Literal[
+        "created",
+        "setup",
+        "validating",
+        "failed",
+        "in_progress",
+        "finalizing",
+        "completed",
+        "expired",
+        "cancelling",
+        "cancelled",
+    ]:
+        if self.batch is None:
+            return self.status_value
+        return self.batch.status
 
     @field_validator("created_at", "updated_at")
     def set_datetime(cls, value: datetime | None):
@@ -109,13 +129,15 @@ class Experiment(BaseModel):
         Returns:
             None
         """
-        if self.status != ExperimentStatus.CREATED:
-            raise ValueError(f"Experiment in status {self.status.value} is not in created status")
+        if self.status != "created":
+            raise ValueError(f"Experiment in status {self.status} is not in created status")
         if not os.path.exists(self.input_file_path):
             self.write_jsonl_input_file()
-        self.status = ExperimentStatus.SETUP
+        self.status_value = "setup"
         with get_db() as db:
-            update_experiment(db=db, id=self.id, status=self.status, updated_at=datetime.now())
+            update_experiment(
+                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
+            )
 
     def start(self) -> Batch:
         """Start the experiment
@@ -123,8 +145,8 @@ class Experiment(BaseModel):
         Returns:
             Batch: The batch object
         """
-        if self.status != ExperimentStatus.SETUP:
-            raise ValueError(f"Experiment in status {self.status.value} is not in setup status")
+        if self.status != "setup":
+            raise ValueError(f"Experiment in status {self.status} is not in setup status")
         self.input_file = self.client.files.create(
             file=open(self.input_file_path, "rb"), purpose="batch"
         )
@@ -134,9 +156,11 @@ class Experiment(BaseModel):
             completion_window="24h",
             metadata={"description": self.description},
         )
-        self.status = ExperimentStatus.RUNNING
+        self.status_value = "running"
         with get_db() as db:
-            update_experiment(db=db, id=self.id, status=self.status, updated_at=datetime.now())
+            update_experiment(
+                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
+            )
         return self.batch
 
     def cancel(self) -> None:
@@ -145,12 +169,14 @@ class Experiment(BaseModel):
         Returns:
             None
         """
-        if self.status != ExperimentStatus.RUNNING:
-            raise ValueError(f"Experiment in status {self.status.value} is not in running status")
+        if self.status != "running":
+            raise ValueError(f"Experiment in status {self.status} is not in running status")
         self.client.batches.cancel(self.batch.id)
-        self.status = ExperimentStatus.CANCELLED
+        self.status_value = "cancelled"
         with get_db() as db:
-            update_experiment(db=db, id=self.id, status=self.status, updated_at=datetime.now())
+            update_experiment(
+                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
+            )
 
     def get_results(self) -> HttpxBinaryResponseContent:
         """Get the results of the experiment
@@ -161,9 +187,9 @@ class Experiment(BaseModel):
         return self.client.files.content(self.batch.output_file_id)
 
     def save(self):
-        if self.status != ExperimentStatus.CREATED:
+        if self.status != "created":
             raise ValueError(
-                f"Can only create an experiment in {ExperimentStatus.CREATED.value} status. Found: {self.status.value}"
+                f"Can only create an experiment in created status. Found: {self.status}"
             )
         with get_db() as db:
             create_experiment(
@@ -189,9 +215,9 @@ class Experiment(BaseModel):
             delete_experiment(db=db, id=self.id)
 
     def update(self, **kwargs):
-        if self.status != ExperimentStatus.CREATED:
+        if self.status != "created":
             raise ValueError(
-                f"Can only update an experiment in {ExperimentStatus.CREATED.value} status. Found: {self.status.value}"
+                f"Can only update an experiment in created status. Found: {self.status}"
             )
         for key, value in kwargs.items():
             setattr(self, key, value)

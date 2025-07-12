@@ -9,7 +9,6 @@ from batchling.db.crud import (
 )
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
-from batchling.status import ExperimentStatus
 
 
 class ExperimentManager(BaseModel):
@@ -62,16 +61,16 @@ class ExperimentManager(BaseModel):
                 else None,
                 input_file_path=input_file_path,
                 input_file_id=None,
-                status=ExperimentStatus.CREATED,
+                status_value="created",
                 batch_id=None,
             )
         return Experiment.model_validate(experiment)
 
     def update_experiment(self, experiment_id: str, **kwargs) -> Experiment:
         experiment = self.retrieve(experiment_id=experiment_id)
-        if experiment.status != ExperimentStatus.CREATED:
+        if experiment.status != "created":
             raise ValueError(
-                f"Can only update experiments with status: created. Found: {experiment.status.value}"
+                f"Can only update experiments with status: created. Found: {experiment.status}"
             )
         with get_db() as db:
             updated_experiment = update_experiment(db=db, id=experiment_id, **kwargs)
