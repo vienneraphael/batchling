@@ -226,8 +226,26 @@ class Experiment(BaseModel):
             )
 
     def delete(self):
+        """Delete:
+        - experiment from the database, if any
+        - local file, if any
+        - provider file, if any
+        - provider batch, if any
+        - provider output file, if any
+
+        Returns:
+            None
+        """
         with get_db() as db:
             delete_experiment(db=db, id=self.id)
+        if os.path.exists(self.input_file_path):
+            os.remove(self.input_file_path)
+        if self.input_file_id:
+            self.client.files.delete(self.input_file_id)
+        if self.batch_id:
+            self.client.batches.delete(self.batch_id)
+            if self.batch.output_file_id:
+                self.client.files.delete(self.batch.output_file_id)
 
     def update(self, **kwargs):
         if self.status != "created":
