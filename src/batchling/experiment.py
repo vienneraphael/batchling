@@ -247,15 +247,26 @@ class Experiment(BaseModel):
             if self.batch.output_file_id:
                 self.client.files.delete(self.batch.output_file_id)
 
-    def update(self, **kwargs):
+    def update(self, **kwargs) -> "Experiment":
         """Update the experiment by updating the database
 
         Returns:
-            None
+            Experiment: The updated experiment
         """
-        if self.status != "created":
+        if self.is_setup:
             raise ValueError(
                 f"Can only update an experiment in created status. Found: {self.status}"
             )
+        if "id" in kwargs:
+            raise ValueError(
+                "id cannot be updated, please delete the experiment and create a new one"
+            )
+        exp_dict = self.model_dump()
+        exp_dict.update(kwargs)
+        # validate model first to avoid updating the database with invalid data
+        updated_experiment = Experiment.model_validate(exp_dict)
         with get_db() as db:
-            update_experiment(db=db, id=self.id, **kwargs)
+            db_experiment = update_experiment(db=db, id=self.id, **kwargs)
+        if db_experiment is None:
+            raise ValueError(f"Experiment with id: {self.id} not found")
+        return updated_experiment
