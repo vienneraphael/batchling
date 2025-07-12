@@ -19,7 +19,7 @@ def create_experiment(
     response_format: dict | None = None,
     input_file_path: str | None = None,
     input_file_id: str | None = None,
-    status_value: str = "created",
+    is_setup: bool = False,
     batch_id: str | None = None,
 ) -> Experiment:
     """Create an experiment
@@ -50,8 +50,8 @@ def create_experiment(
         The path to the input file
     input_file_id : str
         The id of the input file
-    status_value : str
-        The status of the experiment
+    is_setup : bool
+        Whether the experiment is setup
     batch_id : str
         The id of the batch
 
@@ -75,7 +75,7 @@ def create_experiment(
         response_format=response_format,
         input_file_path=input_file_path,
         input_file_id=input_file_id,
-        status_value=status_value,
+        is_setup=is_setup,
         batch_id=batch_id,
     )
     db.add(experiment)

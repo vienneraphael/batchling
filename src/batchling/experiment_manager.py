@@ -61,7 +61,7 @@ class ExperimentManager(BaseModel):
                 else None,
                 input_file_path=input_file_path,
                 input_file_id=None,
-                status_value="created",
+                is_setup=False,
                 batch_id=None,
             )
         return Experiment.model_validate(experiment)

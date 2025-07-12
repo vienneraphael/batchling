@@ -42,9 +42,7 @@ class Experiment(BaseModel):
     )
     response_format: BaseModel | None = Field(default=None, description="response model to use")
     input_file_path: str | None = Field(default=None, description="input file path")
-    status_value: t.Literal["created", "setup"] = Field(
-        default="created", description="status of the experiment"
-    )
+    is_setup: bool = Field(default=False, description="whether the experiment is setup")
     input_file_id: str | None = Field(default=None, description="input file id")
     batch_id: str | None = Field(default=None, description="batch id")
     created_at: datetime | None = Field(default=None, description="created at")
@@ -93,8 +91,10 @@ class Experiment(BaseModel):
         "cancelling",
         "cancelled",
     ]:
-        if self.batch is None:
-            return self.status_value
+        if self.batch_id is None:
+            if self.is_setup:
+                return "setup"
+            return "created"
         return self.batch.status
 
     @field_validator("created_at", "updated_at")
@@ -150,18 +150,15 @@ class Experiment(BaseModel):
             raise ValueError(f"Experiment in status {self.status} is not in created status")
         if not os.path.exists(self.input_file_path):
             self.write_jsonl_input_file()
-        self.status_value = "setup"
+        self.is_setup = True
         with get_db() as db:
-            update_experiment(
-                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, is_setup=self.is_setup, updated_at=datetime.now())
 
     def start(self) -> None:
         """Start the experiment:
         - create the input file in the provider
         - create the batch in the provider
-        - update the experiment status to running
-        - update the database status and updated_at in the local db
+        - update the database updated_at in the local db
 
         Returns:
             None
@@ -177,26 +174,22 @@ class Experiment(BaseModel):
             completion_window="24h",
             metadata={"description": self.description},
         ).id
-        self.status_value = "running"
         with get_db() as db:
-            update_experiment(
-                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, updated_at=datetime.now())
 
     def cancel(self) -> None:
-        """Cancel the experiment
+        """Cancel the experiment:
+        - cancel the batch in the provider
+        - update the database updated_at in the local db
 
         Returns:
             None
         """
         if self.status != "running":
             raise ValueError(f"Experiment in status {self.status} is not in running status")
-        self.client.batches.cancel(self.batch.id)
-        self.status_value = "cancelled"
+        self.client.batches.cancel(self.batch_id)
         with get_db() as db:
-            update_experiment(
-                db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, updated_at=datetime.now())
 
     def get_results(self) -> HttpxBinaryResponseContent:
         """Get the results of the experiment
