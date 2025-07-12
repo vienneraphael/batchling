@@ -2,7 +2,8 @@ import os
 
 import pytest
 
-from batchling.experiment import Experiment, ExperimentStatus
+from batchling.experiment import Experiment
+from batchling.status import ExperimentStatus
 
 
 @pytest.fixture

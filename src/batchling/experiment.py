@@ -1,5 +1,5 @@
 import os
-from enum import Enum
+from datetime import datetime
 from functools import cached_property
 
 from openai import OpenAI
@@ -15,15 +15,9 @@ from pydantic import (
 )
 
 from batchling.batch_utils import write_input_batch_file
-
-
-class ExperimentStatus(str, Enum):
-    CREATED = "created"
-    SETUP = "setup"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+from batchling.db.crud import update_experiment
+from batchling.db.session import get_db, init_db
+from batchling.status import ExperimentStatus
 
 
 class Experiment(BaseModel):
