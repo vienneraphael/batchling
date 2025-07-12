@@ -2,6 +2,8 @@ import os
 
 import pytest
 
+from batchling.db.crud import get_experiment
+from batchling.db.session import get_db
 from batchling.experiment import Experiment
 from batchling.status import ExperimentStatus
 
@@ -87,3 +89,22 @@ def test_cancel_without_start(setup_experiment: Experiment):
         match=f"Experiment in status {ExperimentStatus.SETUP.value} is not in {ExperimentStatus.RUNNING.value} status",
     ):
         setup_experiment.cancel()
+
+
+def test_save(experiment: Experiment):
+    experiment.save()
+    with get_db() as db:
+        assert get_experiment(db=db, id=experiment.id) is not None
+
+
+def test_delete(experiment: Experiment):
+    experiment.delete()
+    with get_db() as db:
+        assert get_experiment(db=db, id=experiment.id) is None
+
+
+def test_update(experiment: Experiment):
+    experiment.update(name="test 1 updated")
+    with get_db() as db:
+        updated_experiment = get_experiment(db=db, id=experiment.id)
+        assert experiment.__dict__ != updated_experiment.__dict__

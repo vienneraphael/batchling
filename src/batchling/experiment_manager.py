@@ -28,7 +28,7 @@ class ExperimentManager(BaseModel):
 
     def retrieve(self, experiment_id: str) -> Experiment:
         with get_db() as db:
-            experiment = get_experiment(db=db, experiment_id=experiment_id)
+            experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             raise ValueError(f"Experiment with id: {experiment_id} not found")
         return Experiment.model_validate(experiment)

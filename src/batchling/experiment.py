@@ -34,8 +34,6 @@ class Experiment(BaseModel):
         default=None,
         description="API key for the used provider, uses OAI key from env variables by default",
     )
-    tpm: int | None = Field(default=None, description="tpm of the experiment")
-    rpm: int | None = Field(default=None, description="rpm of the experiment")
     template_messages: list[dict] | None = Field(
         default=None, description="messages template to use"
     )
@@ -162,7 +160,7 @@ class Experiment(BaseModel):
         """
         return self.client.files.content(self.batch.output_file_id)
 
-    def create(self):
+    def save(self):
         if self.status != ExperimentStatus.CREATED:
             raise ValueError(
                 f"Can only create an experiment in {ExperimentStatus.CREATED.value} status. Found: {self.status.value}"
@@ -190,24 +188,11 @@ class Experiment(BaseModel):
         with get_db() as db:
             delete_experiment(db=db, id=self.id)
 
-    def update(self):
+    def update(self, **kwargs):
         if self.status != ExperimentStatus.CREATED:
             raise ValueError(
                 f"Can only update an experiment in {ExperimentStatus.CREATED.value} status. Found: {self.status.value}"
             )
-        with get_db() as db:
-            update_experiment(
-                db=db,
-                id=self.id,
-                **self.model_dump(
-                    exclude={
-                        "id",
-                        "created_at",
-                        "updated_at",
-                        "input_file",
-                        "batch",
-                        "client",
-                        "status",
-                    }
-                ),
-            )
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.save()

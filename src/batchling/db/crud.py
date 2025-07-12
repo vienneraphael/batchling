@@ -84,14 +84,14 @@ def create_experiment(
     return experiment
 
 
-def get_experiment(db: Session, experiment_id: str) -> Experiment | None:
+def get_experiment(db: Session, id: str) -> Experiment | None:
     """Get an experiment
 
     Parameters
     ----------
     db : Session
         The database session
-    experiment_id : str
+    id : str
         The id of the experiment
 
     Returns
@@ -99,7 +99,7 @@ def get_experiment(db: Session, experiment_id: str) -> Experiment | None:
     Experiment
         The experiment
     """
-    stmt = select(Experiment).where(Experiment.id == experiment_id)
+    stmt = select(Experiment).where(Experiment.id == id)
     return db.execute(stmt).scalar_one_or_none()
 
 
@@ -151,7 +151,7 @@ def update_experiment(
     stmt = update(Experiment).where(Experiment.id == id).values(**kwargs)
     db.execute(stmt)
     db.commit()
-    return get_experiment(db=db, experiment_id=id)
+    return get_experiment(db=db, id=id)
 
 
 def delete_experiment(db: Session, id: str) -> bool:
