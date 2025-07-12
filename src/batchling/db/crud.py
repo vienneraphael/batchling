@@ -128,7 +128,7 @@ def get_experiments(
 
 def update_experiment(
     db: Session,
-    experiment_id: str,
+    id: str,
     **kwargs: dict,
 ) -> Experiment | None:
     """Update an experiment
@@ -137,7 +137,7 @@ def update_experiment(
     ----------
     db : Session
         The database session
-    experiment_id : str
+    id : str
         The id of the experiment
     **kwargs : dict
         The fields to update
@@ -148,23 +148,23 @@ def update_experiment(
         The updated experiment
     """
     kwargs["updated_at"] = datetime.now()
-    stmt = update(Experiment).where(Experiment.id == experiment_id).values(**kwargs)
+    stmt = update(Experiment).where(Experiment.id == id).values(**kwargs)
     db.execute(stmt)
     db.commit()
-    return get_experiment(db=db, experiment_id=experiment_id)
+    return get_experiment(db=db, experiment_id=id)
 
 
-def delete_experiment(db: Session, experiment_id: str) -> bool:
+def delete_experiment(db: Session, id: str) -> bool:
     """Delete an experiment
 
     Parameters
     ----------
     db : Session
         The database session
-    experiment_id : str
+    id : str
         The id of the experiment
     """
-    stmt = delete(Experiment).where(Experiment.id == experiment_id)
+    stmt = delete(Experiment).where(Experiment.id == id)
     db.execute(stmt)
     db.commit()
     return True

@@ -61,7 +61,7 @@ def test_update_experiment(db):
         description="test experiment number 3",
     )
     update_dict = {"name": "test 3 updated", "description": "test experiment number 3 updated"}
-    updated_experiment = update_experiment(db=db, experiment_id="experiment-test-3", **update_dict)
+    updated_experiment = update_experiment(db=db, id="experiment-test-3", **update_dict)
     assert updated_experiment is not None
     assert updated_experiment.model == "gpt-4o-mini"
     assert updated_experiment.id == "experiment-test-3"
@@ -79,7 +79,7 @@ def test_delete_experiment(db):
         name="test 4",
         description="test experiment number 4",
     )
-    delete_experiment(db=db, experiment_id="experiment-test-4")
+    delete_experiment(db=db, id="experiment-test-4")
     assert get_experiment(db=db, experiment_id="experiment-test-4") is None
 
 
