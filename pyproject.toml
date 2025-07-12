@@ -1,6 +1,6 @@
 [project]
 name = "batchling"
-version = "0.0.3"
+version = "0.0.4"
 description = "A python library to abstract GenAI Batch API usage"
 authors = [{ name = "Raphael Vienne", email = "raphael.vienne@live.fr" }]
 readme = "README.md"
