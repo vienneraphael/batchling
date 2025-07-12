@@ -32,7 +32,8 @@ def setup_experiment(experiment: Experiment):
 
 
 @pytest.fixture
-def started_experiment(setup_experiment: Experiment):
+def started_experiment(setup_experiment: Experiment, mock_client):
+    setup_experiment.client = mock_client
     setup_experiment.start()
     return setup_experiment
 
@@ -49,7 +50,10 @@ def test_invalid_input_file_path():
 
 
 def test_double_setup(setup_experiment: Experiment):
-    with pytest.raises(ValueError, match="Experiment in status setup is not in created status"):
+    with pytest.raises(
+        ValueError,
+        match=f"Experiment in status {ExperimentStatus.SETUP.value} is not in {ExperimentStatus.CREATED.value} status",
+    ):
         setup_experiment.setup()
 
 
@@ -59,13 +63,15 @@ def test_setup(setup_experiment: Experiment):
 
 
 def test_start_without_setup(experiment: Experiment):
-    with pytest.raises(ValueError, match="Experiment in status created is not in setup status"):
+    with pytest.raises(
+        ValueError,
+        match=f"Experiment in status {ExperimentStatus.CREATED.value} is not in {ExperimentStatus.SETUP.value} status",
+    ):
         experiment.start()
 
 
 def test_start(started_experiment: Experiment):
     assert started_experiment.status == ExperimentStatus.RUNNING
-    assert started_experiment.batch.id is not None
     assert started_experiment.batch is not None
     assert started_experiment.input_file is not None
 
@@ -76,5 +82,8 @@ def test_cancel(started_experiment: Experiment):
 
 
 def test_cancel_without_start(setup_experiment: Experiment):
-    with pytest.raises(ValueError, match="Experiment in status setup is not in running status"):
+    with pytest.raises(
+        ValueError,
+        match=f"Experiment in status {ExperimentStatus.SETUP.value} is not in {ExperimentStatus.RUNNING.value} status",
+    ):
         setup_experiment.cancel()
