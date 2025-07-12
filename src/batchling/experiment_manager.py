@@ -23,11 +23,11 @@ class ExperimentManager(BaseModel):
     def list_experiments(self) -> list[Experiment]:
         return self.experiments
 
-    def retrieve(self, experiment_id: str) -> Experiment:
+    def retrieve(self, experiment_id: str) -> Experiment | None:
         with get_db() as db:
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
-            raise ValueError(f"Experiment with id: {experiment_id} not found")
+            return None
         return Experiment.model_validate(experiment)
 
     def start_experiment(
@@ -43,6 +43,8 @@ class ExperimentManager(BaseModel):
         response_format: BaseModel | None = None,
         input_file_path: str | None = None,
     ) -> Experiment:
+        if self.retrieve(experiment_id=experiment_id) is not None:
+            raise ValueError(f"Experiment with id: {experiment_id} already exists")
         with get_db() as db:
             experiment = create_experiment(
                 db=db,
