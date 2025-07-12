@@ -1,5 +1,5 @@
 import os
-from enum import Enum
+from datetime import datetime
 from functools import cached_property
 
 from openai import OpenAI
@@ -15,14 +15,9 @@ from pydantic import (
 )
 
 from batchling.batch_utils import write_input_batch_file
-
-
-class ExperimentStatus(str, Enum):
-    CREATED = "created"
-    SETUP = "setup"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
+from batchling.db.crud import update_experiment
+from batchling.db.session import get_db, init_db
+from batchling.status import ExperimentStatus
 
 
 class Experiment(BaseModel):
@@ -53,8 +48,16 @@ class Experiment(BaseModel):
     status: ExperimentStatus = Field(
         default=ExperimentStatus.CREATED, description="status of the experiment"
     )
-    batch_id: str | None = Field(default=None, description="batch id")
     batch: Batch | None = Field(default=None, init=False, description="batch object")
+    created_at: datetime | None = Field(default=None, description="created at")
+    updated_at: datetime | None = Field(default=None, description="updated at")
+
+    def model_post_init(self, context):
+        init_db()
+
+    @field_validator("created_at", "updated_at")
+    def set_datetime(cls, value: datetime | None):
+        return value or datetime.now()
 
     @field_validator("input_file_path")
     def check_jsonl_format(cls, value: str):
@@ -69,8 +72,9 @@ class Experiment(BaseModel):
         Raises:
             ValueError: If the input file path is not a .jsonl file
         """
-        if not value.endswith(".jsonl"):
-            raise ValueError("input_file_path must be a .jsonl file")
+        if isinstance(value, str):
+            if not value.endswith(".jsonl"):
+                raise ValueError("input_file_path must be a .jsonl file")
         return value
 
     @computed_field
@@ -112,6 +116,10 @@ class Experiment(BaseModel):
         if not os.path.exists(self.input_file_path):
             self.write_jsonl_input_file()
         self.status = ExperimentStatus.SETUP
+        with get_db() as db:
+            update_experiment(
+                db=db, experiment_id=self.id, status=self.status, updated_at=datetime.now()
+            )
 
     def start(self) -> Batch:
         """Start the experiment
@@ -131,6 +139,10 @@ class Experiment(BaseModel):
             metadata={"description": self.description},
         )
         self.status = ExperimentStatus.RUNNING
+        with get_db() as db:
+            update_experiment(
+                db=db, experiment_id=self.id, status=self.status, updated_at=datetime.now()
+            )
         return self.batch
 
     def cancel(self) -> None:
@@ -139,7 +151,14 @@ class Experiment(BaseModel):
         Returns:
             None
         """
+        if self.status != ExperimentStatus.RUNNING:
+            raise ValueError(f"Experiment in status {self.status.value} is not in running status")
         self.client.batches.cancel(self.batch.id)
+        self.status = ExperimentStatus.CANCELLED
+        with get_db() as db:
+            update_experiment(
+                db=db, experiment_id=self.id, status=self.status, updated_at=datetime.now()
+            )
 
     def get_results(self) -> HttpxBinaryResponseContent:
         """Get the results of the experiment

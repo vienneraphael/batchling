@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import JSON, DateTime, Enum, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from batchling.experiment import ExperimentStatus
+from batchling.status import ExperimentStatus
 
 
 class Base(DeclarativeBase):
