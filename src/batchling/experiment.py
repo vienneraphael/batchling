@@ -264,9 +264,9 @@ class Experiment(BaseModel):
         exp_dict = self.model_dump()
         exp_dict.update(kwargs)
         # validate model first to avoid updating the database with invalid data
-        updated_experiment = Experiment.model_validate(exp_dict)
+        Experiment.model_validate(exp_dict)
         with get_db() as db:
             db_experiment = update_experiment(db=db, id=self.id, **kwargs)
         if db_experiment is None:
             raise ValueError(f"Experiment with id: {self.id} not found")
-        return updated_experiment
+        return Experiment.model_validate(db_experiment)

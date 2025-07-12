@@ -70,7 +70,7 @@ def test_update_experiment_with_invalid_status(
     mock_experiment.setup()
     with pytest.raises(
         ValueError,
-        match="Can only update experiments with status: created. Found: setup",
+        match="Can only update an experiment in created status. Found: setup",
     ):
         experiment_manager.update_experiment(
             experiment_id=mock_experiment.id, name="em test updated"
