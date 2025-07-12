@@ -26,8 +26,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   tqdm
 comm==0.2.2
     # via ipykernel
-coverage==7.9.1
-    # via pytest-cov
+coverage==7.9.2
 debugpy==1.8.14
     # via ipykernel
 decorator==5.2.1
@@ -97,9 +96,7 @@ platformdirs==4.3.8
     #   jupyter-core
     #   virtualenv
 pluggy==1.6.0
-    # via
-    #   pytest
-    #   pytest-cov
+    # via pytest
 pre-commit==4.2.0
 prompt-toolkit==3.0.51
     # via ipython
@@ -121,8 +118,6 @@ pygments==2.19.2
     #   ipython-pygments-lexers
     #   pytest
 pytest==8.4.1
-    # via pytest-cov
-pytest-cov==6.2.1
 python-dateutil==2.9.0.post0
     # via jupyter-client
 python-dotenv==1.1.1

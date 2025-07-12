@@ -52,7 +52,7 @@ def test_request_capture():
         Exception, match="Aborted request in CapturingTransport to capture payload."
     ):
         custom_http_client.request("GET", "https://www.google.com")
-        assert capturing_transport.captured_request is not None
+    assert capturing_transport.captured_request is not None
 
 
 @pytest.mark.parametrize("response_format", [None, MockBaseModel])

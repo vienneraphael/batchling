@@ -55,4 +55,4 @@ jobs:
           UV_PROJECT_ENVIRONMENT: .venv
 
       - name: Run pytest
-        run: uv run pytest --cov=src
+        run: uv run coverage run -m pytest
