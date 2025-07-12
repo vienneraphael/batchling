@@ -197,6 +197,8 @@ class Experiment(BaseModel):
         Returns:
             HttpxBinaryResponseContent: The results
         """
+        if self.status != "completed":
+            raise ValueError(f"Experiment in status {self.status} has not completed yet")
         return self.client.files.content(self.batch.output_file_id)
 
     def save(self):
