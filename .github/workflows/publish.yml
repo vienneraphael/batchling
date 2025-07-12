@@ -10,6 +10,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: publish-env
 
     steps:
       - name: Checkout code
@@ -27,6 +28,4 @@ jobs:
         run: uv build
 
       - name: Publish to PyPI
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
-        run: uv publish --token
+        run: uv publish --token ${{ secrets.UV_PUBLISH_TOKEN }}
