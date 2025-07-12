@@ -42,16 +42,40 @@ class Experiment(BaseModel):
     )
     response_format: BaseModel | None = Field(default=None, description="response model to use")
     input_file_path: str | None = Field(default=None, description="input file path")
-    input_file: FileObject | None = Field(default=None, init=False, description="input file object")
     status_value: t.Literal["created", "setup"] = Field(
         default="created", description="status of the experiment"
     )
-    batch: Batch | None = Field(default=None, init=False, description="batch object")
+    input_file_id: str | None = Field(default=None, description="input file id")
+    batch_id: str | None = Field(default=None, description="batch id")
     created_at: datetime | None = Field(default=None, description="created at")
     updated_at: datetime | None = Field(default=None, description="updated at")
 
     def model_post_init(self, context):
         init_db()
+
+    @computed_field
+    @cached_property
+    def client(self) -> OpenAI:
+        """Get the client
+
+        Returns:
+            OpenAI: The client
+        """
+        return OpenAI(api_key=os.getenv(self.api_key_name), base_url=self.base_url)
+
+    @computed_field
+    @property
+    def input_file(self) -> FileObject | None:
+        if self.input_file_id is None:
+            return None
+        return self.client.files.retrieve(self.input_file_id)
+
+    @computed_field
+    @property
+    def batch(self) -> Batch | None:
+        if self.batch_id is None:
+            return None
+        return self.client.batches.retrieve(self.batch_id)
 
     @computed_field
     @property
@@ -94,16 +118,6 @@ class Experiment(BaseModel):
             if not value.endswith(".jsonl"):
                 raise ValueError("input_file_path must be a .jsonl file")
         return value
-
-    @computed_field
-    @cached_property
-    def client(self) -> OpenAI:
-        """Get the client
-
-        Returns:
-            OpenAI: The client
-        """
-        return OpenAI(api_key=os.getenv(self.api_key_name), base_url=self.base_url)
 
     def write_jsonl_input_file(self) -> None:
         """Create the input file
