@@ -156,29 +156,32 @@ class Experiment(BaseModel):
                 db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
             )
 
-    def start(self) -> Batch:
-        """Start the experiment
+    def start(self) -> None:
+        """Start the experiment:
+        - create the input file in the provider
+        - create the batch in the provider
+        - update the experiment status to running
+        - update the database status and updated_at in the local db
 
         Returns:
-            Batch: The batch object
+            None
         """
         if self.status != "setup":
             raise ValueError(f"Experiment in status {self.status} is not in setup status")
-        self.input_file = self.client.files.create(
+        self.input_file_id = self.client.files.create(
             file=open(self.input_file_path, "rb"), purpose="batch"
-        )
-        self.batch = self.client.batches.create(
-            input_file_id=self.input_file.id,
+        ).id
+        self.batch_id = self.client.batches.create(
+            input_file_id=self.input_file_id,
             endpoint="/v1/chat/completions",
             completion_window="24h",
             metadata={"description": self.description},
-        )
+        ).id
         self.status_value = "running"
         with get_db() as db:
             update_experiment(
                 db=db, id=self.id, status_value=self.status_value, updated_at=datetime.now()
             )
-        return self.batch
 
     def cancel(self) -> None:
         """Cancel the experiment
