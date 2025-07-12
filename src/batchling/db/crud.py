@@ -13,7 +13,7 @@ def create_experiment(
     name: str | None = None,
     description: str | None = None,
     base_url: str | None = None,
-    api_key: str | None = None,
+    api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
     response_format: dict | None = None,
@@ -38,8 +38,8 @@ def create_experiment(
         The model to use for the experiment
     base_url : str
         The base url of the experiment
-    api_key : str
-        The api key of the experiment
+    api_key_name : str
+        The api key name of the experiment
     template_messages : list[dict]
         The template messages of the experiment
     placeholders : list[dict]
@@ -69,7 +69,7 @@ def create_experiment(
         updated_at=now,
         model=model,
         base_url=base_url,
-        api_key=api_key,
+        api_key_name=api_key_name,
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,

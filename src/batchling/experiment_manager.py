@@ -39,7 +39,7 @@ class ExperimentManager(BaseModel):
         name: str,
         description: str | None = None,
         base_url: str | None = None,
-        api_key: str | None = None,
+        api_key_name: str = "OPENAI_API_KEY",
         template_messages: list[dict] | None = None,
         placeholders: list[dict] | None = None,
         response_format: BaseModel | None = None,
@@ -53,7 +53,7 @@ class ExperimentManager(BaseModel):
                 name=name,
                 description=description,
                 base_url=base_url,
-                api_key=api_key,
+                api_key_name=api_key_name,
                 template_messages=template_messages,
                 placeholders=placeholders,
                 response_format=response_format.model_dump()

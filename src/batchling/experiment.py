@@ -30,9 +30,9 @@ class Experiment(BaseModel):
         default=None,
         description="base url of the used provider. Must be compatible with OAI Batch API. Defaults to OAI base url",
     )
-    api_key: str | None = Field(
-        default=None,
-        description="API key for the used provider, uses OAI key from env variables by default",
+    api_key_name: str = Field(
+        default="OPENAI_API_KEY",
+        description="API key name for the used provider, uses OAI key from env variables by default",
     )
     template_messages: list[dict] | None = Field(
         default=None, description="messages template to use"
@@ -103,7 +103,7 @@ class Experiment(BaseModel):
         Returns:
             OpenAI: The client
         """
-        return OpenAI(api_key=self.api_key, base_url=self.base_url)
+        return OpenAI(api_key=os.getenv(self.api_key_name), base_url=self.base_url)
 
     def write_jsonl_input_file(self) -> None:
         """Create the input file
