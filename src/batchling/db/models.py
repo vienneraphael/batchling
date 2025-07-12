@@ -24,5 +24,5 @@ class Experiment(Base):
     response_format: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     input_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
     input_file_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    status_value: Mapped[str | None] = mapped_column(String, nullable=False)
+    status_value: Mapped[str] = mapped_column(String, nullable=False)
     batch_id: Mapped[str | None] = mapped_column(String, nullable=True)
