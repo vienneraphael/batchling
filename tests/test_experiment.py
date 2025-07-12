@@ -97,6 +97,7 @@ def test_delete(experiment: Experiment):
 
 
 def test_update(experiment: Experiment):
+    experiment.save()
     experiment.update(name="test 1 updated")
     with get_db() as db:
         updated_experiment = get_experiment(db=db, id=experiment.id)
