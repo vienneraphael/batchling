@@ -63,8 +63,9 @@ class Experiment(BaseModel):
         Raises:
             ValueError: If the input file path is not a .jsonl file
         """
-        if not value.endswith(".jsonl"):
-            raise ValueError("input_file_path must be a .jsonl file")
+        if isinstance(value, str):
+            if not value.endswith(".jsonl"):
+                raise ValueError("input_file_path must be a .jsonl file")
         return value
 
     @computed_field
