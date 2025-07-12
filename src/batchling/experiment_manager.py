@@ -28,7 +28,7 @@ class ExperimentManager(BaseModel):
 
     def retrieve(self, experiment_id: str) -> Experiment:
         with get_db() as db:
-            experiment = get_experiment(db=db, experiment_id=experiment_id)
+            experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             raise ValueError(f"Experiment with id: {experiment_id} not found")
         return Experiment.model_validate(experiment)
@@ -74,11 +74,11 @@ class ExperimentManager(BaseModel):
                 f"Can only update experiments with status: created. Found: {experiment.status.value}"
             )
         with get_db() as db:
-            updated_experiment = update_experiment(db=db, experiment_id=experiment_id, **kwargs)
+            updated_experiment = update_experiment(db=db, id=experiment_id, **kwargs)
         if updated_experiment is None:
             raise ValueError(f"Experiment with id: {experiment_id} not found")
         return Experiment.model_validate(updated_experiment)
 
     def delete_experiment(self, experiment_id: str) -> bool:
         with get_db() as db:
-            return delete_experiment(db=db, experiment_id=experiment_id)
+            return delete_experiment(db=db, id=experiment_id)

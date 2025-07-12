@@ -15,7 +15,7 @@ from pydantic import (
 )
 
 from batchling.batch_utils import write_input_batch_file
-from batchling.db.crud import update_experiment
+from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
 from batchling.status import ExperimentStatus
 
@@ -34,8 +34,6 @@ class Experiment(BaseModel):
         default=None,
         description="API key for the used provider, uses OAI key from env variables by default",
     )
-    tpm: int | None = Field(default=None, description="tpm of the experiment")
-    rpm: int | None = Field(default=None, description="rpm of the experiment")
     template_messages: list[dict] | None = Field(
         default=None, description="messages template to use"
     )
@@ -117,9 +115,7 @@ class Experiment(BaseModel):
             self.write_jsonl_input_file()
         self.status = ExperimentStatus.SETUP
         with get_db() as db:
-            update_experiment(
-                db=db, experiment_id=self.id, status=self.status, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, status=self.status, updated_at=datetime.now())
 
     def start(self) -> Batch:
         """Start the experiment
@@ -140,9 +136,7 @@ class Experiment(BaseModel):
         )
         self.status = ExperimentStatus.RUNNING
         with get_db() as db:
-            update_experiment(
-                db=db, experiment_id=self.id, status=self.status, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, status=self.status, updated_at=datetime.now())
         return self.batch
 
     def cancel(self) -> None:
@@ -156,9 +150,7 @@ class Experiment(BaseModel):
         self.client.batches.cancel(self.batch.id)
         self.status = ExperimentStatus.CANCELLED
         with get_db() as db:
-            update_experiment(
-                db=db, experiment_id=self.id, status=self.status, updated_at=datetime.now()
-            )
+            update_experiment(db=db, id=self.id, status=self.status, updated_at=datetime.now())
 
     def get_results(self) -> HttpxBinaryResponseContent:
         """Get the results of the experiment
@@ -167,3 +159,40 @@ class Experiment(BaseModel):
             HttpxBinaryResponseContent: The results
         """
         return self.client.files.content(self.batch.output_file_id)
+
+    def save(self):
+        if self.status != ExperimentStatus.CREATED:
+            raise ValueError(
+                f"Can only create an experiment in {ExperimentStatus.CREATED.value} status. Found: {self.status.value}"
+            )
+        with get_db() as db:
+            create_experiment(
+                db=db,
+                id=self.id,
+                model=self.model,
+                **self.model_dump(
+                    exclude={
+                        "id",
+                        "model",
+                        "created_at",
+                        "updated_at",
+                        "input_file",
+                        "batch",
+                        "client",
+                        "status",
+                    }
+                ),
+            )
+
+    def delete(self):
+        with get_db() as db:
+            delete_experiment(db=db, id=self.id)
+
+    def update(self, **kwargs):
+        if self.status != ExperimentStatus.CREATED:
+            raise ValueError(
+                f"Can only update an experiment in {ExperimentStatus.CREATED.value} status. Found: {self.status.value}"
+            )
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.save()
