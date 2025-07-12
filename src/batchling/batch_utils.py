@@ -123,10 +123,10 @@ def write_input_batch_file(
     if placeholders is None:
         placeholders = []
     batch_requests = []
-    for placeholder_dict in placeholders:
+    for i, placeholder_dict in enumerate(placeholders):
         clean_messages = replace_placeholders(messages=messages, placeholder_dict=placeholder_dict)
         batch_request = batch_create_chat_completion(
-            custom_id=custom_id,
+            custom_id=f"{custom_id}-sample-{i}",
             messages=clean_messages,
             model=model,
             response_format=response_format,
