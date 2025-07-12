@@ -138,7 +138,10 @@ class Experiment(BaseModel):
         )
 
     def setup(self) -> None:
-        """Setup the experiment
+        """Setup the experiment locally:
+        - write the local input file if it does not exist already
+        - update the experiment status to setup
+        - update the database status and updated_at in the local db
 
         Returns:
             None
