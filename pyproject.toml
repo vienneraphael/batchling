@@ -13,6 +13,9 @@ dependencies = [
     "sqlalchemy>=2.0.41",
 ]
 
+[project.urls]
+source = "https://github.com/vienneraphael/batchling"
+
 [dependency-groups]
 dev = [
     "ipykernel>=6.29.5",
