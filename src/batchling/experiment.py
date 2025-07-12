@@ -248,10 +248,14 @@ class Experiment(BaseModel):
                 self.client.files.delete(self.batch.output_file_id)
 
     def update(self, **kwargs):
+        """Update the experiment by updating the database
+
+        Returns:
+            None
+        """
         if self.status != "created":
             raise ValueError(
                 f"Can only update an experiment in created status. Found: {self.status}"
             )
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        self.save()
+        with get_db() as db:
+            update_experiment(db=db, id=self.id, **kwargs)
