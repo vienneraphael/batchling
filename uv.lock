@@ -51,7 +51,6 @@ dependencies = [
     { name = "httpx" },
     { name = "openai" },
     { name = "platformdirs" },
-    { name = "python-dotenv" },
     { name = "sqlalchemy" },
 ]
 
@@ -61,6 +60,7 @@ dev = [
     { name = "ipykernel" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "python-dotenv" },
     { name = "ruff" },
 ]
 
@@ -69,7 +69,6 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "openai", specifier = ">=1.90.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
-    { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "sqlalchemy", specifier = ">=2.0.41" },
 ]
 
@@ -79,6 +78,7 @@ dev = [
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pytest", specifier = ">=8.3.5" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "ruff", specifier = ">=0.11.5" },
 ]
 
