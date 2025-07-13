@@ -100,5 +100,5 @@ def test_get_experiments(db):
     )
     experiments = get_experiments(db=db)
     assert len(experiments) == 2
-    assert experiments[0].id == "experiment-test-5"
-    assert experiments[1].id == "experiment-test-6"
+    assert experiments[0].id == "experiment-test-6"
+    assert experiments[1].id == "experiment-test-5"
