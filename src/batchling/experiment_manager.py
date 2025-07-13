@@ -20,10 +20,27 @@ class ExperimentManager(BaseModel):
 
     @staticmethod
     def list_experiments(
-        order_by: str | None = "updated_at", ascending: bool = False
+        order_by: str | None = "updated_at",
+        ascending: bool = False,
+        limit: int | None = None,
+        offset: int | None = None,
+        filter_by: str | None = None,
+        filter_value: str | None = None,
+        starts_with_field: str | None = None,
+        starts_with: str | None = None,
     ) -> list[Experiment]:
         with get_db() as db:
-            experiments = get_experiments(db=db, order_by=order_by, ascending=ascending)
+            experiments = get_experiments(
+                db=db,
+                order_by=order_by,
+                ascending=ascending,
+                limit=limit,
+                offset=offset,
+                filter_by=filter_by,
+                filter_value=filter_value,
+                starts_with_field=starts_with_field,
+                starts_with=starts_with,
+            )
         return [Experiment.model_validate(experiment) for experiment in experiments]
 
     @staticmethod

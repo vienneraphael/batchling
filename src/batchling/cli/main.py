@@ -8,16 +8,12 @@ from rich.panel import Panel
 from rich.table import Table
 
 from batchling.cli.callbacks import order_by_callback
-from batchling.cli.completions import complete_order_by
+from batchling.cli.completions import complete_experiment_id, complete_order_by
 from batchling.db.session import init_db
 from batchling.experiment_manager import ExperimentManager
 
 app = typer.Typer(no_args_is_help=True)
-
-
-@app.callback()
-def callback():
-    init_db()
+init_db()
 
 
 @app.command(name="list")
@@ -69,7 +65,15 @@ def list_experiments(
 
 
 @app.command(name="get")
-def get_experiment(experiment_id: Annotated[str, typer.Argument(help="The id of the experiment")]):
+def get_experiment(
+    experiment_id: Annotated[
+        str,
+        typer.Argument(
+            help="The id of the experiment",
+            autocompletion=complete_experiment_id,
+        ),
+    ],
+):
     experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
     if experiment is None:
         typer.echo(f"Experiment with id: {experiment_id} not found")
