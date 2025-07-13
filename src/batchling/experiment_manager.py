@@ -18,22 +18,41 @@ class ExperimentManager(BaseModel):
     def experiments(self) -> list[Experiment]:
         return self.list_experiments()
 
+    @staticmethod
     def list_experiments(
-        self, order_by: str | None = "updated_at", ascending: bool = False
+        order_by: str | None = "updated_at",
+        ascending: bool = False,
+        limit: int | None = None,
+        offset: int | None = None,
+        filter_by: str | None = None,
+        filter_value: str | None = None,
+        starts_with_field: str | None = None,
+        starts_with: str | None = None,
     ) -> list[Experiment]:
         with get_db() as db:
-            experiments = get_experiments(db=db, order_by=order_by, ascending=ascending)
+            experiments = get_experiments(
+                db=db,
+                order_by=order_by,
+                ascending=ascending,
+                limit=limit,
+                offset=offset,
+                filter_by=filter_by,
+                filter_value=filter_value,
+                starts_with_field=starts_with_field,
+                starts_with=starts_with,
+            )
         return [Experiment.model_validate(experiment) for experiment in experiments]
 
-    def retrieve(self, experiment_id: str) -> Experiment | None:
+    @staticmethod
+    def retrieve(experiment_id: str) -> Experiment | None:
         with get_db() as db:
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             return None
         return Experiment.model_validate(experiment)
 
+    @staticmethod
     def start_experiment(
-        self,
         experiment_id: str,
         model: str,
         name: str,
@@ -42,11 +61,13 @@ class ExperimentManager(BaseModel):
         api_key_name: str = "OPENAI_API_KEY",
         template_messages: list[dict] | None = None,
         placeholders: list[dict] | None = None,
-        response_format: BaseModel | None = None,
+        response_format: BaseModel | dict | None = None,
         input_file_path: str | None = None,
     ) -> Experiment:
-        if self.retrieve(experiment_id=experiment_id) is not None:
+        if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
+        if isinstance(response_format, BaseModel):
+            response_format = response_format.model_dump()
         with get_db() as db:
             experiment = create_experiment(
                 db=db,
@@ -58,9 +79,7 @@ class ExperimentManager(BaseModel):
                 api_key_name=api_key_name,
                 template_messages=template_messages,
                 placeholders=placeholders,
-                response_format=response_format.model_dump()
-                if response_format is not None
-                else None,
+                response_format=response_format,
                 input_file_path=input_file_path,
                 input_file_id=None,
                 is_setup=False,
@@ -68,11 +87,17 @@ class ExperimentManager(BaseModel):
             )
         return Experiment.model_validate(experiment)
 
-    def update_experiment(self, experiment_id: str, **kwargs) -> Experiment:
-        experiment = self.retrieve(experiment_id=experiment_id)
+    @staticmethod
+    def update_experiment(experiment_id: str, **kwargs) -> Experiment:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
         return experiment.update(**kwargs)
 
-    def delete_experiment(self, experiment_id: str) -> bool:
-        experiment = self.retrieve(experiment_id=experiment_id)
+    @staticmethod
+    def delete_experiment(experiment_id: str) -> bool:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
         experiment.delete()
         return True
