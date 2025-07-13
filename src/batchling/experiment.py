@@ -243,9 +243,11 @@ class Experiment(BaseModel):
         if self.input_file_id:
             self.client.files.delete(self.input_file_id)
         if self.batch_id:
-            self.client.batches.delete(self.batch_id)
-            if self.batch.output_file_id:
-                self.client.files.delete(self.batch.output_file_id)
+            batch = self.batch
+            if batch.status == "in_progress":
+                self.client.batches.cancel(self.batch_id)
+            elif batch.status == "completed" and batch.output_file_id:
+                self.client.files.delete(batch.output_file_id)
 
     def update(self, **kwargs) -> "Experiment":
         """Update the experiment by updating the database
