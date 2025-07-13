@@ -109,6 +109,10 @@ def get_experiments(
     offset: int | None = None,
     order_by: str | None = "updated_at",
     ascending: bool = False,
+    filter_by: str | None = "id",
+    filter_value: str | None = None,
+    starts_with_field: str | None = None,
+    starts_with: str | None = None,
 ) -> list[Experiment]:
     """Get all experiments
 
@@ -124,14 +128,30 @@ def get_experiments(
         The field to order by
     ascending : bool
         Whether to order in ascending order (default is descending)
-
+    filter_by : str | None
+        The field to filter by
+    filter_value : str | None
+        The value to filter by
+    starts_with_field : str | None
+        The field to filter by starts with
+    starts_with : str | None
+        The value to filter by starts with
     Returns
     -------
     list[Experiment]
         The list of experiments
     """
     direction = asc if ascending else desc
-    stmt = select(Experiment).order_by(direction(order_by)).limit(limit).offset(offset)
+    stmt = select(Experiment)
+    if filter_by is not None and filter_value is not None:
+        stmt = stmt.where(getattr(Experiment, filter_by) == filter_value)
+    if starts_with_field is not None and starts_with is not None:
+        stmt = stmt.where(getattr(Experiment, starts_with_field).istartswith(starts_with))
+    stmt = stmt.order_by(direction(order_by))
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    if offset is not None:
+        stmt = stmt.offset(offset)
     return db.execute(stmt).scalars().all()
 
 
