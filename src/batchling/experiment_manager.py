@@ -66,6 +66,8 @@ class ExperimentManager(BaseModel):
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
+        if isinstance(response_format, BaseModel):
+            response_format = response_format.model_dump()
         with get_db() as db:
             experiment = create_experiment(
                 db=db,
