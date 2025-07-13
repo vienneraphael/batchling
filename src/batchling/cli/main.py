@@ -138,9 +138,23 @@ def create_experiment(
 
 @app.command(name="setup")
 def setup_experiment(
-    id: Annotated[str, typer.Option(default=..., help="The id of the experiment")],
+    id: Annotated[
+        str,
+        typer.Argument(
+            default=...,
+            help="The id of the experiment",
+            autocompletion=complete_experiment_id,
+        ),
+    ],
 ):
-    pass
+    experiment = ExperimentManager.retrieve(experiment_id=id)
+    if experiment.status != "created":
+        typer.echo(
+            f"Experiment with id: {id} is not in created status, current status: {experiment.status}"
+        )
+        raise typer.Exit(1)
+    experiment.setup()
+    print_experiment(experiment)
 
 
 @app.command(name="start")
