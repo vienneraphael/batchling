@@ -8,9 +8,15 @@ from rich.table import Table
 
 from batchling.cli.callbacks import order_by_callback
 from batchling.cli.completions import complete_order_by
+from batchling.db.session import init_db
 from batchling.experiment_manager import ExperimentManager
 
 app = typer.Typer(no_args_is_help=True)
+
+
+@app.callback()
+def callback():
+    init_db()
 
 
 @app.command(name="list")
