@@ -117,12 +117,12 @@ def create_experiment(
     ],
     input_file_path: Annotated[Path, typer.Option(default=..., help="The path to the input file")],
     response_format_path: Annotated[
-        Path, typer.Option(default=..., help="The path to the response format file")
-    ],
+        Path | None, typer.Option(help="The path to the response format file")
+    ] = None,
 ):
     template_messages = read_jsonl_file(template_messages_path)
     placeholders = read_jsonl_file(placeholders_path)
-    response_format = json.load(response_format_path.open())
+    response_format = json.load(response_format_path.open()) if response_format_path else None
     experiment = ExperimentManager.start_experiment(
         experiment_id=id,
         model=model,
@@ -141,13 +141,15 @@ def setup_experiment(
     id: Annotated[
         str,
         typer.Argument(
-            default=...,
             help="The id of the experiment",
             autocompletion=complete_experiment_id,
         ),
     ],
 ):
     experiment = ExperimentManager.retrieve(experiment_id=id)
+    if experiment is None:
+        typer.echo(f"Experiment with id: {id} not found")
+        raise typer.Exit(1)
     if experiment.status != "created":
         typer.echo(
             f"Experiment with id: {id} is not in created status, current status: {experiment.status}"
@@ -162,13 +164,15 @@ def start_experiment(
     id: Annotated[
         str,
         typer.Argument(
-            default=...,
             help="The id of the experiment",
             autocompletion=complete_experiment_id,
         ),
     ],
 ):
     experiment = ExperimentManager.retrieve(experiment_id=id)
+    if experiment is None:
+        typer.echo(f"Experiment with id: {id} not found")
+        raise typer.Exit(1)
     if experiment.status != "setup":
         typer.echo(
             f"Experiment with id: {id} is not in setup status, current status: {experiment.status}"
@@ -180,9 +184,50 @@ def start_experiment(
 
 @app.command(name="update")
 def update_experiment(
-    id: Annotated[str, typer.Option(default=..., help="The id of the experiment")],
+    ctx: typer.Context,
+    id: Annotated[
+        str,
+        typer.Argument(
+            help="The id of the experiment",
+            autocompletion=complete_experiment_id,
+        ),
+    ],
+    model: Annotated[str | None, typer.Option(help="Updated model name, if applicable")] = None,
+    name: Annotated[str | None, typer.Option(help="Updated name, if applicable")] = None,
+    description: Annotated[
+        str | None, typer.Option(help="Updated description, if applicable")
+    ] = None,
+    template_messages_path: Annotated[
+        Path | None, typer.Option(help="Updated template messages file, if applicable")
+    ] = None,
+    placeholders_path: Annotated[
+        Path | None, typer.Option(help="Updated placeholders file, if applicable")
+    ] = None,
+    input_file_path: Annotated[
+        Path | None, typer.Option(help="Updated input file, if applicable")
+    ] = None,
+    response_format_path: Annotated[
+        Path | None, typer.Option(help="Updated response format file, if applicable")
+    ] = None,
 ):
-    pass
+    fields_to_update = {
+        key: value for key, value in ctx.params.items() if value is not None and key != "id"
+    }
+    if "template_messages_path" in fields_to_update:
+        fields_to_update["template_messages"] = read_jsonl_file(
+            fields_to_update["template_messages_path"]
+        )
+        del fields_to_update["template_messages_path"]
+    if "placeholders_path" in fields_to_update:
+        fields_to_update["placeholders"] = read_jsonl_file(fields_to_update["placeholders_path"])
+        del fields_to_update["placeholders_path"]
+    if "response_format_path" in fields_to_update:
+        fields_to_update["response_format"] = json.load(
+            fields_to_update["response_format_path"].open()
+        )
+        del fields_to_update["response_format_path"]
+    experiment = ExperimentManager.update_experiment(experiment_id=id, **fields_to_update)
+    print_experiment(experiment)
 
 
 @app.command(name="delete")
