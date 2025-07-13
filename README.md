@@ -21,9 +21,40 @@
 
 batchling is a python library to abstract GenAI Batch API usage. It provides a simple interface to create, manage and run experiments on any OpenAI-compatible provider.
 
+## What is a Batch API?
+
+Batch APIs enable you to process large volumes of requests asynchronously (usually at 50% lower cost compared to real-time API calls). It's perfect for workloads that don't need immediate responses such as:
+
+- Running evaluations and data analysis
+- Classifying large datasets
+- Offline summarization
+- Synthetic data generation
+- Dataset processing and transformations
+- Structured Data Extraction
+
+Compared to using standard endpoints directly, Batch API offers:
+
+- Better cost efficiency: usually 50% cost discount compared to synchronous APIs
+- Higher rate limits: Substantially more headroom with separate rate limit pools
+- Large-scale support: Process thousands of requests per batch
+- Flexible completion: Best-effort completion within 24 hours with progress tracking
+
+## Why use batchling?
+
+Batch APIs that are OpenAI-compatible offer clear and simple functionality. However, some aspects of managing batches are not straightforward:
+
+- **File Management**: it's easy to get lost with tons of local files
+- **Error Handling**: it's not easy to retrieve and re-run batch failed samples automatically
+- **Structured Output Generation**: generating structured outputs with pydantic models in Batch APIs requires some tricks and is tiresome
+- **Templating Prompts**: it can get scrappy very quickly when you have to do prompt injection in multiple scenarios
+
+_batchling aims to solve these issues by providing a simple interface to create, manage and run experiments on any OpenAI-compatible provider._
+
+## Features
+
 Key features include:
 
-- **Fully Local Batch Management**: Store experiments locally in a sqlite database
+- **Fully Local Batch Management**: Store experiments locally in a sqlite database and manage them with a CLI
 - **Multi-provider support**: Support for any OpenAI batch API compatible provider (OpenAI, Groq, Gemini, etc.)
 - **Structured output generation**: Generate structured outputs with pydantic models in Batch APIs
 - **Error handling**: Easily retrieve and re-run batch failed samples
