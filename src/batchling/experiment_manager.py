@@ -79,9 +79,7 @@ class ExperimentManager(BaseModel):
                 api_key_name=api_key_name,
                 template_messages=template_messages,
                 placeholders=placeholders,
-                response_format=response_format.model_dump()
-                if response_format is not None
-                else None,
+                response_format=response_format,
                 input_file_path=input_file_path,
                 input_file_id=None,
                 is_setup=False,
