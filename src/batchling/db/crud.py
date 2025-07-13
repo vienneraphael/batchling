@@ -104,7 +104,10 @@ def get_experiment(db: Session, id: str) -> Experiment | None:
 
 
 def get_experiments(
-    db: Session, limit: int | None = None, offset: int | None = None
+    db: Session,
+    limit: int | None = None,
+    offset: int | None = None,
+    order_by: str | None = "updated_at",
 ) -> list[Experiment]:
     """Get all experiments
 
@@ -116,13 +119,16 @@ def get_experiments(
         The limit of the experiments
     offset : int
         The offset of the experiments
+    order_by : str | None
+        The field to order by
 
     Returns
     -------
     list[Experiment]
         The list of experiments
     """
-    stmt = select(Experiment).limit(limit).offset(offset)
+    field = getattr(Experiment, order_by) if order_by is not None else None
+    stmt = select(Experiment).order_by(field).limit(limit).offset(offset)
     return db.execute(stmt).scalars().all()
 
 
