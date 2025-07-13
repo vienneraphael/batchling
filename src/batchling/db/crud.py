@@ -132,8 +132,15 @@ def get_experiments(
     """
     field = getattr(Experiment, order_by) if order_by is not None else None
     direction = "asc" if ascending else "desc"
-    order_by_fn = getattr(field, direction)
-    stmt = select(Experiment).order_by(order_by_fn()).limit(limit).offset(offset)
+    if field is not None:
+        stmt = (
+            select(Experiment)
+            .order_by(getattr(field.amount, direction)())
+            .limit(limit)
+            .offset(offset)
+        )
+    else:
+        stmt = select(Experiment).limit(limit).offset(offset)
     return db.execute(stmt).scalars().all()
 
 
