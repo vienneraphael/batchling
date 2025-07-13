@@ -61,7 +61,7 @@ class ExperimentManager(BaseModel):
         api_key_name: str = "OPENAI_API_KEY",
         template_messages: list[dict] | None = None,
         placeholders: list[dict] | None = None,
-        response_format: BaseModel | None = None,
+        response_format: BaseModel | dict | None = None,
         input_file_path: str | None = None,
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
