@@ -35,10 +35,10 @@ class Experiment(BaseModel):
         description="API key name for the used provider, uses OAI key from env variables by default",
     )
     template_messages: list[dict] | None = Field(
-        default=None, description="messages template to use"
+        default=None, description="messages template to use", repr=False
     )
     placeholders: list[dict] | None = Field(
-        default=None, description="placeholders to map in the template messages"
+        default=None, description="placeholders to map in the template messages", repr=False
     )
     response_format: BaseModel | None = Field(default=None, description="response model to use")
     input_file_path: str | None = Field(default=None, description="input file path")
@@ -48,10 +48,13 @@ class Experiment(BaseModel):
     created_at: datetime | None = Field(default=None, description="created at")
     updated_at: datetime | None = Field(default=None, description="updated at")
 
+    def __repr__(self):
+        return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
+
     def model_post_init(self, context):
         init_db()
 
-    @computed_field
+    @computed_field(repr=False)
     @cached_property
     def client(self) -> OpenAI:
         """Get the client
@@ -61,14 +64,14 @@ class Experiment(BaseModel):
         """
         return OpenAI(api_key=os.getenv(self.api_key_name), base_url=self.base_url)
 
-    @computed_field
+    @computed_field(repr=False)
     @property
     def input_file(self) -> FileObject | None:
         if self.input_file_id is None:
             return None
         return self.client.files.retrieve(self.input_file_id)
 
-    @computed_field
+    @computed_field(repr=False)
     @property
     def batch(self) -> Batch | None:
         if self.batch_id is None:
