@@ -232,9 +232,20 @@ def update_experiment(
 
 @app.command(name="delete")
 def delete_experiment(
-    id: Annotated[str, typer.Option(default=..., help="The id of the experiment")],
+    id: Annotated[
+        str,
+        typer.Argument(
+            help="The id of the experiment",
+            autocompletion=complete_experiment_id,
+        ),
+    ],
 ):
-    pass
+    experiment = ExperimentManager.retrieve(experiment_id=id)
+    if experiment is None:
+        typer.echo(f"Experiment with id: {id} not found")
+        raise typer.Exit(1)
+    experiment.delete()
+    typer.echo(f"Experiment with id: {id} deleted")
 
 
 @app.command()
