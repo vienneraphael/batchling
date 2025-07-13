@@ -1,4 +1,5 @@
 import tomllib
+from datetime import datetime
 from typing import Annotated
 
 import typer
@@ -54,8 +55,8 @@ def list_experiments(
             experiment.name,
             experiment.description,
             experiment.status,
-            experiment.created_at,
-            experiment.updated_at,
+            datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
+            datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
         )
     console = Console()
     console.print(table)
