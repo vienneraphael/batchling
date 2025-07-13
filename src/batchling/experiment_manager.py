@@ -90,10 +90,14 @@ class ExperimentManager(BaseModel):
     @staticmethod
     def update_experiment(experiment_id: str, **kwargs) -> Experiment:
         experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
         return experiment.update(**kwargs)
 
     @staticmethod
     def delete_experiment(experiment_id: str) -> bool:
         experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
         experiment.delete()
         return True
