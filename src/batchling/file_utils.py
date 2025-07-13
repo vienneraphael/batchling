@@ -15,7 +15,7 @@ def write_jsonl_file(file_path: str, data: list[str]) -> None:
         f.write(data[-1])
 
 
-def read_jsonl_file(file_path: str | Path) -> list[str]:
+def read_jsonl_file(file_path: str | Path) -> list[dict]:
     """Read a JSONL file and return a list of strings-represented JSON objects
 
     Args:
