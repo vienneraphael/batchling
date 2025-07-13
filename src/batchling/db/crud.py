@@ -108,6 +108,7 @@ def get_experiments(
     limit: int | None = None,
     offset: int | None = None,
     order_by: str | None = "updated_at",
+    ascending: bool = False,
 ) -> list[Experiment]:
     """Get all experiments
 
@@ -121,6 +122,8 @@ def get_experiments(
         The offset of the experiments
     order_by : str | None
         The field to order by
+    ascending : bool
+        Whether to order in ascending order (default is descending)
 
     Returns
     -------
@@ -128,7 +131,9 @@ def get_experiments(
         The list of experiments
     """
     field = getattr(Experiment, order_by) if order_by is not None else None
-    stmt = select(Experiment).order_by(field).limit(limit).offset(offset)
+    direction = "asc" if ascending else "desc"
+    order_by_fn = getattr(field, direction)
+    stmt = select(Experiment).order_by(order_by_fn()).limit(limit).offset(offset)
     return db.execute(stmt).scalars().all()
 
 
