@@ -18,22 +18,24 @@ class ExperimentManager(BaseModel):
     def experiments(self) -> list[Experiment]:
         return self.list_experiments()
 
+    @staticmethod
     def list_experiments(
-        self, order_by: str | None = "updated_at", ascending: bool = False
+        order_by: str | None = "updated_at", ascending: bool = False
     ) -> list[Experiment]:
         with get_db() as db:
             experiments = get_experiments(db=db, order_by=order_by, ascending=ascending)
         return [Experiment.model_validate(experiment) for experiment in experiments]
 
-    def retrieve(self, experiment_id: str) -> Experiment | None:
+    @staticmethod
+    def retrieve(experiment_id: str) -> Experiment | None:
         with get_db() as db:
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             return None
         return Experiment.model_validate(experiment)
 
+    @staticmethod
     def start_experiment(
-        self,
         experiment_id: str,
         model: str,
         name: str,
@@ -45,7 +47,7 @@ class ExperimentManager(BaseModel):
         response_format: BaseModel | None = None,
         input_file_path: str | None = None,
     ) -> Experiment:
-        if self.retrieve(experiment_id=experiment_id) is not None:
+        if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
         with get_db() as db:
             experiment = create_experiment(
@@ -68,11 +70,13 @@ class ExperimentManager(BaseModel):
             )
         return Experiment.model_validate(experiment)
 
-    def update_experiment(self, experiment_id: str, **kwargs) -> Experiment:
-        experiment = self.retrieve(experiment_id=experiment_id)
+    @staticmethod
+    def update_experiment(experiment_id: str, **kwargs) -> Experiment:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
         return experiment.update(**kwargs)
 
-    def delete_experiment(self, experiment_id: str) -> bool:
-        experiment = self.retrieve(experiment_id=experiment_id)
+    @staticmethod
+    def delete_experiment(experiment_id: str) -> bool:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
         experiment.delete()
         return True
