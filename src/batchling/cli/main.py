@@ -4,6 +4,7 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from batchling.cli.callbacks import order_by_callback
@@ -65,6 +66,27 @@ def list_experiments(
         )
     console = Console()
     console.print(table)
+
+
+@app.command(name="get")
+def get_experiment(experiment_id: Annotated[str, typer.Argument(help="The id of the experiment")]):
+    experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    if experiment is None:
+        typer.echo(f"Experiment with id: {experiment_id} not found")
+        raise typer.Exit(1)
+    values = "\n".join(
+        [
+            f"ID: {experiment.id}",
+            f"Name: {experiment.name}",
+            f"Description: {experiment.description}",
+            f"Model: {experiment.model}",
+            f"Status: {experiment.status}",
+            f"Created At: {datetime.strftime(experiment.created_at, '%Y-%m-%d %H:%M:%S')}",
+            f"Updated At: {datetime.strftime(experiment.updated_at, '%Y-%m-%d %H:%M:%S')}",
+        ]
+    )
+    console = Console()
+    console.print(Panel(values, title=experiment.id, expand=False, highlight=True))
 
 
 @app.command()
