@@ -16,12 +16,12 @@ class ExperimentManager(BaseModel):
     @computed_field
     @property
     def experiments(self) -> list[Experiment]:
-        with get_db() as db:
-            experiments = get_experiments(db=db)
-        return [Experiment.model_validate(experiment) for experiment in experiments]
+        return self.list_experiments()
 
-    def list_experiments(self) -> list[Experiment]:
-        return self.experiments
+    def list_experiments(self, order_by: str | None = "updated_at") -> list[Experiment]:
+        with get_db() as db:
+            experiments = get_experiments(db=db, order_by=order_by)
+        return [Experiment.model_validate(experiment) for experiment in experiments]
 
     def retrieve(self, experiment_id: str) -> Experiment | None:
         with get_db() as db:
