@@ -53,8 +53,7 @@ def list_experiments(
         "Updated At",
         title="Experiments",
     )
-    em = ExperimentManager()
-    experiments = em.list_experiments(order_by=order_by, ascending=ascending)
+    experiments = ExperimentManager.list_experiments(order_by=order_by, ascending=ascending)
     for experiment in experiments:
         table.add_row(
             experiment.id,
