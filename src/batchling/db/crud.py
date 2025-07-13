@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import asc, delete, desc, select, update
 from sqlalchemy.orm import Session
 
 from batchling.db.models import Experiment
@@ -130,17 +130,8 @@ def get_experiments(
     list[Experiment]
         The list of experiments
     """
-    field = getattr(Experiment, order_by) if order_by is not None else None
-    direction = "asc" if ascending else "desc"
-    if field is not None:
-        stmt = (
-            select(Experiment)
-            .order_by(getattr(field.amount, direction)())
-            .limit(limit)
-            .offset(offset)
-        )
-    else:
-        stmt = select(Experiment).limit(limit).offset(offset)
+    direction = asc if ascending else desc
+    stmt = select(Experiment).order_by(direction(order_by)).limit(limit).offset(offset)
     return db.execute(stmt).scalars().all()
 
 
