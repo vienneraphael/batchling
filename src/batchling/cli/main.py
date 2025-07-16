@@ -10,7 +10,6 @@ from rich.panel import Panel
 from rich.table import Table
 
 from batchling.cli.callbacks import order_by_callback
-from batchling.cli.completions import complete_experiment_id, complete_order_by
 from batchling.db.session import init_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
@@ -45,7 +44,6 @@ def list_experiments(
             "--order-by",
             help="The field to order by",
             rich_help_panel="Ordering",
-            autocompletion=complete_order_by,
             callback=order_by_callback,
         ),
     ] = "created_at",
@@ -90,7 +88,6 @@ def get_experiment(
         str,
         typer.Argument(
             help="The id of the experiment",
-            autocompletion=complete_experiment_id,
         ),
     ],
 ):
@@ -142,7 +139,6 @@ def setup_experiment(
         str,
         typer.Argument(
             help="The id of the experiment",
-            autocompletion=complete_experiment_id,
         ),
     ],
 ):
@@ -165,7 +161,6 @@ def start_experiment(
         str,
         typer.Argument(
             help="The id of the experiment",
-            autocompletion=complete_experiment_id,
         ),
     ],
 ):
@@ -189,7 +184,6 @@ def update_experiment(
         str,
         typer.Argument(
             help="The id of the experiment",
-            autocompletion=complete_experiment_id,
         ),
     ],
     model: Annotated[str | None, typer.Option(help="Updated model name, if applicable")] = None,
@@ -236,7 +230,6 @@ def delete_experiment(
         str,
         typer.Argument(
             help="The id of the experiment",
-            autocompletion=complete_experiment_id,
         ),
     ],
 ):
