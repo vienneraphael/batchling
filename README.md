@@ -21,46 +21,49 @@
 
 batchling is a python library to abstract GenAI Batch API usage. It provides a simple interface to create, manage and run experiments on any OpenAI-compatible provider.
 
-## What is a Batch API?
+<details>
+
+**<summary>What is a Batch API?</summary>**
 
 Batch APIs enable you to process large volumes of requests asynchronously (usually at 50% lower cost compared to real-time API calls). It's perfect for workloads that don't need immediate responses such as:
 
-- Running evaluations and data analysis
+- Running mass offline evaluations
 - Classifying large datasets
+- Generating large-scale embeddings
 - Offline summarization
 - Synthetic data generation
-- Dataset processing and transformations
-- Structured Data Extraction
+- Structured data extraction (e.g. OCR)
 
 Compared to using standard endpoints directly, Batch API offers:
 
-- Better cost efficiency: usually 50% cost discount compared to synchronous APIs
-- Higher rate limits: Substantially more headroom with separate rate limit pools
-- Large-scale support: Process thousands of requests per batch
-- Flexible completion: Best-effort completion within 24 hours with progress tracking
+- **Better cost efficiency**: usually 50% cost discount compared to synchronous APIs
+- **Higher rate limits**: Substantially more headroom with separate rate limit pools
+- **Large-scale support**: Process thousands of requests per batch
+- **Flexible completion**: Best-effort completion within 24 hours with progress tracking, batches usually complete within an hour.
+
+</details>
 
 ## Why use batchling?
 
 Batch APIs that are OpenAI-compatible offer clear and simple functionality. However, some aspects of managing batches are not straightforward:
 
-- **File Management**: it's easy to get lost with tons of local files
-- **Error Handling**: it's not easy to retrieve and re-run batch failed samples automatically
-- **Structured Output Generation**: generating structured outputs with pydantic models in Batch APIs requires some tricks and is tiresome
-- **Templating Prompts**: it can get scrappy very quickly when you have to do prompt injection in multiple scenarios
-
-_batchling aims to solve these issues by providing a simple interface to create, manage and run experiments on any OpenAI-compatible provider._
+- **Multi-provider support**: Not all provider batch APIs are compatible with the OpenAI Batch API. If you were to compare major providers, you'd have to write duplicate code for each provider.
+- **File Management**: it's easy to get lost with tons of local files.
+- **Error Handling**: it's not easy to retrieve and re-run batch failed samples automatically.
+- **Structured Output Generation**: generating structured outputs with pydantic models in Batch APIs requires some tricks and is tiresome.
+- **Batch Creation**: By default, Batch APIs require you to build your own batch creation logic, which is prone to errors.
+- **Usage**: Most Batch APIs require you to write code to create, manage and run experiments.
 
 ## Features
 
 Key features include:
 
-- **Fully Local Batch Management**: Store experiments locally in a sqlite database and manage them with a CLI
-- **Multi-provider support**: Support for any OpenAI batch API compatible provider (OpenAI, Groq, Gemini, etc.)
-- **Structured output generation**: Generate structured outputs with pydantic models in Batch APIs
-- **Error handling**: Easily retrieve and re-run batch failed samples
-- **Batch visualization**: Visualize any experiment alone or in a group
-- **Ease of Use**: Messages and placeholders formatting for easy batching
-- **Smart RPM/TPM**: Automatically calculate the RPM/TPM of the experiments and manages batch splitting/merging
+- **Multi-provider support**: The goal behind batchling is to maintain a unified interface for all providers, allowing you to gain access to all models available.
+- **File Management**: batchling provides you with a local database to store your experiments and results.
+- **Error Handling**: batchling provides you with the right tools to re-run failed samples.
+- **Structured Output Generation**: batchling takes care of that for you: simply define your pydantic model and batchling will handle the rest.
+- **Batch Creation**: batchling implements a smart templating system to help you.
+- **Usage**: batchling provides a CLI to create, manage and run experiments with a single command, empowering all kind of users to run batch experimentations.
 
 ## Installation
 
