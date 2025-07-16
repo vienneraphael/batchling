@@ -178,7 +178,13 @@ class Experiment(BaseModel):
             metadata={"description": self.description},
         ).id
         with get_db() as db:
-            update_experiment(db=db, id=self.id, updated_at=datetime.now())
+            update_experiment(
+                db=db,
+                id=self.id,
+                updated_at=datetime.now(),
+                batch_id=self.batch_id,
+                input_file_id=self.input_file_id,
+            )
 
     def cancel(self) -> None:
         """Cancel the experiment:
