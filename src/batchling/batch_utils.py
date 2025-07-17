@@ -3,7 +3,6 @@ import json
 
 import httpx
 from openai import NOT_GIVEN, Client, DefaultHttpxClient
-from pydantic import BaseModel
 
 from batchling.file_utils import write_jsonl_file
 
@@ -38,7 +37,7 @@ def batch_create_chat_completion(
     custom_id: str,
     messages: list[dict],
     model: str,
-    response_format: BaseModel | None = None,
+    response_format: dict | None = None,
 ) -> str | None:
     """
     Captures the full API request (as built by the SDK) when calling the beta chat
@@ -61,7 +60,11 @@ def batch_create_chat_completion(
 
     try:
         _ = client.beta.chat.completions.parse(
-            messages=messages, model=model, response_format=response_format or NOT_GIVEN
+            messages=messages,
+            model=model,
+            response_format={"type": "json_schema", "json_schema": response_format}
+            if response_format
+            else NOT_GIVEN,
         )
     except Exception as e:
         captured: dict | None = capturing_transport.captured_request
@@ -106,7 +109,7 @@ def write_input_batch_file(
     custom_id: str,
     model: str,
     messages: list[dict],
-    response_format: BaseModel | None = None,
+    response_format: dict | None = None,
     placeholders: list[dict] | None = None,
 ) -> None:
     """Create the batch file
@@ -114,7 +117,7 @@ def write_input_batch_file(
     Args:
         model (str): The model to use
         messages (list[dict]): The messages to use
-        response_model (BaseModel | None): The response model for structured output generation, if any.
+        response_model (dict | None): The response model for structured output generation, if any.
         **kwargs: Additional arguments to pass to the batch_create_chat_completion function.
 
     Returns:
