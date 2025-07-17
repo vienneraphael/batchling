@@ -1,5 +1,6 @@
 import pytest
 from openai import DefaultHttpxClient
+from openai.lib._parsing._completions import type_to_response_format_param
 from pydantic import BaseModel
 
 from batchling.batch_utils import (
@@ -52,7 +53,7 @@ def test_request_capture():
     assert capturing_transport.captured_request is not None
 
 
-@pytest.mark.parametrize("response_format", [None, MockBaseModel])
+@pytest.mark.parametrize("response_format", [None, type_to_response_format_param(MockBaseModel)])
 def test_single_completion(messages, response_format):
     batch_request = batch_create_chat_completion(
         custom_id="test", messages=messages, model="gpt-4o-mini", response_format=response_format
