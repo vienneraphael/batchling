@@ -4,7 +4,7 @@ import pytest
 
 from batchling.db.crud import get_experiment
 from batchling.db.session import get_db
-from batchling.experiment import Experiment
+from batchling.experiment import Experiment, OpenAIExperiment
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def experiment(tmp_path):
         {"role": "user", "content": "{greeting}, how are you {name}?"},
     ]
     placeholders = [{"name": "John", "greeting": "Hello"}]
-    experiment = Experiment(
+    experiment = OpenAIExperiment(
         id="experiment-test-1",
         model="gpt-4o-mini",
         name="test 1",
@@ -41,7 +41,7 @@ def started_experiment(setup_experiment: Experiment, mock_client):
 
 def test_invalid_input_file_path():
     with pytest.raises(ValueError, match="input_file_path must be a .jsonl file"):
-        Experiment(
+        OpenAIExperiment(
             id="experiment-test-1",
             model="gpt-4o-mini",
             name="test 1",

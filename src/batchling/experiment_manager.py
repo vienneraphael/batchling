@@ -6,7 +6,7 @@ from batchling.db.crud import (
     get_experiments,
 )
 from batchling.db.session import get_db, init_db
-from batchling.experiment import Experiment
+from batchling.experiment import Experiment, OpenAIExperiment
 
 
 class ExperimentManager(BaseModel):
@@ -41,7 +41,9 @@ class ExperimentManager(BaseModel):
                 starts_with_field=starts_with_field,
                 starts_with=starts_with,
             )
-        return [Experiment.model_validate(experiment) for experiment in experiments]
+        return [
+            OpenAIExperiment.model_validate(experiment) for experiment in experiments
+        ]  # TODO: route experiment base_url to class
 
     @staticmethod
     def retrieve(experiment_id: str) -> Experiment | None:
@@ -49,7 +51,9 @@ class ExperimentManager(BaseModel):
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             return None
-        return Experiment.model_validate(experiment)
+        return OpenAIExperiment.model_validate(
+            experiment
+        )  # TODO: route experiment base_url to class
 
     @staticmethod
     def start_experiment(
@@ -85,7 +89,9 @@ class ExperimentManager(BaseModel):
                 is_setup=False,
                 batch_id=None,
             )
-        return Experiment.model_validate(experiment)
+        return OpenAIExperiment.model_validate(
+            experiment
+        )  # TODO: route experiment base_url to class
 
     @staticmethod
     def update_experiment(experiment_id: str, **kwargs) -> Experiment:

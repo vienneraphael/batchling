@@ -30,14 +30,16 @@ colorama==0.4.6 ; sys_platform == 'win32'
 comm==0.2.2
     # via ipykernel
 coverage==7.9.2
-debugpy==1.8.14
+debugpy==1.8.15
     # via ipykernel
 decorator==5.2.1
     # via ipython
-distlib==0.3.9
+distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via openai
+eval-type-backport==0.2.2
+    # via mistralai
 executing==2.2.0
     # via stack-data
 filelock==3.18.0
@@ -51,6 +53,7 @@ httpcore==1.0.9
 httpx==0.28.1
     # via
     #   batchling
+    #   mistralai
     #   openai
 identify==2.6.12
     # via pre-commit
@@ -83,6 +86,8 @@ matplotlib-inline==0.1.7
     #   ipython
 mdurl==0.1.2
     # via markdown-it-py
+mistralai==1.9.2
+    # via batchling
 nest-asyncio==1.6.0
     # via ipykernel
 nodeenv==1.9.1
@@ -116,7 +121,9 @@ pure-eval==0.2.3
 pycparser==2.22 ; implementation_name == 'pypy'
     # via cffi
 pydantic==2.11.7
-    # via openai
+    # via
+    #   mistralai
+    #   openai
 pydantic-core==2.33.2
     # via pydantic
 pygments==2.19.2
@@ -127,9 +134,11 @@ pygments==2.19.2
     #   rich
 pytest==8.4.1
 python-dateutil==2.9.0.post0
-    # via jupyter-client
+    # via
+    #   jupyter-client
+    #   mistralai
 python-dotenv==1.1.1
-pywin32==310 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
+pywin32==311 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
     # via jupyter-core
 pyyaml==6.0.2
     # via pre-commit
@@ -139,7 +148,7 @@ pyzmq==27.0.0
     #   jupyter-client
 rich==14.0.0
     # via typer
-ruff==0.12.1
+ruff==0.12.4
 shellingham==1.5.4
     # via typer
 six==1.17.0
@@ -178,7 +187,9 @@ typing-extensions==4.14.0
     #   typer
     #   typing-inspection
 typing-inspection==0.4.1
-    # via pydantic
+    # via
+    #   mistralai
+    #   pydantic
 virtualenv==20.31.2
     # via pre-commit
 wcwidth==0.2.13
