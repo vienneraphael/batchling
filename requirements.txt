@@ -30,11 +30,11 @@ colorama==0.4.6 ; sys_platform == 'win32'
 comm==0.2.2
     # via ipykernel
 coverage==7.9.2
-debugpy==1.8.14
+debugpy==1.8.15
     # via ipykernel
 decorator==5.2.1
     # via ipython
-distlib==0.3.9
+distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via openai
@@ -129,7 +129,7 @@ pytest==8.4.1
 python-dateutil==2.9.0.post0
     # via jupyter-client
 python-dotenv==1.1.1
-pywin32==310 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
+pywin32==311 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
     # via jupyter-core
 pyyaml==6.0.2
     # via pre-commit
@@ -139,7 +139,7 @@ pyzmq==27.0.0
     #   jupyter-client
 rich==14.0.0
     # via typer
-ruff==0.12.1
+ruff==0.12.4
 shellingham==1.5.4
     # via typer
 six==1.17.0

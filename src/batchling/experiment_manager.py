@@ -1,5 +1,6 @@
 from pydantic import BaseModel, computed_field
 
+from batchling.cls_utils import get_cls_from_url
 from batchling.db.crud import (
     create_experiment,
     get_experiment,
@@ -41,7 +42,10 @@ class ExperimentManager(BaseModel):
                 starts_with_field=starts_with_field,
                 starts_with=starts_with,
             )
-        return [Experiment.model_validate(experiment) for experiment in experiments]
+        return [
+            get_cls_from_url(experiment.base_url).model_validate(experiment)
+            for experiment in experiments
+        ]
 
     @staticmethod
     def retrieve(experiment_id: str) -> Experiment | None:
@@ -49,7 +53,7 @@ class ExperimentManager(BaseModel):
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             return None
-        return Experiment.model_validate(experiment)
+        return get_cls_from_url(experiment.base_url).model_validate(experiment)
 
     @staticmethod
     def start_experiment(
@@ -85,7 +89,7 @@ class ExperimentManager(BaseModel):
                 is_setup=False,
                 batch_id=None,
             )
-        return Experiment.model_validate(experiment)
+        return get_cls_from_url(experiment.base_url).model_validate(experiment)
 
     @staticmethod
     def update_experiment(experiment_id: str, **kwargs) -> Experiment:
