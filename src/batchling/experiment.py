@@ -1,4 +1,5 @@
 import os
+import typing as t
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
@@ -26,6 +27,10 @@ class Experiment(BaseModel, ABC):
     name: str = Field(description="name of the experiment")
     description: str | None = Field(default=None, description="description of the experiment")
     model: str = Field(description="model to use")
+    provider: t.Literal["mistral"] | None = Field(
+        default=None,
+        description="provider to use if not compatible with OAI Batch API",
+    )
     base_url: str | None = Field(
         default=None,
         description="base url of the used provider. Must be compatible with OAI Batch API. Defaults to OAI base url",
