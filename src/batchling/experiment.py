@@ -69,7 +69,7 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @cached_property
-    def client(self):
+    def client(self) -> OpenAI | Mistral:
         pass
 
     @abstractmethod
@@ -108,7 +108,6 @@ class Experiment(BaseModel, ABC):
     def delete_provider_batch(self):
         pass
 
-    @abstractmethod
     def write_jsonl_input_file(self) -> None:
         write_input_batch_file(
             file_path=self.input_file_path,
@@ -127,13 +126,13 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @property
-    def input_file(self):
+    def input_file(self) -> FileObject | RetrieveFileOut | None:
         pass
 
     @abstractmethod
     @computed_field(repr=False)
     @property
-    def batch(self):
+    def batch(self) -> Batch | BatchJobOut | None:
         pass
 
     @abstractmethod

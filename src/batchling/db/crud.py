@@ -13,6 +13,8 @@ def create_experiment(
     name: str | None = None,
     description: str | None = None,
     base_url: str | None = None,
+    provider: str | None = None,
+    endpoint: str | None = None,
     api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
@@ -38,6 +40,10 @@ def create_experiment(
         The model to use for the experiment
     base_url : str
         The base url of the experiment
+    provider : str
+        The provider of the experiment
+    endpoint : str
+        The endpoint of the experiment
     api_key_name : str
         The api key name of the experiment
     template_messages : list[dict]
@@ -54,7 +60,6 @@ def create_experiment(
         Whether the experiment is setup
     batch_id : str
         The id of the batch
-
     Returns
     -------
     Experiment
@@ -69,6 +74,8 @@ def create_experiment(
         updated_at=now,
         model=model,
         base_url=base_url,
+        provider=provider,
+        endpoint=endpoint,
         api_key_name=api_key_name,
         template_messages=template_messages,
         placeholders=placeholders,
