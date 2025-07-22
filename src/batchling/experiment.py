@@ -35,6 +35,10 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="base url of the used provider. Must be compatible with OAI Batch API. Defaults to OAI base url",
     )
+    endpoint: str | None = Field(
+        default="v1/chat/completions",
+        description="endpoint to use for the provider",
+    )
     api_key_name: str = Field(
         default="OPENAI_API_KEY",
         description="API key name for the used provider, uses OAI key from env variables by default",
