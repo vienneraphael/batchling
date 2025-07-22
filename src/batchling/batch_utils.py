@@ -2,7 +2,8 @@ import copy
 import json
 
 import httpx
-from openai import NOT_GIVEN, Client, DefaultHttpxClient
+from mistralai import Mistral
+from openai import NOT_GIVEN, DefaultHttpxClient, OpenAI
 
 from batchling.file_utils import write_jsonl_file
 
@@ -33,10 +34,64 @@ class CapturingTransport(httpx.BaseTransport):
             raise Exception("Aborted request in CapturingTransport to capture payload.")
 
 
+def get_custom_client(provider: str | None = None) -> tuple[OpenAI | Mistral, CapturingTransport]:
+    capturing_transport = CapturingTransport()
+
+    if provider == "mistral":
+        custom_http_client = httpx.Client(transport=capturing_transport)
+        client = Mistral(client=custom_http_client)
+    else:
+        custom_http_client = DefaultHttpxClient(transport=capturing_transport)
+        client = OpenAI(http_client=custom_http_client, max_retries=0)
+    return client, capturing_transport
+
+
+def mistral_request(
+    client: Mistral, messages: list[dict], model: str, response_format: dict | None
+):
+    client.chat.parse(
+        messages=messages,
+        model=model,
+        response_format={"type": "json_schema", "json_schema": response_format}
+        if response_format
+        else client.chat.complete(model=model, messages=messages),
+    )
+
+
+def openai_request(
+    client: OpenAI, messages: list[dict], model: str, response_format: dict | None
+) -> None:
+    client.beta.chat.completions.parse(
+        messages=messages,
+        model=model,
+        response_format={"type": "json_schema", "json_schema": response_format}
+        if response_format
+        else NOT_GIVEN,
+    )
+
+
+def make_request(
+    client: OpenAI | Mistral,
+    messages: list[dict],
+    model: str,
+    response_format: dict | None,
+) -> None:
+    if isinstance(client, Mistral):
+        mistral_request(
+            client=client, messages=messages, model=model, response_format=response_format
+        )
+    elif isinstance(client, OpenAI):
+        openai_request(
+            client=client, messages=messages, model=model, response_format=response_format
+        )
+    return
+
+
 def batch_create_chat_completion(
     custom_id: str,
     messages: list[dict],
     model: str,
+    provider: str | None = None,
     response_format: dict | None = None,
 ) -> str | None:
     """
@@ -52,19 +107,13 @@ def batch_create_chat_completion(
     If the SDK's validation fails (for example, due to an invalid response_format),
     no request is built and an error is raised.
     """
-    capturing_transport = CapturingTransport()
-
-    custom_http_client = DefaultHttpxClient(transport=capturing_transport)
-
-    client = Client(http_client=custom_http_client, max_retries=0)
-
+    client, capturing_transport = get_custom_client(provider=provider)
     try:
-        _ = client.beta.chat.completions.parse(
+        make_request(
+            client=client,
             messages=messages,
             model=model,
-            response_format={"type": "json_schema", "json_schema": response_format}
-            if response_format
-            else NOT_GIVEN,
+            response_format=response_format,
         )
     except Exception as e:
         captured: dict | None = capturing_transport.captured_request
@@ -111,6 +160,7 @@ def write_input_batch_file(
     messages: list[dict],
     response_format: dict | None = None,
     placeholders: list[dict] | None = None,
+    provider: str | None = None,
 ) -> None:
     """Create the batch file
 
@@ -133,6 +183,7 @@ def write_input_batch_file(
             messages=clean_messages,
             model=model,
             response_format=response_format,
+            provider=provider,
         )
         batch_requests.append(batch_request)
     write_jsonl_file(file_path=file_path, data=batch_requests)

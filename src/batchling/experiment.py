@@ -110,7 +110,15 @@ class Experiment(BaseModel, ABC):
 
     @abstractmethod
     def write_jsonl_input_file(self) -> None:
-        pass
+        write_input_batch_file(
+            file_path=self.input_file_path,
+            custom_id=self.id,
+            model=self.model,
+            messages=self.template_messages,
+            response_format=self.response_format,
+            placeholders=self.placeholders,
+            provider=self.provider,
+        )
 
     @abstractmethod
     def get_provider_results(self):
@@ -364,16 +372,6 @@ class OpenAIExperiment(Experiment):
         elif self.batch.status == "completed" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def write_jsonl_input_file(self) -> None:
-        write_input_batch_file(
-            file_path=self.input_file_path,
-            custom_id=self.id,
-            model=self.model,
-            messages=self.template_messages,
-            response_format=self.response_format,
-            placeholders=self.placeholders,
-        )
-
     def get_provider_results(self) -> HttpxBinaryResponseContent:
         return self.client.files.content(self.batch.output_file_id)
 
@@ -468,16 +466,6 @@ class MistralExperiment(Experiment):
             self.cancel_provider_batch()
         elif self.batch.status == "SUCCESS" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
-
-    def write_jsonl_input_file(self) -> None:
-        write_input_batch_file(
-            file_path=self.input_file_path,
-            custom_id=self.id,
-            model=self.model,
-            messages=self.template_messages,
-            response_format=self.response_format,
-            placeholders=self.placeholders,
-        )
 
     def get_provider_results(self) -> Response:
         return self.client.files.download(self.batch.output_file)
