@@ -82,8 +82,8 @@ class GeminiExperiment(Experiment):
             ),
         ).name
 
-    def delete_provider_file(self, file_id: str):
-        self.client.files.delete(name=file_id)
+    def delete_provider_file(self):
+        self.client.files.delete(name=self.input_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batches.create(

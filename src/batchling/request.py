@@ -73,10 +73,21 @@ class GeminiMessage(BaseModel):
 
 class GeminiBody(Body):
     system_instructions: GeminiMessage | None = None
-    contents: list[GeminiMessage]
+    messages: list[GeminiMessage] = Field(alias="contents")
     config: GeminiConfig | None = None
 
 
 class GeminiRequest(Request):
     id: str = Field(alias="key")
-    request: GeminiBody
+    body: GeminiBody = Field(alias="request")
+
+
+class AnthropicBody(Body):
+    model: str
+    max_tokens: int | None = None
+    messages: list[Message]
+    response_format: dict | None = None
+
+
+class AnthropicRequest(Request):
+    body: AnthropicBody = Field(alias="params")

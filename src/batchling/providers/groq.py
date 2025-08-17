@@ -74,8 +74,8 @@ class GroqExperiment(Experiment):
     def create_provider_file(self) -> str:
         return self.client.files.create(file=open(self.input_file_path, "rb"), purpose="batch").id
 
-    def delete_provider_file(self, file_id: str):
-        self.client.files.delete(file_id=file_id)
+    def delete_provider_file(self):
+        self.client.files.delete(file_id=self.input_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batches.create(

@@ -79,8 +79,8 @@ class MistralExperiment(Experiment):
             purpose="batch",
         ).id
 
-    def delete_provider_file(self, file_id: str):
-        self.client.files.delete(file_id=file_id)
+    def delete_provider_file(self):
+        self.client.files.delete(file_id=self.input_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batch.jobs.create(

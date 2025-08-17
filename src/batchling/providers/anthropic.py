@@ -1,3 +1,4 @@
+import json
 import os
 import typing as t
 from functools import cached_property
@@ -5,15 +6,16 @@ from functools import cached_property
 from anthropic import Anthropic
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
 from anthropic.types.messages import MessageBatch
-from anthropic.types.messages.batch_create_params import Request as AnthropicRequest
+from anthropic.types.messages.batch_create_params import Request
 from pydantic import Field, computed_field
 
 from batchling.experiment import Experiment
+from batchling.request import AnthropicBody, AnthropicRequest
 
 
 class AnthropicExperiment(Experiment):
-    body_cls: t.Type[MessageCreateParamsNonStreaming] = Field(
-        default=MessageCreateParamsNonStreaming, description="body class to use", init=False
+    body_cls: t.Type[AnthropicBody] = Field(
+        default=AnthropicBody, description="body class to use", init=False
     )
     request_cls: t.Type[AnthropicRequest] = Field(
         default=AnthropicRequest, description="request class to use", init=False
@@ -30,15 +32,17 @@ class AnthropicExperiment(Experiment):
         return Anthropic(api_key=os.getenv(self.api_key_name))
 
     def retrieve_provider_file(self):
-        return None
+        return self.input_file_path
 
     def retrieve_provider_batch(self):
         return self.client.messages.batches.retrieve(message_batch_id=self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> None:
-        return None
+    def input_file(self) -> str | None:
+        if self.input_file_id is None:
+            return None
+        return self.input_file_path
 
     @computed_field
     @property
@@ -59,20 +63,24 @@ class AnthropicExperiment(Experiment):
         return self.batch.processing_status
 
     def create_provider_file(self) -> str:
-        return ""
+        return self.input_file_path
 
-    def delete_provider_file(self, file_id: str):
-        return None
+    def delete_provider_file(self):
+        pass
 
     def create_provider_batch(self) -> str:
+        with open(self.input_file_path, "r") as f:
+            data = json.load(f)
         return self.client.messages.batches.create(
             requests=[
-                AnthropicRequest(
-                    custom_id=f"{self.id}-sample-xxx",
-                    body=MessageCreateParamsNonStreaming(
-                        model=self.model, max_tokens=1024, messages=[]
+                Request(
+                    custom_id=request["custom_id"],
+                    params=MessageCreateParamsNonStreaming(
+                        model=self.model,
+                        messages=request["params"]["messages"],
                     ),
                 )
+                for request in data
             ]
         ).id
 

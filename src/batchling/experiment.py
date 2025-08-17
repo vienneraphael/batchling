@@ -139,7 +139,7 @@ class Experiment(BaseModel, ABC):
                     "url": self.endpoint,
                 }
             )
-            batch_requests.append(batch_request.model_dump_json())
+            batch_requests.append(batch_request.model_dump_json(by_alias=True))
         write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
 
     @abstractmethod
