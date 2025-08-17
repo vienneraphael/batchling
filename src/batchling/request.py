@@ -46,3 +46,12 @@ class GroqRequest(Request):
     method: t.Literal["POST"] = Field(default="POST", init=False)
     url: str
     body: GroqBody
+
+
+class TogetherBody(Body):
+    model: str
+    response_format: dict | None = None
+
+
+class TogetherRequest(Request):
+    body: TogetherBody
