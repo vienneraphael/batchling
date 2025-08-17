@@ -14,7 +14,7 @@ def create_experiment(
     description: str | None = None,
     base_url: str | None = None,
     provider: str | None = None,
-    endpoint: str | None = None,
+    endpoint: str | None = "v1/chat/completions",
     api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
