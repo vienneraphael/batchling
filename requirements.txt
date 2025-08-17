@@ -9,8 +9,11 @@ aiosignal==1.4.0
     # via aiohttp
 annotated-types==0.7.0
     # via pydantic
+anthropic==0.64.0
+    # via batchling
 anyio==4.9.0
     # via
+    #   anthropic
     #   google-genai
     #   groq
     #   httpx
@@ -55,6 +58,7 @@ distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via
+    #   anthropic
     #   groq
     #   openai
 eval-type-backport==0.2.2
@@ -85,6 +89,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via
+    #   anthropic
     #   batchling
     #   google-genai
     #   groq
@@ -108,7 +113,9 @@ ipython-pygments-lexers==1.1.1
 jedi==0.19.2
     # via ipython
 jiter==0.10.0
-    # via openai
+    # via
+    #   anthropic
+    #   openai
 jupyter-client==8.6.3
     # via ipykernel
 jupyter-core==5.8.1
@@ -177,6 +184,7 @@ pycparser==2.22 ; implementation_name == 'pypy'
     # via cffi
 pydantic==2.11.7
     # via
+    #   anthropic
     #   google-genai
     #   groq
     #   mistralai
@@ -221,6 +229,7 @@ six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
     # via
+    #   anthropic
     #   anyio
     #   groq
     #   openai
@@ -257,6 +266,7 @@ typer==0.15.3
 typing-extensions==4.14.0
     # via
     #   aiosignal
+    #   anthropic
     #   anyio
     #   google-genai
     #   groq
