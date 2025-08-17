@@ -1,10 +1,11 @@
+import json
 import os
 import typing as t
 from functools import cached_property
 
 from groq import Groq
 from groq.resources.batches import BatchRetrieveResponse
-from groq.resources.files import BinaryAPIResponse, FileInfoResponse
+from groq.resources.files import FileInfoResponse
 from pydantic import Field, computed_field
 
 from batchling.experiment import Experiment
@@ -104,5 +105,7 @@ class GroqExperiment(Experiment):
         elif self.batch.status == "completed" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def get_provider_results(self) -> BinaryAPIResponse:
-        return self.client.files.content(file_id=self.batch.output_file_id)
+    def get_provider_results(self) -> list[dict]:
+        output = self.client.files.content(file_id=self.batch.output_file_id).json()
+        json.dump(obj=output, fp=open(self.output_file_path, "w"))
+        return output

@@ -3,7 +3,6 @@ import typing as t
 from functools import cached_property
 
 from openai import OpenAI
-from openai._legacy_response import HttpxBinaryResponseContent
 from openai.types.batch import Batch
 from openai.types.file_object import FileObject
 from pydantic import Field, computed_field
@@ -103,5 +102,5 @@ class OpenAIExperiment(Experiment):
         elif self.batch.status == "completed" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def get_provider_results(self) -> HttpxBinaryResponseContent:
-        return self.client.files.content(file_id=self.batch.output_file_id)
+    def get_provider_results(self) -> list[dict]:
+        return self.client.files.content(file_id=self.batch.output_file_id).json()
