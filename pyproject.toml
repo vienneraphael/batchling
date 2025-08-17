@@ -6,6 +6,7 @@ authors = [{ name = "Raphael Vienne", email = "raphael.vienne@live.fr" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
+    "groq>=0.31.0",
     "httpx>=0.28.1",
     "mistralai>=1.9.2",
     "openai>=1.90.0",

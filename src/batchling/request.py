@@ -35,3 +35,14 @@ class OpenAIRequest(Request):
     method: t.Literal["POST"] = Field(default="POST", init=False)
     url: str
     body: OpenAIBody
+
+
+class GroqBody(Body):
+    model: str
+    response_format: dict | None = None
+
+
+class GroqRequest(Request):
+    method: t.Literal["POST"] = Field(default="POST", init=False)
+    url: str
+    body: GroqBody
