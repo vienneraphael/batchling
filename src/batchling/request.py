@@ -55,3 +55,28 @@ class TogetherBody(Body):
 
 class TogetherRequest(Request):
     body: TogetherBody
+
+
+class GeminiPart(BaseModel):
+    text: str
+
+
+class GeminiConfig(BaseModel):
+    response_mime_type: str
+    response_schema: dict | None = None
+
+
+class GeminiMessage(BaseModel):
+    role: t.Literal["user", "assistant"] | None = None
+    parts: list[GeminiPart]
+
+
+class GeminiBody(Body):
+    system_instructions: GeminiMessage | None = None
+    contents: list[GeminiMessage]
+    config: GeminiConfig | None = None
+
+
+class GeminiRequest(Request):
+    id: str = Field(alias="key")
+    request: GeminiBody
