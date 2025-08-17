@@ -12,7 +12,8 @@ dependencies = [
     "openai>=1.90.0",
     "platformdirs>=4.3.8",
     "sqlalchemy>=2.0.41",
-    "typer>=0.16.0",
+    "together>=1.5.25",
+    "typer>=0.15.3",
 ]
 
 [project.scripts]

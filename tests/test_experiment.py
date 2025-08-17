@@ -4,7 +4,8 @@ import pytest
 
 from batchling.db.crud import get_experiment
 from batchling.db.session import get_db
-from batchling.experiment import Experiment, OpenAIExperiment
+from batchling.experiment import Experiment
+from batchling.providers.openai import OpenAIExperiment
 
 
 @pytest.fixture
