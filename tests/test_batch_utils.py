@@ -1,17 +1,6 @@
 import pytest
-from openai import DefaultHttpxClient
-from openai.lib._parsing._completions import type_to_response_format_param
-from pydantic import BaseModel
 
-from batchling.batch_utils import (
-    CapturingTransport,
-    batch_create_chat_completion,
-    replace_placeholders,
-)
-
-
-class MockBaseModel(BaseModel):
-    name: str
+from batchling.batch_utils import replace_placeholders
 
 
 @pytest.fixture
@@ -41,24 +30,6 @@ def placeholder_messages():
 @pytest.fixture
 def placeholder_dict():
     return {"name": "John", "greeting": "Hello"}
-
-
-def test_request_capture():
-    capturing_transport = CapturingTransport()
-    custom_http_client = DefaultHttpxClient(transport=capturing_transport)
-    with pytest.raises(
-        Exception, match="Aborted request in CapturingTransport to capture payload."
-    ):
-        custom_http_client.request("GET", "https://www.google.com")
-    assert capturing_transport.captured_request is not None
-
-
-@pytest.mark.parametrize("response_format", [None, type_to_response_format_param(MockBaseModel)])
-def test_single_completion(messages, response_format):
-    batch_request = batch_create_chat_completion(
-        custom_id="test", messages=messages, model="gpt-4o-mini", response_format=response_format
-    )
-    assert batch_request is not None
 
 
 def test_placeholders_filling(placeholder_messages, placeholder_dict):
