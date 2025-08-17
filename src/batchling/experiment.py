@@ -1,8 +1,12 @@
 import os
+import typing as t
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
+from httpx import Response
+from mistralai import Mistral
+from mistralai.models import BatchJobOut, RetrieveFileOut
 from openai import OpenAI
 from openai._legacy_response import HttpxBinaryResponseContent
 from openai.types.batch import Batch
@@ -15,9 +19,18 @@ from pydantic import (
     field_validator,
 )
 
-from batchling.batch_utils import write_input_batch_file
+from batchling.batch_utils import replace_placeholders
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
+from batchling.file_utils import write_jsonl_file
+from batchling.request import (
+    Body,
+    MistralBody,
+    MistralRequest,
+    OpenAIBody,
+    OpenAIRequest,
+    Request,
+)
 
 
 class Experiment(BaseModel, ABC):
@@ -26,9 +39,21 @@ class Experiment(BaseModel, ABC):
     name: str = Field(description="name of the experiment")
     description: str | None = Field(default=None, description="description of the experiment")
     model: str = Field(description="model to use")
+    provider: t.Literal["mistral"] | None = Field(
+        default=None,
+        description="provider to use if not compatible with OAI Batch API",
+    )
+    body_cls: t.Type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
+    request_cls: t.Type[Request] = Field(
+        default=OpenAIRequest, description="request class to use", init=False
+    )
     base_url: str | None = Field(
         default=None,
         description="base url of the used provider. Must be compatible with OAI Batch API. Defaults to OAI base url",
+    )
+    endpoint: str | None = Field(
+        default="v1/chat/completions",
+        description="endpoint to use for the provider",
     )
     api_key_name: str = Field(
         default="OPENAI_API_KEY",
@@ -57,7 +82,7 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @cached_property
-    def client(self) -> OpenAI:
+    def client(self) -> OpenAI | Mistral:
         pass
 
     @abstractmethod
@@ -96,38 +121,54 @@ class Experiment(BaseModel, ABC):
     def delete_provider_batch(self):
         pass
 
+    def write_input_batch_file(self) -> None:
+        if self.placeholders is None:
+            self.placeholders = []
+        batch_requests = []
+        for i, placeholder_dict in enumerate(self.placeholders):
+            clean_messages = replace_placeholders(
+                messages=self.template_messages, placeholder_dict=placeholder_dict
+            )
+            batch_request: Request = self.request_cls.model_validate(
+                {
+                    "custom_id": f"{self.id}-sample-{i}",
+                    "body": self.body_cls.model_validate(
+                        {
+                            "model": self.model,
+                            "messages": clean_messages,
+                            "response_format": self.response_format,
+                        }
+                    ),
+                    "method": "POST",
+                    "url": self.endpoint,
+                }
+            )
+            batch_requests.append(batch_request.model_dump_json())
+        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
+
     @abstractmethod
-    def write_jsonl_input_file(self) -> None:
+    def get_provider_results(self):
         pass
 
     @abstractmethod
-    def get_provider_results(self) -> HttpxBinaryResponseContent:
+    @computed_field(repr=False)
+    @property
+    def input_file(self) -> FileObject | RetrieveFileOut | None:
         pass
 
+    @abstractmethod
     @computed_field(repr=False)
     @property
-    def input_file(self) -> FileObject | None:
-        if self.input_file_id is None:
-            return None
-        return self.retrieve_provider_file()
+    def batch(self) -> Batch | BatchJobOut | None:
+        pass
 
-    @computed_field(repr=False)
-    @property
-    def batch(self) -> Batch | None:
-        if self.batch_id is None:
-            return None
-        return self.retrieve_provider_batch()
-
+    @abstractmethod
     @computed_field
     @property
     def status(
         self,
     ) -> str:
-        if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
-            return "created"
-        return self.batch.status
+        pass
 
     @field_validator("created_at", "updated_at")
     def set_datetime(cls, value: datetime | None):
@@ -152,7 +193,7 @@ class Experiment(BaseModel, ABC):
         if self.status != "created":
             raise ValueError(f"Experiment in status {self.status} is not in created status")
         if not os.path.exists(self.input_file_path):
-            self.write_jsonl_input_file()
+            self.write_input_batch_file()
         self.is_setup = True
         with get_db() as db:
             update_experiment(db=db, id=self.id, is_setup=self.is_setup, updated_at=datetime.now())
@@ -221,6 +262,8 @@ class Experiment(BaseModel, ABC):
                         "batch",
                         "client",
                         "status",
+                        "body_cls",
+                        "request_cls",
                     }
                 ),
             )
@@ -274,6 +317,13 @@ class Experiment(BaseModel, ABC):
 
 
 class OpenAIExperiment(Experiment):
+    body_cls: t.Type[OpenAIBody] = Field(
+        default=OpenAIBody, description="body class to use", init=False
+    )
+    request_cls: t.Type[OpenAIRequest] = Field(
+        default=OpenAIRequest, description="request class to use", init=False
+    )
+
     @computed_field(repr=False)
     @cached_property
     def client(self) -> OpenAI:
@@ -290,6 +340,42 @@ class OpenAIExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.batches.retrieve(self.batch_id)
 
+    @computed_field
+    @property
+    def input_file(self) -> FileObject | None:
+        if self.input_file_id is None:
+            return None
+        return self.retrieve_provider_file()
+
+    @computed_field
+    @property
+    def batch(self) -> Batch | None:
+        if self.batch_id is None:
+            return None
+        return self.retrieve_provider_batch()
+
+    @computed_field
+    @property
+    def status(
+        self,
+    ) -> t.Literal[
+        "setup",
+        "created",
+        "validating",
+        "failed",
+        "in_progress",
+        "finalizing",
+        "completed",
+        "expired",
+        "cancelling",
+        "cancelled",
+    ]:
+        if self.batch_id is None:
+            if self.is_setup:
+                return "setup"
+            return "created"
+        return self.batch.status
+
     def create_provider_file(self) -> str:
         return self.client.files.create(file=open(self.input_file_path, "rb"), purpose="batch").id
 
@@ -299,7 +385,7 @@ class OpenAIExperiment(Experiment):
     def create_provider_batch(self) -> str:
         return self.client.batches.create(
             input_file_id=self.input_file_id,
-            endpoint="/v1/chat/completions",
+            endpoint=self.endpoint,
             completion_window="24h",
             metadata={"description": self.description},
         ).id
@@ -321,15 +407,107 @@ class OpenAIExperiment(Experiment):
         elif self.batch.status == "completed" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def write_jsonl_input_file(self) -> None:
-        write_input_batch_file(
-            file_path=self.input_file_path,
-            custom_id=self.id,
-            model=self.model,
-            messages=self.template_messages,
-            response_format=self.response_format,
-            placeholders=self.placeholders,
-        )
-
     def get_provider_results(self) -> HttpxBinaryResponseContent:
         return self.client.files.content(self.batch.output_file_id)
+
+
+class MistralExperiment(Experiment):
+    body_cls: t.Type[MistralBody] = Field(
+        default=MistralBody, description="body class to use", init=False
+    )
+    request_cls: t.Type[MistralRequest] = Field(
+        default=MistralRequest, description="request class to use", init=False
+    )
+
+    @computed_field(repr=False)
+    @cached_property
+    def client(self) -> Mistral:
+        """Get the client
+
+        Returns:
+            Mistral: The client
+        """
+        return Mistral(api_key=os.getenv(self.api_key_name))
+
+    def retrieve_provider_file(self):
+        return self.client.files.retrieve(file_id=self.input_file_id)
+
+    def retrieve_provider_batch(self):
+        return self.client.batch.jobs.get(job_id=self.batch_id)
+
+    @computed_field
+    @property
+    def input_file(self) -> RetrieveFileOut | None:
+        if self.input_file_id is None:
+            return None
+        return self.retrieve_provider_file()
+
+    @computed_field
+    @property
+    def batch(self) -> BatchJobOut | None:
+        if self.batch_id is None:
+            return None
+        return self.retrieve_provider_batch()
+
+    @computed_field
+    @property
+    def status(
+        self,
+    ) -> t.Literal[
+        "setup",
+        "created",
+        "QUEUED",
+        "RUNNING",
+        "SUCCESS",
+        "FAILED",
+        "TIMEOUT_EXCEEDED",
+        "CANCELLATION_REQUESTED",
+        "CANCELLED",
+    ]:
+        if self.batch_id is None:
+            if self.is_setup:
+                return "setup"
+            return "created"
+        return self.batch.status
+
+    def create_provider_file(self) -> str:
+        return self.client.files.upload(
+            file={
+                "file_name": self.input_file_path.split("/")[-1],
+                "content": open(self.input_file_path, "rb"),
+            },
+            purpose="batch",
+        ).id
+
+    def delete_provider_file(self, file_id: str):
+        self.client.files.delete(file_id=file_id)
+
+    def create_provider_batch(self) -> str:
+        return self.client.batch.jobs.create(
+            input_files=[self.input_file_id],
+            endpoint=self.endpoint,
+            model=self.model,
+            metadata={"description": self.description},
+        ).id
+
+    def raise_not_in_running_status(self):
+        if self.status not in ["QUEUED", "RUNNING"]:
+            raise ValueError(
+                f"Experiment in status {self.status} is not in QUEUED or RUNNING status"
+            )
+
+    def raise_not_in_completed_status(self):
+        if self.status != "SUCCESS":
+            raise ValueError(f"Experiment in status {self.status} is not in SUCCESS status")
+
+    def cancel_provider_batch(self):
+        self.client.batch.jobs.cancel(job_id=self.batch_id)
+
+    def delete_provider_batch(self):
+        if self.batch.status in ["QUEUED", "RUNNING"]:
+            self.cancel_provider_batch()
+        elif self.batch.status == "SUCCESS" and self.batch.output_file_id:
+            self.delete_provider_file(file_id=self.batch.output_file_id)
+
+    def get_provider_results(self) -> Response:
+        return self.client.files.download(self.batch.output_file)
