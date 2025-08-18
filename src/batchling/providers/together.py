@@ -1,3 +1,4 @@
+import json
 import os
 import typing as t
 from functools import cached_property
@@ -5,7 +6,7 @@ from functools import cached_property
 from pydantic import Field, computed_field
 from together import Together
 from together.resources.batch import BatchJob
-from together.resources.files import FileObject, FileResponse
+from together.resources.files import FileResponse
 
 from batchling.experiment import Experiment
 from batchling.request import TogetherBody, TogetherRequest
@@ -100,5 +101,8 @@ class TogetherExperiment(Experiment):
         elif self.batch.status == "COMPLETED" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def get_provider_results(self) -> FileObject:
-        return self.client.files.retrieve_content(id=self.batch.output_file_id)
+    def get_provider_results(self) -> list[dict]:
+        self.client.files.retrieve_content(
+            id=self.batch.output_file_id, output=self.output_file_path
+        )
+        return json.load(open(self.output_file_path, "r"))

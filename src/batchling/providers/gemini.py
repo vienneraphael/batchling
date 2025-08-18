@@ -1,3 +1,4 @@
+import json
 import os
 import typing as t
 from functools import cached_property
@@ -113,5 +114,7 @@ class GeminiExperiment(Experiment):
         elif self.batch.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def get_provider_results(self) -> bytes:
-        return self.client.files.download(file=self.batch.dest.file_name)
+    def get_provider_results(self) -> list[dict]:
+        output = json.loads(self.client.files.download(file=self.batch.dest.file_name))
+        json.dump(obj=output, fp=open(self.output_file_path, "w"))
+        return output

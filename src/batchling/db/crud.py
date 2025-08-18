@@ -20,6 +20,7 @@ def create_experiment(
     placeholders: list[dict] | None = None,
     response_format: dict | None = None,
     input_file_path: str | None = None,
+    output_file_path: str = "results.jsonl",
     input_file_id: str | None = None,
     is_setup: bool = False,
     batch_id: str | None = None,
@@ -54,6 +55,8 @@ def create_experiment(
         The response format of the experiment
     input_file_path : str
         The path to the input file
+    output_file_path : str
+        The path to the output file
     input_file_id : str
         The id of the input file
     is_setup : bool
@@ -81,6 +84,7 @@ def create_experiment(
         placeholders=placeholders,
         response_format=response_format,
         input_file_path=input_file_path,
+        output_file_path=output_file_path,
         input_file_id=input_file_id,
         is_setup=is_setup,
         batch_id=batch_id,

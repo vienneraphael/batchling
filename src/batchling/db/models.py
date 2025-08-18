@@ -26,6 +26,7 @@ class Experiment(Base):
     placeholders: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     response_format: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     input_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    output_file_path: Mapped[str] = mapped_column(String, nullable=False)
     input_file_id: Mapped[str | None] = mapped_column(String, nullable=True)
     is_setup: Mapped[bool] = mapped_column(Boolean, nullable=False)
     batch_id: Mapped[str | None] = mapped_column(String, nullable=True)

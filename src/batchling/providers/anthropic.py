@@ -102,7 +102,9 @@ class AnthropicExperiment(Experiment):
             self.client.messages.batches.delete(message_batch_id=self.batch_id)
 
     def get_provider_results(self) -> list[dict]:
-        return [
+        output = [
             result.model_dump_json()
             for result in self.client.messages.batches.results(message_batch_id=self.batch_id)
         ]
+        json.dump(obj=output, fp=open(self.output_file_path, "w"))
+        return output

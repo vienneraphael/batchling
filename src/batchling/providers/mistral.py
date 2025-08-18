@@ -1,8 +1,8 @@
+import json
 import os
 import typing as t
 from functools import cached_property
 
-from httpx import Response
 from mistralai import Mistral
 from mistralai.models import BatchJobOut, RetrieveFileOut
 from pydantic import Field, computed_field
@@ -109,5 +109,7 @@ class MistralExperiment(Experiment):
         elif self.batch.status == "SUCCESS" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
-    def get_provider_results(self) -> Response:
-        return self.client.files.download(file_id=self.batch.output_file)
+    def get_provider_results(self) -> list[dict]:
+        output = self.client.files.download(file_id=self.batch.output_file).json()
+        json.dump(obj=output, fp=open(self.output_file_path, "w"))
+        return output
