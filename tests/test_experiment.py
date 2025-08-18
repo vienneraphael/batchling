@@ -10,7 +10,7 @@ from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
 
 
-@pytest.fixture(params=["openai", "mistral", "together", "groq"])
+@pytest.fixture(params=["openai", "mistral", "together", "groq", "gemini"])
 def provider(request):
     return request.param
 
@@ -53,6 +53,17 @@ def mock_client(provider):
                 batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
                 client.batches.create.return_value = batch_obj
                 Groq_cls.return_value = client
+                yield client
+        case "gemini":
+            with patch("google.genai.Client") as Gemini_cls:
+                client = MagicMock(name="gemini_client")
+                file_obj = MagicMock(name="fake_file")
+                file_obj.name = "test-file-id"
+                client.files.upload.return_value = file_obj
+                batch_obj = MagicMock(name="fake_batch")
+                batch_obj.name = "test-batch-id"
+                client.batches.create.return_value = batch_obj
+                Gemini_cls.return_value = client
                 yield client
         case _:
             raise ValueError(f"Invalid provider: {provider}")

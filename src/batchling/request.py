@@ -71,14 +71,18 @@ class GeminiMessage(BaseModel):
     parts: list[GeminiPart]
 
 
+class GeminiSystemInstructions(BaseModel):
+    parts: list[GeminiPart]
+
+
 class GeminiBody(Body):
-    system_instructions: GeminiMessage | None = None
+    system_instructions: GeminiSystemInstructions | None = None
     messages: list[GeminiMessage] = Field(alias="contents")
     config: GeminiConfig | None = None
 
 
 class GeminiRequest(Request):
-    id: str = Field(alias="key")
+    custom_id: str = Field(alias="key")
     body: GeminiBody = Field(alias="request")
 
 
