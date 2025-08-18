@@ -12,10 +12,10 @@ from batchling.request import MistralBody, MistralRequest
 
 
 class MistralExperiment(Experiment):
-    body_cls: t.Type[MistralBody] = Field(
+    body_cls: type[MistralBody] = Field(
         default=MistralBody, description="body class to use", init=False
     )
-    request_cls: t.Type[MistralRequest] = Field(
+    request_cls: type[MistralRequest] = Field(
         default=MistralRequest, description="request class to use", init=False
     )
 

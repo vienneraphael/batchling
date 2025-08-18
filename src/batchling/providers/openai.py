@@ -12,10 +12,10 @@ from batchling.request import OpenAIBody, OpenAIRequest
 
 
 class OpenAIExperiment(Experiment):
-    body_cls: t.Type[OpenAIBody] = Field(
+    body_cls: type[OpenAIBody] = Field(
         default=OpenAIBody, description="body class to use", init=False
     )
-    request_cls: t.Type[OpenAIRequest] = Field(
+    request_cls: type[OpenAIRequest] = Field(
         default=OpenAIRequest, description="request class to use", init=False
     )
 

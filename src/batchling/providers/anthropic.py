@@ -10,14 +10,15 @@ from anthropic.types.messages.batch_create_params import Request
 from pydantic import Field, computed_field
 
 from batchling.experiment import Experiment
+from batchling.file_utils import read_jsonl_file
 from batchling.request import AnthropicBody, AnthropicRequest
 
 
 class AnthropicExperiment(Experiment):
-    body_cls: t.Type[AnthropicBody] = Field(
+    body_cls: type[AnthropicBody] = Field(
         default=AnthropicBody, description="body class to use", init=False
     )
-    request_cls: t.Type[AnthropicRequest] = Field(
+    request_cls: type[AnthropicRequest] = Field(
         default=AnthropicRequest, description="request class to use", init=False
     )
 
@@ -69,12 +70,11 @@ class AnthropicExperiment(Experiment):
         pass
 
     def create_provider_batch(self) -> str:
-        with open(self.input_file_path, "r") as f:
-            data = json.load(f)
+        data = read_jsonl_file(self.input_file_path)
         return self.client.messages.batches.create(
             requests=[
                 Request(
-                    custom_id=request["custom_id"],
+                    custom_id=request.get("custom_id"),
                     params=MessageCreateParamsNonStreaming(
                         model=self.model,
                         messages=request["params"]["messages"],

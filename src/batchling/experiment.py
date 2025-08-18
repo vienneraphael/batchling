@@ -39,8 +39,8 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="provider to use if not compatible with OAI Batch API",
     )
-    body_cls: t.Type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
-    request_cls: t.Type[Request] = Field(
+    body_cls: type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
+    request_cls: type[Request] = Field(
         default=OpenAIRequest, description="request class to use", init=False
     )
     base_url: str | None = Field(
@@ -140,7 +140,7 @@ class Experiment(BaseModel, ABC):
                     "url": self.endpoint,
                 }
             )
-            batch_requests.append(batch_request.model_dump_json(by_alias=True))
+            batch_requests.append(batch_request.model_dump_json())
         write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
 
     @abstractmethod

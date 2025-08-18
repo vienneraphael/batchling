@@ -7,15 +7,27 @@ from google.genai import Client
 from google.genai.types import BatchJob, File, UploadFileConfig
 from pydantic import Field, computed_field
 
+from batchling.batch_utils import (
+    replace_placeholders,
+    split_system_instructions_and_messages,
+)
 from batchling.experiment import Experiment
-from batchling.request import GeminiBody, GeminiRequest
+from batchling.file_utils import write_jsonl_file
+from batchling.request import (
+    GeminiBody,
+    GeminiConfig,
+    GeminiMessage,
+    GeminiPart,
+    GeminiRequest,
+    GeminiSystemInstructions,
+)
 
 
 class GeminiExperiment(Experiment):
-    body_cls: t.Type[GeminiBody] = Field(
+    body_cls: type[GeminiBody] = Field(
         default=GeminiBody, description="body class to use", init=False
     )
-    request_cls: t.Type[GeminiRequest] = Field(
+    request_cls: type[GeminiRequest] = Field(
         default=GeminiRequest, description="request class to use", init=False
     )
 
@@ -113,6 +125,40 @@ class GeminiExperiment(Experiment):
             self.cancel_provider_batch()
         elif self.batch.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
             self.delete_provider_file(file_id=self.batch.output_file_id)
+
+    def write_input_batch_file(self) -> None:
+        if self.placeholders is None:
+            self.placeholders = []
+        batch_requests = []
+        for i, placeholder_dict in enumerate(self.placeholders):
+            clean_messages = replace_placeholders(
+                messages=self.template_messages, placeholder_dict=placeholder_dict
+            )
+            system_instructions, messages = split_system_instructions_and_messages(clean_messages)
+            batch_request = GeminiRequest(
+                key=f"{self.id}-sample-{i}",
+                request=GeminiBody(
+                    system_instructions=GeminiSystemInstructions(
+                        parts=[GeminiPart(text=system_instructions["content"])]
+                    )
+                    if system_instructions
+                    else None,
+                    contents=[
+                        GeminiMessage(
+                            role=message["role"], parts=[GeminiPart(text=message["content"])]
+                        )
+                        for message in messages
+                    ],
+                    config=GeminiConfig(
+                        response_mime_type="application/json",
+                        response_schema=self.response_format,
+                    )
+                    if self.response_format
+                    else None,
+                ),
+            )
+            batch_requests.append(batch_request.model_dump_json())
+        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
 
     def get_provider_results(self) -> list[dict]:
         output = json.loads(self.client.files.download(file=self.batch.dest.file_name))

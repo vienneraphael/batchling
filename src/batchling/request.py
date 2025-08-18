@@ -71,15 +71,19 @@ class GeminiMessage(BaseModel):
     parts: list[GeminiPart]
 
 
-class GeminiBody(Body):
-    system_instructions: GeminiMessage | None = None
-    messages: list[GeminiMessage] = Field(alias="contents")
+class GeminiSystemInstructions(BaseModel):
+    parts: list[GeminiPart]
+
+
+class GeminiBody(BaseModel):
+    system_instructions: GeminiSystemInstructions | None = None
+    contents: list[GeminiMessage]
     config: GeminiConfig | None = None
 
 
-class GeminiRequest(Request):
-    id: str = Field(alias="key")
-    body: GeminiBody = Field(alias="request")
+class GeminiRequest(BaseModel):
+    key: str
+    request: GeminiBody
 
 
 class AnthropicBody(Body):
@@ -90,4 +94,4 @@ class AnthropicBody(Body):
 
 
 class AnthropicRequest(Request):
-    body: AnthropicBody = Field(alias="params")
+    params: AnthropicBody = Field(alias="body")
