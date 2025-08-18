@@ -39,8 +39,8 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="provider to use if not compatible with OAI Batch API",
     )
-    body_cls: t.Type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
-    request_cls: t.Type[Request] = Field(
+    body_cls: type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
+    request_cls: type[Request] = Field(
         default=OpenAIRequest, description="request class to use", init=False
     )
     base_url: str | None = Field(
