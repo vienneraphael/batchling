@@ -63,6 +63,7 @@ class Experiment(BaseModel, ABC):
     )
     response_format: dict | None = Field(default=None, description="response model to use")
     input_file_path: str | None = Field(default=None, description="input file path")
+    output_file_path: str = Field(default="results.jsonl", description="output file path")
     is_setup: bool = Field(default=False, description="whether the experiment is setup")
     input_file_id: str | None = Field(default=None, description="input file id")
     batch_id: str | None = Field(default=None, description="batch id")
