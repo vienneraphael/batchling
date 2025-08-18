@@ -10,7 +10,7 @@ from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
 
 
-@pytest.fixture(params=["openai", "mistral", "together", "groq", "gemini"])
+@pytest.fixture(params=["openai", "mistral", "together", "groq", "gemini", "anthropic"])
 def provider(request):
     return request.param
 
@@ -64,6 +64,13 @@ def mock_client(provider):
                 batch_obj.name = "test-batch-id"
                 client.batches.create.return_value = batch_obj
                 Gemini_cls.return_value = client
+                yield client
+        case "anthropic":
+            with patch("anthropic.Anthropic") as Anthropic_cls:
+                client = MagicMock(name="anthropic_client")
+                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
+                client.messages.batches.create.return_value = batch_obj
+                Anthropic_cls.return_value = client
                 yield client
         case _:
             raise ValueError(f"Invalid provider: {provider}")
