@@ -1,28 +1,63 @@
 import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import get_experiment
 from batchling.db.session import get_db
 from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
 
 
+@pytest.fixture(params=["openai", "mistral"])
+def provider(request):
+    return request.param
+
+
 @pytest.fixture
-def experiment(tmp_path):
+def mock_client(provider):
+    match provider:
+        case "openai":
+            with patch("openai.OpenAI") as OpenAI_cls:
+                client = MagicMock(name="openai_client")
+                file_obj = MagicMock(name="fake_file", id="test-file-id")
+                client.files.create.return_value = file_obj
+                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
+                client.batches.create.return_value = batch_obj
+                OpenAI_cls.return_value = client
+                yield client
+        case "mistral":
+            with patch("mistralai.Mistral") as Mistral_cls:
+                client = MagicMock(name="mistral_client")
+                file_obj = MagicMock(name="fake_file", id="test-file-id")
+                client.files.upload.return_value = file_obj
+                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
+                client.batch.jobs.create.return_value = batch_obj
+                Mistral_cls.return_value = client
+                yield client
+        case _:
+            raise ValueError(f"Invalid provider: {provider}")
+
+
+@pytest.fixture
+def experiment(tmp_path, provider):
     template_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "{greeting}, how are you {name}?"},
     ]
     placeholders = [{"name": "John", "greeting": "Hello"}]
-    experiment = OpenAIExperiment(
-        id="experiment-test-1",
-        model="gpt-4o-mini",
-        name="test 1",
-        description="test experiment number 1",
-        input_file_path=(tmp_path / "test.jsonl").as_posix(),
-        template_messages=template_messages,
-        placeholders=placeholders,
+    experiment_cls = get_experiment_cls_from_provider(provider)
+    experiment = experiment_cls.model_validate(
+        {
+            "id": f"{provider}-experiment-test-1",
+            "model": "gpt-4o-mini",
+            "name": "test 1",
+            "description": "test experiment number 1",
+            "input_file_path": (tmp_path / "test.jsonl").as_posix(),
+            "template_messages": template_messages,
+            "placeholders": placeholders,
+        }
     )
     return experiment
 
@@ -80,7 +115,7 @@ def test_start(started_experiment: Experiment):
 def test_cancel_without_start(setup_experiment: Experiment):
     with pytest.raises(
         ValueError,
-        match="Experiment in status setup is not in running status",
+        match=r"Experiment in status setup is not in .*",
     ):
         setup_experiment.cancel()
 
