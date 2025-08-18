@@ -94,4 +94,4 @@ class AnthropicBody(Body):
 
 
 class AnthropicRequest(Request):
-    body: AnthropicBody = Field(alias="params")
+    params: AnthropicBody = Field(alias="body")
