@@ -136,19 +136,19 @@ class GeminiExperiment(Experiment):
             )
             system_instructions, messages = split_system_instructions_and_messages(clean_messages)
             batch_request = GeminiRequest(
-                custom_id=f"{self.id}-sample-{i}",
-                body=GeminiBody(
-                    messages=[
-                        GeminiMessage(
-                            role=message["role"], parts=[GeminiPart(text=message["content"])]
-                        )
-                        for message in messages
-                    ],
+                key=f"{self.id}-sample-{i}",
+                request=GeminiBody(
                     system_instructions=GeminiSystemInstructions(
                         parts=[GeminiPart(text=system_instructions["content"])]
                     )
                     if system_instructions
                     else None,
+                    contents=[
+                        GeminiMessage(
+                            role=message["role"], parts=[GeminiPart(text=message["content"])]
+                        )
+                        for message in messages
+                    ],
                     config=GeminiConfig(
                         response_mime_type="application/json",
                         response_schema=self.response_format,
