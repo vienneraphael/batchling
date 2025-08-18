@@ -13,10 +13,8 @@ from batchling.request import GroqBody, GroqRequest
 
 
 class GroqExperiment(Experiment):
-    body_cls: t.Type[GroqBody] = Field(
-        default=GroqBody, description="body class to use", init=False
-    )
-    request_cls: t.Type[GroqRequest] = Field(
+    body_cls: type[GroqBody] = Field(default=GroqBody, description="body class to use", init=False)
+    request_cls: type[GroqRequest] = Field(
         default=GroqRequest, description="request class to use", init=False
     )
 

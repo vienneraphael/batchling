@@ -12,10 +12,10 @@ from batchling.request import GeminiBody, GeminiRequest
 
 
 class GeminiExperiment(Experiment):
-    body_cls: t.Type[GeminiBody] = Field(
+    body_cls: type[GeminiBody] = Field(
         default=GeminiBody, description="body class to use", init=False
     )
-    request_cls: t.Type[GeminiRequest] = Field(
+    request_cls: type[GeminiRequest] = Field(
         default=GeminiRequest, description="request class to use", init=False
     )
 

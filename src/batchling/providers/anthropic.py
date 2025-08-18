@@ -14,10 +14,10 @@ from batchling.request import AnthropicBody, AnthropicRequest
 
 
 class AnthropicExperiment(Experiment):
-    body_cls: t.Type[AnthropicBody] = Field(
+    body_cls: type[AnthropicBody] = Field(
         default=AnthropicBody, description="body class to use", init=False
     )
-    request_cls: t.Type[AnthropicRequest] = Field(
+    request_cls: type[AnthropicRequest] = Field(
         default=AnthropicRequest, description="request class to use", init=False
     )
 

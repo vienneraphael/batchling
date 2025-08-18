@@ -13,10 +13,10 @@ from batchling.request import TogetherBody, TogetherRequest
 
 
 class TogetherExperiment(Experiment):
-    body_cls: t.Type[TogetherBody] = Field(
+    body_cls: type[TogetherBody] = Field(
         default=TogetherBody, description="body class to use", init=False
     )
-    request_cls: t.Type[TogetherRequest] = Field(
+    request_cls: type[TogetherRequest] = Field(
         default=TogetherRequest, description="request class to use", init=False
     )
 
