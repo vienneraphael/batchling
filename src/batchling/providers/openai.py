@@ -27,7 +27,7 @@ class OpenAIExperiment(Experiment):
         Returns:
             OpenAI: The client
         """
-        return OpenAI(api_key=os.getenv(self.api_key_name), base_url=self.base_url)
+        return OpenAI(api_key=os.getenv(self.api_key_name))
 
     def retrieve_provider_file(self):
         return self.client.files.retrieve(self.input_file_id)
