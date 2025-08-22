@@ -43,7 +43,7 @@ Compared to using standard endpoints directly, Batch API offers:
 
 </details>
 
-## Why use batchling?
+## Common issues with Batch APIs
 
 Batch APIs that are OpenAI-compatible offer clear and simple functionality. However, some aspects of managing batches are not straightforward:
 
@@ -54,9 +54,9 @@ Batch APIs that are OpenAI-compatible offer clear and simple functionality. Howe
 - **Batch Creation**: By default, Batch APIs require you to build your own batch creation logic, which is prone to errors.
 - **Usage**: Most Batch APIs require you to write code to create, manage and run experiments.
 
-## Features
+## Why use batchling?
 
-Key features include:
+batchling aims to solve the most common issues with Batch APIs:
 
 - **Multi-provider support**: The goal behind batchling is to maintain a unified interface for all providers, allowing you to gain access to all models available.
 - **File Management**: batchling provides you with a local database to store your experiments and results.
@@ -106,16 +106,27 @@ experiment = em.start_experiment(
     input_file_path="path/to/write/input.jsonl",
 )
 
-# write the input file with right format
+# write a local input file with the right format
 experiment.setup()
 
-# submit file and batch to provider
+# submit the local input file and batch to provider
 experiment.start()
 
-# monitor experiment status
+# monitor experiment status and wait for it to complete
 print(experiment.status)
+# > "running"
+```
 
-# get results
+### Retrieve results
+
+```python
+from batchling import ExperimentManager
+
+em = ExperimentManager()
+
+experiment = em.retrieve(experiment_id="my-experiment-1")
+
 results = experiment.get_results()
-
+print(results)
+# TODO: add example
 ```
