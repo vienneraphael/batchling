@@ -71,9 +71,70 @@ batchling aims to solve the most common issues with Batch APIs:
 pip install batchling
 ```
 
-## Quick Start
+## CLI
 
-### Create a simple experiment
+### Create an experiment (CLI)
+
+Suppose we have the following files:
+
+- `tests/test_data/template_messages_countries.jsonl`
+
+```json
+{"role": "system", "content": "You are a helpful assistant."}
+{"role": "user", "content": "What is the capital of {country}?"}
+```
+
+- `tests/test_data/placeholders_capitals.jsonl`
+
+```json
+{"name": "France"}
+{"name": "Germany"}
+{"name": "Italy"}
+```
+
+We can create an experiment with the following command:
+
+```bash
+batchling create\
+ --id test\
+ --model gpt-4o\
+ --name exp name\
+ --description exp description\
+ --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --placeholders-path tests/test_data/placeholders_capitals.jsonl\
+ --provider openai\
+ --endpoint v1/chat/completions\
+ --output-file-path output/result_capitals.jsonl
+
+# ╭───────────────────── test ─────────────────────╮
+# │ ID: test                                       │
+# │ Name: exp name                                 │
+# │ Description: exp description                   │
+# │ Provider: openai                               │
+# │ Endpoint: v1/chat/completions                  │
+# │ Model: gpt-4o                                  │
+# │ is_setup: False                                │
+# │ Input File ID: None                            │
+# │ Output File Path: output/result_capitals.jsonl │
+# │ Batch ID: None                                 │
+# │ Status: created                                │
+# │ Created At: 2025-08-23 16:20:33                │
+# │ Updated At: 2025-08-23 16:20:33                │
+# ╰────────────────────────────────────────────────╯
+```
+
+### Retrieve results
+
+```bash
+batchling results test
+
+# > Downloading results to output/result_capitals.jsonl...
+# > Done!
+```
+
+## Python SDK
+
+### Create an experiment (Python)
 
 ```python
 from batchling import ExperimentManager
@@ -117,7 +178,7 @@ print(experiment.status)
 # > "running"
 ```
 
-### Retrieve results
+### Retrieve results (Python)
 
 ```python
 from batchling import ExperimentManager
