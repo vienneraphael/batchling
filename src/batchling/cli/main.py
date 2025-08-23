@@ -25,9 +25,12 @@ def print_experiment(experiment: Experiment):
             f"ID: {experiment.id}",
             f"Name: {experiment.name}",
             f"Description: {experiment.description}",
+            f"Provider: {experiment.provider}",
+            f"Endpoint: {experiment.endpoint}",
             f"Model: {experiment.model}",
             f"is_setup: {experiment.is_setup}",
             f"Input File ID: {experiment.input_file_id}",
+            f"Output File Path: {experiment.output_file_path}",
             f"Batch ID: {experiment.batch_id}",
             f"Status: {experiment.status}",
             f"Created At: {datetime.strftime(experiment.created_at, '%Y-%m-%d %H:%M:%S')}",
@@ -56,7 +59,6 @@ def list_experiments(
             "-a/-d",
             "--ascending/--descending",
             help="Whether to order in ascending order instead of descending",
-            is_flag=True,
             rich_help_panel="Ordering",
         ),
     ] = False,
@@ -66,6 +68,8 @@ def list_experiments(
         "ID",
         "Name",
         "Description",
+        "Provider",
+        "Endpoint",
         "Status",
         "Created At",
         "Updated At",
@@ -77,6 +81,8 @@ def list_experiments(
             experiment.id,
             experiment.name,
             experiment.description,
+            experiment.provider,
+            experiment.endpoint,
             experiment.status,
             datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
             datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
@@ -109,6 +115,8 @@ def create_experiment(
     description: Annotated[
         str, typer.Option(default=..., help="The description of the experiment")
     ],
+    provider: Annotated[str, typer.Option(default=..., help="The provider to use")],
+    endpoint: Annotated[str, typer.Option(default=..., help="The endpoint to use")],
     template_messages_path: Annotated[
         Path, typer.Option(default=..., help="The path to the template messages file")
     ],
@@ -116,6 +124,9 @@ def create_experiment(
         Path, typer.Option(default=..., help="The path to the placeholders file")
     ],
     input_file_path: Annotated[Path, typer.Option(default=..., help="The path to the input file")],
+    output_file_path: Annotated[
+        Path, typer.Option(default=..., help="The path to the output file")
+    ],
     response_format_path: Annotated[
         Path | None, typer.Option(help="The path to the response format file")
     ] = None,
@@ -128,10 +139,13 @@ def create_experiment(
         model=model,
         name=name,
         description=description,
+        provider=provider,
+        endpoint=endpoint,
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,
         input_file_path=input_file_path.as_posix(),
+        output_file_path=output_file_path.as_posix(),
     )
     print_experiment(experiment)
 
@@ -203,6 +217,11 @@ def update_experiment(
     input_file_path: Annotated[
         Path | None, typer.Option(help="Updated input file, if applicable")
     ] = None,
+    output_file_path: Annotated[
+        Path | None, typer.Option(help="Updated output file, if applicable")
+    ] = None,
+    provider: Annotated[str | None, typer.Option(help="Updated provider, if applicable")] = None,
+    endpoint: Annotated[str | None, typer.Option(help="Updated endpoint, if applicable")] = None,
     response_format_path: Annotated[
         Path | None, typer.Option(help="Updated response format file, if applicable")
     ] = None,

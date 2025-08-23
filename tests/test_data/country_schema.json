@@ -1,0 +1,13 @@
+{
+  "properties": {
+    "country": {
+      "title": "Country",
+      "type": "string"
+    }
+  },
+  "required": [
+    "country"
+  ],
+  "title": "ResponseFormat",
+  "type": "object"
+}

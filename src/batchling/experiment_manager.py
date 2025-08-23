@@ -68,6 +68,7 @@ class ExperimentManager(BaseModel):
         placeholders: list[dict] | None = None,
         response_format: BaseModel | dict | None = None,
         input_file_path: str | None = None,
+        output_file_path: str = "results.jsonl",
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
@@ -87,9 +88,7 @@ class ExperimentManager(BaseModel):
                 placeholders=placeholders,
                 response_format=response_format,
                 input_file_path=input_file_path,
-                input_file_id=None,
-                is_setup=False,
-                batch_id=None,
+                output_file_path=output_file_path,
             )
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
