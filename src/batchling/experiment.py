@@ -35,19 +35,15 @@ class Experiment(BaseModel, ABC):
     name: str = Field(description="name of the experiment")
     description: str | None = Field(default=None, description="description of the experiment")
     model: str = Field(description="model to use")
-    provider: t.Literal["mistral"] | None = Field(
-        default=None,
-        description="provider to use if not compatible with OAI Batch API",
+    provider: t.Literal["openai", "mistral", "together", "groq", "gemini", "anthropic"] = Field(
+        default="openai",
+        description="provider to use",
     )
     body_cls: type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
     request_cls: type[Request] = Field(
         default=OpenAIRequest, description="request class to use", init=False
     )
-    base_url: str | None = Field(
-        default=None,
-        description="base url of the used provider. Must be compatible with OAI Batch API. Defaults to OAI base url",
-    )
-    endpoint: str | None = Field(
+    endpoint: str = Field(
         default="v1/chat/completions",
         description="endpoint to use for the provider",
     )

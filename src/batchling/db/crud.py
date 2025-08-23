@@ -12,9 +12,8 @@ def create_experiment(
     model: str,
     name: str | None = None,
     description: str | None = None,
-    base_url: str | None = None,
-    provider: str | None = None,
-    endpoint: str | None = "v1/chat/completions",
+    provider: str = "openai",
+    endpoint: str = "v1/chat/completions",
     api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
@@ -33,14 +32,12 @@ def create_experiment(
         The database session
     id : str
         The id of the experiment
+    model : str
+        The model to use for the experiment
     name : str
         The name of the experiment
     description : str
         The description of the experiment
-    model : str
-        The model to use for the experiment
-    base_url : str
-        The base url of the experiment
     provider : str
         The provider of the experiment
     endpoint : str
@@ -76,7 +73,6 @@ def create_experiment(
         created_at=now,
         updated_at=now,
         model=model,
-        base_url=base_url,
         provider=provider,
         endpoint=endpoint,
         api_key_name=api_key_name,
