@@ -191,3 +191,14 @@ results = experiment.get_results()
 print(results)
 # TODO: add example
 ```
+
+## Supported providers
+
+As of now, batchling supports the following providers:
+
+- OpenAI
+- Anthropic
+- Gemini
+- Groq
+- Mistral
+- Together AI
