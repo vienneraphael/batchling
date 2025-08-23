@@ -103,7 +103,7 @@ batchling create\
  --template-messages-path tests/test_data/template_messages_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --provider openai\
- --endpoint v1/chat/completions\
+ --endpoint /v1/chat/completions\
  --output-file-path output/result_capitals.jsonl
 
 # ╭───────────────────── test ─────────────────────╮
@@ -111,7 +111,7 @@ batchling create\
 # │ Name: exp name                                 │
 # │ Description: exp description                   │
 # │ Provider: openai                               │
-# │ Endpoint: v1/chat/completions                  │
+# │ Endpoint: /v1/chat/completions                  │
 # │ Model: gpt-4o                                  │
 # │ is_setup: False                                │
 # │ Input File ID: None                            │

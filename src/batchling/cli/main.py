@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -17,6 +18,8 @@ from batchling.file_utils import read_jsonl_file
 
 app = typer.Typer(no_args_is_help=True)
 init_db()
+
+load_dotenv()
 
 
 def print_experiment(experiment: Experiment):
