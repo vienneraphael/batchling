@@ -6,6 +6,7 @@ from typing import Annotated
 
 import typer
 from dotenv import load_dotenv
+from rich import print
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -199,6 +200,25 @@ def start_experiment(
         raise typer.Exit(1)
     experiment.start()
     print_experiment(experiment)
+
+
+@app.command(name="results")
+def get_results(
+    id: Annotated[
+        str,
+        typer.Argument(
+            help="The id of the experiment",
+        ),
+    ],
+):
+    """Download the results of an experiment locally"""
+    experiment = ExperimentManager.retrieve(experiment_id=id)
+    if experiment is None:
+        typer.echo(f"Experiment with id: {id} not found")
+        raise typer.Exit(1)
+    print("Downloading results..")
+    experiment.get_results()
+    print(f"Results downloaded to [green]{experiment.output_file_path}[/green]")
 
 
 @app.command(name="update")
