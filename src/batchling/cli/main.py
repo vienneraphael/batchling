@@ -100,6 +100,7 @@ def get_experiment(
         ),
     ],
 ):
+    """Get an experiment by id"""
     experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
     if experiment is None:
         typer.echo(f"Experiment with id: {experiment_id} not found")
@@ -131,6 +132,7 @@ def create_experiment(
         Path | None, typer.Option(help="The path to the response format file")
     ] = None,
 ):
+    """Create an experiment"""
     template_messages = read_jsonl_file(template_messages_path)
     placeholders = read_jsonl_file(placeholders_path)
     response_format = json.load(response_format_path.open()) if response_format_path else None
@@ -159,6 +161,7 @@ def setup_experiment(
         ),
     ],
 ):
+    """Setup an experiment by writing the jsonl batch input file"""
     experiment = ExperimentManager.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
@@ -181,6 +184,7 @@ def start_experiment(
         ),
     ],
 ):
+    """Start an experiment by submitting the batch to the provider"""
     experiment = ExperimentManager.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
@@ -226,6 +230,7 @@ def update_experiment(
         Path | None, typer.Option(help="Updated response format file, if applicable")
     ] = None,
 ):
+    """Update an experiment"""
     fields_to_update = {
         key: value for key, value in ctx.params.items() if value is not None and key != "id"
     }
@@ -255,6 +260,7 @@ def delete_experiment(
         ),
     ],
 ):
+    """Delete an experiment"""
     experiment = ExperimentManager.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
@@ -265,6 +271,7 @@ def delete_experiment(
 
 @app.command()
 def version():
+    """Get the version of the package"""
     with open("pyproject.toml", "rb") as f:
         pyproject_data = tomllib.load(f)
     typer.echo(pyproject_data["project"]["version"])
