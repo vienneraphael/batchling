@@ -126,10 +126,11 @@ batchling create\
 ### Retrieve results
 
 ```bash
+# Once batch is completed
 batchling results test
 
-# > Downloading results to output/result_capitals.jsonl...
-# > Done!
+# > Downloading results..
+# > Results downloaded to output/result_capitals.jsonl
 ```
 
 ## Python SDK
