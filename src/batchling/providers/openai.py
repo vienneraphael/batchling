@@ -8,6 +8,7 @@ from openai.types.file_object import FileObject
 from pydantic import Field, computed_field
 
 from batchling.experiment import Experiment
+from batchling.file_utils import read_jsonl_file
 from batchling.request import OpenAIBody, OpenAIRequest
 
 
@@ -103,4 +104,6 @@ class OpenAIExperiment(Experiment):
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
     def get_provider_results(self) -> list[dict]:
-        return self.client.files.content(file_id=self.batch.output_file_id).json()
+        with open(self.output_file_path, "w") as f:
+            f.write(self.client.files.content(file_id=self.batch.output_file_id).text)
+        return read_jsonl_file(self.output_file_path)
