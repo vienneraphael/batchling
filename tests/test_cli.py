@@ -1,0 +1,41 @@
+from typer.testing import CliRunner
+
+from batchling.cli.main import app
+
+runner = CliRunner()
+
+
+def test_create_experiment():
+    result = runner.invoke(
+        app,
+        [
+            "create",
+            "--id",
+            "test-cli-1",
+            "--model",
+            "gpt-4o-mini",
+            "--name",
+            "test cli 1",
+            "--description",
+            "test cli experiment number 1",
+            "--provider",
+            "openai",
+            "--endpoint",
+            "v1/chat/completions",
+            "--template-messages-path",
+            "tests/test_data/template_messages_countries.jsonl",
+            "--placeholders-path",
+            "tests/test_data/placeholders_capitals.jsonl",
+            "--input-file-path",
+            "tests/test_data/input_capitals.jsonl",
+            "--output-file-path",
+            "output/result_capitals.jsonl",
+        ],
+    )
+    assert result.exit_code == 0
+
+
+def test_delete_experiment():
+    result = runner.invoke(app, ["delete", "test-cli-1"])
+    assert result.exit_code == 0
+    assert "deleted" in result.output

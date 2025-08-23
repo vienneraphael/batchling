@@ -59,7 +59,6 @@ def list_experiments(
             "-a/-d",
             "--ascending/--descending",
             help="Whether to order in ascending order instead of descending",
-            is_flag=True,
             rich_help_panel="Ordering",
         ),
     ] = False,
