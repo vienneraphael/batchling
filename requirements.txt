@@ -37,8 +37,9 @@ cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.4.3
     # via requests
-click==8.2.1
+click==8.1.8
     # via
+    #   batchling
     #   together
     #   typer
 colorama==0.4.6 ; sys_platform == 'win32'

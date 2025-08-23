@@ -16,6 +16,7 @@ dependencies = [
     "sqlalchemy>=2.0.41",
     "together>=1.5.25",
     "typer>=0.15.3",
+    "click<8.2.0"
 ]
 
 [project.scripts]
