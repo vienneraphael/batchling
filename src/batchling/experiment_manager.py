@@ -13,7 +13,7 @@ from batchling.experiment import Experiment
 
 class ExperimentManager(BaseModel):
     def model_post_init(self, context):
-        load_dotenv()
+        load_dotenv(override=True)
         init_db()
 
     @computed_field
