@@ -20,7 +20,7 @@ from batchling.file_utils import read_jsonl_file
 app = typer.Typer(no_args_is_help=True)
 init_db()
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 def print_experiment(experiment: Experiment):
@@ -122,6 +122,7 @@ def create_experiment(
     ],
     provider: Annotated[str, typer.Option(default=..., help="The provider to use")],
     endpoint: Annotated[str, typer.Option(default=..., help="The endpoint to use")],
+    api_key_name: Annotated[str, typer.Option(default=..., help="The name of the API key")],
     template_messages_path: Annotated[
         Path, typer.Option(default=..., help="The path to the template messages file")
     ],
@@ -147,6 +148,7 @@ def create_experiment(
         description=description,
         provider=provider,
         endpoint=endpoint,
+        api_key_name=api_key_name,
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,
