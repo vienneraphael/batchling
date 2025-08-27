@@ -1,4 +1,3 @@
-import json
 import os
 import typing as t
 from functools import cached_property
@@ -9,9 +8,13 @@ from anthropic.types.messages import MessageBatch
 from anthropic.types.messages.batch_create_params import Request
 from pydantic import Field, computed_field
 
+from batchling.batch_utils import (
+    replace_placeholders,
+    split_system_instructions_and_messages,
+)
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file
-from batchling.request import AnthropicBody, AnthropicRequest
+from batchling.file_utils import read_jsonl_file, write_jsonl_file
+from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, Message
 
 
 class AnthropicExperiment(Experiment):
@@ -69,6 +72,32 @@ class AnthropicExperiment(Experiment):
     def delete_provider_file(self):
         pass
 
+    def write_input_batch_file(self) -> None:
+        if self.placeholders is None:
+            self.placeholders = []
+        batch_requests = []
+        for i, placeholder_dict in enumerate(self.placeholders):
+            clean_messages = replace_placeholders(
+                messages=self.template_messages, placeholder_dict=placeholder_dict
+            )
+            system_dict, messages = split_system_instructions_and_messages(messages=clean_messages)
+            system_instructions = (
+                [AnthropicPart(type="text", text=system_dict["content"])] if system_dict else None
+            )
+            messages = [
+                Message(role=message["role"], content=message["content"]) for message in messages
+            ]
+            batch_request = AnthropicRequest(
+                custom_id=f"{self.id}-sample-{i}",
+                params=AnthropicBody(
+                    model=self.model,
+                    messages=messages,
+                    system=system_instructions,
+                ),
+            )
+            batch_requests.append(batch_request.model_dump_json())
+        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
+
     def create_provider_batch(self) -> str:
         data = read_jsonl_file(self.input_file_path)
         return self.client.messages.batches.create(
@@ -78,6 +107,8 @@ class AnthropicExperiment(Experiment):
                     params=MessageCreateParamsNonStreaming(
                         model=self.model,
                         messages=request["params"]["messages"],
+                        system=request["params"]["system"],
+                        # max_tokens=request["params"]["max_tokens"],
                     ),
                 )
                 for request in data
@@ -106,5 +137,5 @@ class AnthropicExperiment(Experiment):
             result.model_dump_json()
             for result in self.client.messages.batches.results(message_batch_id=self.batch_id)
         ]
-        json.dump(obj=output, fp=open(self.output_file_path, "w"))
+        write_jsonl_file(file_path=self.output_file_path, data=output)
         return output

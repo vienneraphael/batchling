@@ -1,4 +1,3 @@
-import json
 import os
 import typing as t
 from functools import cached_property
@@ -12,14 +11,14 @@ from batchling.batch_utils import (
     split_system_instructions_and_messages,
 )
 from batchling.experiment import Experiment
-from batchling.file_utils import write_jsonl_file
+from batchling.file_utils import read_jsonl_file, write_jsonl_file
 from batchling.request import (
     GeminiBody,
     GeminiConfig,
     GeminiMessage,
     GeminiPart,
     GeminiRequest,
-    GeminiSystemInstructions,
+    GeminiSystemInstruction,
 )
 
 
@@ -138,7 +137,7 @@ class GeminiExperiment(Experiment):
             batch_request = GeminiRequest(
                 key=f"{self.id}-sample-{i}",
                 request=GeminiBody(
-                    system_instructions=GeminiSystemInstructions(
+                    system_instruction=GeminiSystemInstruction(
                         parts=[GeminiPart(text=system_instructions["content"])]
                     )
                     if system_instructions
@@ -149,7 +148,7 @@ class GeminiExperiment(Experiment):
                         )
                         for message in messages
                     ],
-                    config=GeminiConfig(
+                    generation_config=GeminiConfig(
                         response_mime_type="application/json",
                         response_schema=self.response_format,
                     )
@@ -161,6 +160,11 @@ class GeminiExperiment(Experiment):
         write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
 
     def get_provider_results(self) -> list[dict]:
-        output = json.loads(self.client.files.download(file=self.batch.dest.file_name))
-        json.dump(obj=output, fp=open(self.output_file_path, "w"))
-        return output
+        output = (
+            self.client.files.download(file=self.batch.dest.file_name)
+            .decode("utf-8")
+            .strip("\n")
+            .split("\n")
+        )
+        write_jsonl_file(file_path=self.output_file_path, data=output)
+        return read_jsonl_file(file_path=self.output_file_path)
