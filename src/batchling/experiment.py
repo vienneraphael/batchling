@@ -71,7 +71,7 @@ class Experiment(BaseModel, ABC):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
     def model_post_init(self, context):
-        load_dotenv()
+        load_dotenv(override=True)
         init_db()
 
     @abstractmethod
@@ -277,7 +277,7 @@ class Experiment(BaseModel, ABC):
         """
         self.delete_local_experiment()
         if self.input_file_id is not None:
-            self.delete_provider_file(file_id=self.input_file_id)
+            self.delete_provider_file()
         if self.batch_id is not None:
             self.delete_provider_batch()
 
