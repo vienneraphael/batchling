@@ -71,14 +71,14 @@ class GeminiMessage(BaseModel):
     parts: list[GeminiPart]
 
 
-class GeminiSystemInstructions(BaseModel):
+class GeminiSystemInstruction(BaseModel):
     parts: list[GeminiPart]
 
 
 class GeminiBody(BaseModel):
-    system_instructions: GeminiSystemInstructions | None = None
+    system_instruction: GeminiSystemInstruction | None = None
     contents: list[GeminiMessage]
-    config: GeminiConfig | None = None
+    generation_config: GeminiConfig | None = None
 
 
 class GeminiRequest(BaseModel):
@@ -86,12 +86,19 @@ class GeminiRequest(BaseModel):
     request: GeminiBody
 
 
+class AnthropicPart(BaseModel):
+    type: t.Literal["text"]
+    text: str
+
+
 class AnthropicBody(Body):
     model: str
     max_tokens: int | None = None
     messages: list[Message]
     response_format: dict | None = None
+    system: list[AnthropicPart] | None = None
 
 
-class AnthropicRequest(Request):
-    params: AnthropicBody = Field(alias="body")
+class AnthropicRequest(BaseModel):
+    custom_id: str
+    params: AnthropicBody

@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
+from dotenv import load_dotenv
 from mistralai import Mistral
 from mistralai.models import BatchJobOut, RetrieveFileOut
 from openai import OpenAI
@@ -44,7 +45,7 @@ class Experiment(BaseModel, ABC):
         default=OpenAIRequest, description="request class to use", init=False
     )
     endpoint: str = Field(
-        default="v1/chat/completions",
+        default="/v1/chat/completions",
         description="endpoint to use for the provider",
     )
     api_key_name: str = Field(
@@ -70,6 +71,7 @@ class Experiment(BaseModel, ABC):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
     def model_post_init(self, context):
+        load_dotenv(override=True)
         init_db()
 
     @abstractmethod
@@ -275,7 +277,7 @@ class Experiment(BaseModel, ABC):
         """
         self.delete_local_experiment()
         if self.input_file_id is not None:
-            self.delete_provider_file(file_id=self.input_file_id)
+            self.delete_provider_file()
         if self.batch_id is not None:
             self.delete_provider_batch()
 

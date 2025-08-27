@@ -1,4 +1,3 @@
-import json
 import os
 import typing as t
 from functools import cached_property
@@ -8,6 +7,7 @@ from mistralai.models import BatchJobOut, RetrieveFileOut
 from pydantic import Field, computed_field
 
 from batchling.experiment import Experiment
+from batchling.file_utils import read_jsonl_file
 from batchling.request import MistralBody, MistralRequest
 
 
@@ -110,6 +110,8 @@ class MistralExperiment(Experiment):
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
     def get_provider_results(self) -> list[dict]:
-        output = self.client.files.download(file_id=self.batch.output_file).json()
-        json.dump(obj=output, fp=open(self.output_file_path, "w"))
-        return output
+        output = self.client.files.download(file_id=self.batch.output_file)
+        with open(self.output_file_path, "w") as f:
+            for chunk in output.stream:
+                f.write(chunk.decode("utf-8"))
+        return read_jsonl_file(self.output_file_path)

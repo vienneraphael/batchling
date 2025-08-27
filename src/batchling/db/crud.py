@@ -13,7 +13,7 @@ def create_experiment(
     name: str | None = None,
     description: str | None = None,
     provider: str = "openai",
-    endpoint: str = "v1/chat/completions",
+    endpoint: str = "/v1/chat/completions",
     api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
