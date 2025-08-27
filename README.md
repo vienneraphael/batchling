@@ -43,6 +43,15 @@ Compared to using standard endpoints directly, Batch API offers:
 
 </details>
 
+## Table of contents
+
+- [Common issues with Batch APIs](#common-issues-with-batch-apis)
+- [Why use batchling?](#why-use-batchling)
+- [Installation](#installation)
+- [CLI](#cli)
+- [Python SDK](#python-sdk)
+- [Supported providers](#supported-providers)
+
 ## Common issues with Batch APIs
 
 Batch APIs that are OpenAI-compatible offer clear and simple functionality. However, some aspects of managing batches are not straightforward:
