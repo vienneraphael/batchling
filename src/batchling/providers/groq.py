@@ -1,4 +1,3 @@
-import json
 import os
 import typing as t
 from functools import cached_property
@@ -9,6 +8,7 @@ from groq.resources.files import FileInfoResponse
 from pydantic import Field, computed_field
 
 from batchling.experiment import Experiment
+from batchling.file_utils import read_jsonl_file
 from batchling.request import GroqBody, GroqRequest
 
 
@@ -104,6 +104,6 @@ class GroqExperiment(Experiment):
             self.delete_provider_file(file_id=self.batch.output_file_id)
 
     def get_provider_results(self) -> list[dict]:
-        output = self.client.files.content(file_id=self.batch.output_file_id).json()
-        json.dump(obj=output, fp=open(self.output_file_path, "w"))
-        return output
+        output = self.client.files.content(file_id=self.batch.output_file_id)
+        output.write_to_file(self.output_file_path)
+        return read_jsonl_file(self.output_file_path)
