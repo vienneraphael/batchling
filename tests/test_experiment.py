@@ -93,6 +93,7 @@ def experiment(tmp_path, provider):
             "input_file_path": (tmp_path / "test.jsonl").as_posix(),
             "template_messages": template_messages,
             "placeholders": placeholders,
+            "max_tokens_per_request": 100,
         }
     )
     return experiment

@@ -93,9 +93,10 @@ class AnthropicExperiment(Experiment):
                     model=self.model,
                     messages=messages,
                     system=system_instructions,
+                    max_tokens=self.max_tokens_per_request,
                 ),
             )
-            batch_requests.append(batch_request.model_dump_json())
+            batch_requests.append(batch_request.model_dump_json(exclude_none=True))
         write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
 
     def create_provider_batch(self) -> str:
@@ -108,7 +109,7 @@ class AnthropicExperiment(Experiment):
                         model=self.model,
                         messages=request["params"]["messages"],
                         system=request["params"]["system"],
-                        # max_tokens=request["params"]["max_tokens"],
+                        max_tokens=request["params"]["max_tokens"],
                     ),
                 )
                 for request in data

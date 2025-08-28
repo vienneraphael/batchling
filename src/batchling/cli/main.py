@@ -254,6 +254,9 @@ def update_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="Updated response format file, if applicable")
     ] = None,
+    max_tokens_per_request: Annotated[
+        int | None, typer.Option(help="Updated max tokens per request, if applicable")
+    ] = None,
 ):
     """Update an experiment"""
     fields_to_update = {
