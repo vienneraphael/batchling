@@ -99,7 +99,7 @@ class TogetherExperiment(Experiment):
         if self.batch.status in ["IN_PROGRESS", "VALIDATING"]:
             self.cancel_provider_batch()
         elif self.batch.status == "COMPLETED" and self.batch.output_file_id:
-            self.delete_provider_file(file_id=self.batch.output_file_id)
+            self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
         self.client.files.retrieve_content(

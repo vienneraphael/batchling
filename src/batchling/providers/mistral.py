@@ -107,7 +107,7 @@ class MistralExperiment(Experiment):
         if self.batch.status in ["QUEUED", "RUNNING"]:
             self.cancel_provider_batch()
         elif self.batch.status == "SUCCESS" and self.batch.output_file_id:
-            self.delete_provider_file(file_id=self.batch.output_file_id)
+            self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
         output = self.client.files.download(file_id=self.batch.output_file)
