@@ -6,7 +6,7 @@ from anthropic import Anthropic
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
 from anthropic.types.messages import MessageBatch
 from anthropic.types.messages.batch_create_params import Request
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 
 from batchling.batch_utils import (
     replace_placeholders,
@@ -24,6 +24,18 @@ class AnthropicExperiment(Experiment):
     request_cls: type[AnthropicRequest] = Field(
         default=AnthropicRequest, description="request class to use", init=False
     )
+    max_tokens_per_request: int = Field(description="max tokens to use per request")
+
+    @field_validator("max_tokens_per_request", mode="before")
+    @classmethod
+    def check_max_tokens_per_request_not_none(cls, value: int | None) -> int:
+        if value is None:
+            raise ValueError(
+                "max_tokens_per_request is required to be set for Anthropic experiments and cannot be None"
+            )
+        if value <= 0:
+            raise ValueError("max_tokens_per_request must be a positive integer")
+        return value
 
     @computed_field(repr=False)
     @cached_property
