@@ -10,9 +10,8 @@ def write_jsonl_file(file_path: str, data: list[str]) -> None:
         data (list[str]): The data to write
     """
     with open(file_path, "w") as f:
-        for sample in data[:-1]:
+        for sample in data:
             f.write(sample + "\n")
-        f.write(data[-1])
 
 
 def read_jsonl_file(file_path: str | Path) -> list[dict]:

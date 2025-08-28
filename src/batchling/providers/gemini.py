@@ -123,7 +123,7 @@ class GeminiExperiment(Experiment):
         if self.batch.status in ["JOB_STATE_RUNNING", "JOB_STATE_PENDING"]:
             self.cancel_provider_batch()
         elif self.batch.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
-            self.delete_provider_file(file_id=self.batch.output_file_id)
+            self.delete_provider_file()
 
     def write_input_batch_file(self) -> None:
         if self.placeholders is None:

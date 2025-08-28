@@ -69,6 +69,7 @@ class ExperimentManager(BaseModel):
         template_messages: list[dict] | None = None,
         placeholders: list[dict] | None = None,
         response_format: BaseModel | dict | None = None,
+        max_tokens_per_request: int | None = None,
         input_file_path: str | None = None,
         output_file_path: str = "results.jsonl",
     ) -> Experiment:
@@ -89,6 +90,7 @@ class ExperimentManager(BaseModel):
                 template_messages=template_messages,
                 placeholders=placeholders,
                 response_format=response_format,
+                max_tokens_per_request=max_tokens_per_request,
                 input_file_path=input_file_path,
                 output_file_path=output_file_path,
             )

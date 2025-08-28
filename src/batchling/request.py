@@ -93,7 +93,7 @@ class AnthropicPart(BaseModel):
 
 class AnthropicBody(Body):
     model: str
-    max_tokens: int | None = None
+    max_tokens: int
     messages: list[Message]
     response_format: dict | None = None
     system: list[AnthropicPart] | None = None

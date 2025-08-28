@@ -59,6 +59,9 @@ class Experiment(BaseModel, ABC):
         default=None, description="placeholders to map in the template messages", repr=False
     )
     response_format: dict | None = Field(default=None, description="response model to use")
+    max_tokens_per_request: int | None = Field(
+        default=None, description="max tokens to use per request"
+    )
     input_file_path: str | None = Field(default=None, description="input file path")
     output_file_path: str = Field(default="results.jsonl", description="output file path")
     is_setup: bool = Field(default=False, description="whether the experiment is setup")
@@ -132,13 +135,14 @@ class Experiment(BaseModel, ABC):
                             "model": self.model,
                             "messages": clean_messages,
                             "response_format": self.response_format,
+                            "max_tokens": self.max_tokens_per_request,
                         }
                     ),
                     "method": "POST",
                     "url": self.endpoint,
                 }
             )
-            batch_requests.append(batch_request.model_dump_json())
+            batch_requests.append(batch_request.model_dump_json(exclude_none=True))
         write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
 
     @abstractmethod
