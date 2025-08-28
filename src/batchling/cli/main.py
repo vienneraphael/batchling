@@ -136,6 +136,9 @@ def create_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="The path to the response format file")
     ] = None,
+    max_tokens_per_request: Annotated[
+        int | None, typer.Option(help="The max tokens per request to use")
+    ] = None,
 ):
     """Create an experiment"""
     template_messages = read_jsonl_file(template_messages_path)
@@ -152,6 +155,7 @@ def create_experiment(
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,
+        max_tokens_per_request=max_tokens_per_request,
         input_file_path=input_file_path.as_posix(),
         output_file_path=output_file_path.as_posix(),
     )
