@@ -107,20 +107,23 @@ We can create an experiment with the following command:
 batchling create\
  --id test\
  --model gpt-4o\
- --name exp name\
- --description exp description\
+ --name "exp name"\
+ --description "exp description"\
  --template-messages-path tests/test_data/template_messages_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --provider openai\
  --endpoint /v1/chat/completions\
- --output-file-path output/result_capitals.jsonl
+ --api-key-name OPENAI_API_KEY\
+ --input-file-path input_capitals_openai.jsonl\
+ --output-file-path output/result_capitals.jsonl\
+ --max-tokens-per-request 100
 
 # ╭───────────────────── test ─────────────────────╮
 # │ ID: test                                       │
 # │ Name: exp name                                 │
 # │ Description: exp description                   │
 # │ Provider: openai                               │
-# │ Endpoint: /v1/chat/completions                  │
+# │ Endpoint: /v1/chat/completions                 │
 # │ Model: gpt-4o                                  │
 # │ is_setup: False                                │
 # │ Input File ID: None                            │
