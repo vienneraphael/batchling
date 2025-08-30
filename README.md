@@ -229,7 +229,10 @@ experiment = em.retrieve(experiment_id="my-experiment-1")
 
 results = experiment.get_results()
 print(results)
-# TODO: add example
+# [
+#     {"id": "batch_req_6872c8dsa872c8190b1b5bdcq0d9q9z", "custom_id": "my-experiment-1-sample-0", "result": "My name is Bob."},
+#     {"id": "batch_req_68b2f87c0e0c88b2f87a872c8dsape2", "custom_id": "my-experiment-1-sample-1", "result": "My name is Alice."},
+# ]
 ```
 
 ## Supported providers
