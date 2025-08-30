@@ -4,7 +4,7 @@
 <img src="./docs/assets/images/batchling.png" alt="batchling logo" width="500" role="img">
 </div>
 <p align="center">
-    <em>batchling is the universal GenAI Batch API client. Create, manage and run experiments on any OpenAI-compatible provider.</em>
+    <em>batchling is the universal GenAI Batch API client. Create, manage and run batch experiments on any GenAI provider.</em>
 </p>
 <p align="center">
 <a href="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml" target="_blank">
@@ -16,7 +16,7 @@
 
 ---
 
-batchling is a python library to abstract GenAI Batch API usage. It provides a simple interface to create, manage and run experiments on any OpenAI-compatible provider.
+batchling is a python library to abstract GenAI Batch API usage. It provides a simple interface to create, manage and run batch experiments on any GenAI provider.
 
 <details>
 
@@ -51,24 +51,24 @@ Compared to using standard endpoints directly, Batch API offers:
 
 ## Common issues with Batch APIs
 
-Batch APIs that are OpenAI-compatible offer clear and simple functionality. However, some aspects of managing batches are not straightforward:
+Batch APIs offer clear and simple functionality. However, some aspects of managing batches are not straightforward:
 
-- **Multi-provider support**: Not all provider batch APIs are compatible with the OpenAI Batch API. If you were to compare major providers, you'd have to write duplicate code for each provider.
-- **File Management**: it's easy to get lost with tons of local files.
+- **Multi-provider support**: There is no standard interface for batch APIs. If you were to compare major providers on a given job, you'd have to write duplicate code for each provider.
+- **File Management**: Each provider requires you to manage files on your own, leading to poor data management and experiment monitoring.
 - **Error Handling**: it's not easy to retrieve and re-run batch failed samples automatically.
 - **Structured Output Generation**: generating structured outputs with pydantic models in Batch APIs requires some tricks and is tiresome.
 - **Batch Creation**: By default, Batch APIs require you to build your own batch creation logic, which is prone to errors.
-- **Usage**: Most Batch APIs require you to write code to create, manage and run experiments.
+- **Usage**: Most Batch APIs require you to write code to create, manage and run experiments and do not provide a CLI.
 
 ## Why use batchling?
 
 batchling aims to solve the most common issues with Batch APIs:
 
-- **Multi-provider support**: The goal behind batchling is to maintain a unified interface for all providers, allowing you to gain access to all models available.
+- **Multi-provider support**: The goal behind batchling is to maintain a unified interface for all providers, allowing you to gain access to all models available on the market for your batch jobs.
 - **File Management**: batchling provides you with a local database to store your experiments and results.
 - **Error Handling**: batchling provides you with the right tools to re-run failed samples.
 - **Structured Output Generation**: batchling takes care of that for you: simply define your pydantic model and batchling will handle the rest.
-- **Batch Creation**: batchling implements a smart templating system to help you.
+- **Batch Creation**: batchling implements a smart templating system to help you design experiments.
 - **Usage**: batchling provides a CLI to create, manage and run experiments with a single command, empowering all kind of users to run batch experimentations.
 
 ## Installation
@@ -127,8 +127,32 @@ batchling create\
 # │ Output File Path: output/result_capitals.jsonl │
 # │ Batch ID: None                                 │
 # │ Status: created                                │
-# │ Created At: 2025-08-23 16:20:33                │
-# │ Updated At: 2025-08-23 16:20:33                │
+# │ Created At: 2025-08-29 17:11:34                │
+# │ Updated At: 2025-08-29 17:11:34                │
+# ╰────────────────────────────────────────────────╯
+```
+
+### Setup and start an experiment (CLI)
+
+```bash
+batchling setup test
+
+# ╭───────────────────── test ─────────────────────╮
+# │ ID: test                                       │
+# │ ...                                            │
+# │ ...                                            │
+# │ ...                                            │
+# │ Updated At: 2025-08-29 17:11:40                │
+# ╰────────────────────────────────────────────────╯
+
+batchling start test
+
+# ╭───────────────────── test ─────────────────────╮
+# │ ID: test                                       │
+# │ ...                                            │
+# │ ...                                            │
+# │ ...                                            │
+# │ Updated At: 2025-08-29 17:11:45                │
 # ╰────────────────────────────────────────────────╯
 ```
 
@@ -140,6 +164,12 @@ batchling results test
 
 # > Downloading results..
 # > Results downloaded to output/result_capitals.jsonl
+
+cat output/result_capitals.jsonl
+
+{"id": "batch_req_68b2f87a872c8190b1b5bdc9fdd9c3e0", "custom_id": "test-sample-0", "result": "The capital of France is Paris."}
+{"id": "batch_req_68b2f87c0e0c819095904fe9a1f5430d", "custom_id": "test-sample-1", "result": "The capital of Italy is Rome."}
+{"id": "batch_req_68b2f87aadc08190a0ee50b9a8453b4c", "custom_id": "test-sample-2", "result": "The capital of Belgium is Brussels."}
 ```
 
 ## Python SDK
