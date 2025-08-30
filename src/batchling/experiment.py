@@ -16,8 +16,10 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
+    model_validator,
 )
 
+from batchling.api_utils import get_default_api_key_name_from_provider
 from batchling.batch_utils import replace_placeholders
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
@@ -48,8 +50,8 @@ class Experiment(BaseModel, ABC):
         default="/v1/chat/completions",
         description="endpoint to use for the provider",
     )
-    api_key_name: str = Field(
-        default="OPENAI_API_KEY",
+    api_key_name: str | None = Field(
+        default=None,
         description="API key name for the used provider, uses OAI key from env variables by default",
     )
     template_messages: list[dict] | None = Field(
@@ -72,6 +74,12 @@ class Experiment(BaseModel, ABC):
 
     def __repr__(self):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
+
+    @model_validator(mode="after")
+    def set_api_key_name(self):
+        if self.api_key_name is None:
+            self.api_key_name = get_default_api_key_name_from_provider(self.provider)
+        return self
 
     def model_post_init(self, context):
         load_dotenv(override=True)

@@ -10,11 +10,11 @@ def create_experiment(
     db: Session,
     id: str,
     model: str,
+    api_key_name: str = "OPENAI_API_KEY",
     name: str | None = None,
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
-    api_key_name: str = "OPENAI_API_KEY",
     template_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
     response_format: dict | None = None,
@@ -35,33 +35,33 @@ def create_experiment(
         The id of the experiment
     model : str
         The model to use for the experiment
-    name : str
+    api_key_name : str
+        The api key name of the experiment
+    name : str | None
         The name of the experiment
-    description : str
+    description : str | None
         The description of the experiment
     provider : str
         The provider of the experiment
     endpoint : str
         The endpoint of the experiment
-    api_key_name : str
-        The api key name of the experiment
-    template_messages : list[dict]
+    template_messages : list[dict] | None
         The template messages of the experiment
     placeholders : list[dict]
         The placeholders of the experiment
-    response_format : dict
+    response_format : dict | None
         The response format of the experiment
     max_tokens_per_request : int
         The max tokens per request of the experiment
-    input_file_path : str
+    input_file_path : str | None
         The path to the input file
     output_file_path : str
         The path to the output file
-    input_file_id : str
+    input_file_id : str | None
         The id of the input file
     is_setup : bool
         Whether the experiment is setup
-    batch_id : str
+    batch_id : str | None
         The id of the batch
     Returns
     -------
