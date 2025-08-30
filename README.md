@@ -110,7 +110,6 @@ batchling create\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --provider openai\
  --endpoint /v1/chat/completions\
- --api-key-name OPENAI_API_KEY\
  --input-file-path input_capitals_openai.jsonl\
  --output-file-path output/result_capitals.jsonl\
  --max-tokens-per-request 100
@@ -200,11 +199,14 @@ placeholders = [
 experiment = em.start_experiment(
     experiment_id="my-experiment-1",
     model="gpt-4o-mini",
+    provider="openai",
+    endpoint="/v1/chat/completions",
     name="My first experiment",
     description="Experimenting with gpt-4o-mini",
     template_messages=messages,
     placeholders=placeholders,
     input_file_path="path/to/write/input.jsonl",
+    output_file_path="path/to/write/output.jsonl",
 )
 
 # write a local input file with the right format
