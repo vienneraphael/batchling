@@ -95,7 +95,8 @@ class AnthropicBody(Body):
     model: str
     max_tokens: int
     messages: list[Message]
-    response_format: dict | None = None
+    tools: list[dict] | None = None
+    tool_choice: dict | None = None
     system: list[AnthropicPart] | None = None
 
 
