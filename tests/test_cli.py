@@ -28,8 +28,6 @@ def test_create_experiment():
             "tests/test_data/placeholders_capitals.jsonl",
             "--input-file-path",
             "input_capitals.jsonl",
-            "--api-key-name",
-            "OPENAI_API_KEY",
             "--output-file-path",
             "output/result_capitals.jsonl",
         ],

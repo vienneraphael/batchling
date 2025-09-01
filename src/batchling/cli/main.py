@@ -122,7 +122,6 @@ def create_experiment(
     ],
     provider: Annotated[str, typer.Option(default=..., help="The provider to use")],
     endpoint: Annotated[str, typer.Option(default=..., help="The endpoint to use")],
-    api_key_name: Annotated[str, typer.Option(default=..., help="The name of the API key")],
     template_messages_path: Annotated[
         Path, typer.Option(default=..., help="The path to the template messages file")
     ],
@@ -133,6 +132,7 @@ def create_experiment(
     output_file_path: Annotated[
         Path, typer.Option(default=..., help="The path to the output file")
     ],
+    api_key_name: Annotated[str | None, typer.Option(help="The name of the API key")] = None,
     response_format_path: Annotated[
         Path | None, typer.Option(help="The path to the response format file")
     ] = None,
