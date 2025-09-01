@@ -120,9 +120,9 @@ class GeminiExperiment(Experiment):
         self.client.batches.cancel(name=self.batch_id)
 
     def delete_provider_batch(self):
-        if self.batch.status in ["JOB_STATE_RUNNING", "JOB_STATE_PENDING"]:
+        if self.status in ["JOB_STATE_RUNNING", "JOB_STATE_PENDING"]:
             self.cancel_provider_batch()
-        elif self.batch.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
+        elif self.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
             self.delete_provider_file()
 
     def write_input_batch_file(self) -> None:
@@ -150,7 +150,7 @@ class GeminiExperiment(Experiment):
                     ],
                     generation_config=GeminiConfig(
                         response_mime_type="application/json",
-                        response_schema=self.response_format,
+                        response_json_schema=self.response_format["json_schema"]["schema"],
                     )
                     if self.response_format
                     else None,

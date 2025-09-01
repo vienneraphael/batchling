@@ -62,8 +62,8 @@ class GeminiPart(BaseModel):
 
 
 class GeminiConfig(BaseModel):
-    response_mime_type: str
-    response_schema: dict | None = None
+    response_mime_type: t.Literal["application/json", "text/plain"]
+    response_json_schema: dict | None = None
 
 
 class GeminiMessage(BaseModel):
