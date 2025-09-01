@@ -2,6 +2,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import get_experiment
@@ -10,8 +11,61 @@ from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
 
 
+class City(BaseModel):
+    name: str
+    country: str
+
+
 @pytest.fixture(params=["openai", "mistral", "together", "groq", "gemini", "anthropic"])
 def provider(request):
+    return request.param
+
+
+@pytest.fixture(
+    params=[
+        ("None", None),
+        (
+            "json",
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "schema": {
+                        "properties": {
+                            "name": {
+                                "description": "the city name",
+                                "title": "Name",
+                                "type": "string",
+                            },
+                            "country": {
+                                "description": "the country of the city",
+                                "title": "Country",
+                                "type": "string",
+                            },
+                        },
+                        "required": ["name", "country"],
+                        "title": "City",
+                        "type": "object",
+                        "additionalProperties": False,
+                    },
+                    "name": "City",
+                    "strict": True,
+                },
+            },
+        ),
+        (
+            "pydantic",
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "schema": City.model_json_schema(),
+                    "name": City.__name__,
+                    "strict": True,
+                },
+            },
+        ),
+    ]
+)
+def structured_output(request):
     return request.param
 
 
@@ -77,7 +131,8 @@ def mock_client(provider):
 
 
 @pytest.fixture
-def experiment(tmp_path, provider):
+def experiment(tmp_path, provider, structured_output):
+    name, response_format = structured_output
     template_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "{greeting}, how are you {name}?"},
@@ -86,7 +141,7 @@ def experiment(tmp_path, provider):
     experiment_cls = get_experiment_cls_from_provider(provider)
     experiment = experiment_cls.model_validate(
         {
-            "id": f"{provider}-experiment-test-1",
+            "id": f"{provider}-{name}-experiment-test-1",
             "model": "gpt-4o-mini",
             "name": "test 1",
             "description": "test experiment number 1",
@@ -94,6 +149,7 @@ def experiment(tmp_path, provider):
             "template_messages": template_messages,
             "placeholders": placeholders,
             "max_tokens_per_request": 100,
+            "response_format": response_format,
         }
     )
     return experiment
