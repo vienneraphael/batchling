@@ -38,14 +38,14 @@ Create a `placeholders.jsonl` file with the following content:
 
 ## 3. Create an experiment
 
-Run this command to create an experiment, you can switch the provider for any of the supported providers:
+Run this command to create an experiment, you can switch the provider for any of the supported providers, make sure to call your API key in your `.env` file with the right name:
 
-- openai
-- mistral
-- together
-- groq
-- gemini
-- anthropic
+- openai <> `OPENAI_API_KEY`
+- mistral <> `MISTRAL_API_KEY`
+- together <> `TOGETHER_API_KEY`
+- groq <> `GROQ_API_KEY`
+- gemini <> `GEMINI_API_KEY`
+- anthropic <> `ANTHROPIC_API_KEY`
 
 We recommend using a provider from which you already have an API key from to get started quickly.
 
