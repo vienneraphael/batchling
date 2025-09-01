@@ -18,8 +18,9 @@ class Experiment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     model: Mapped[str] = mapped_column(String, nullable=False)
-    provider: Mapped[t.Literal["mistral"] | None] = mapped_column(String, nullable=True)
-    base_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    provider: Mapped[t.Literal["openai", "mistral", "together", "groq", "gemini", "anthropic"]] = (
+        mapped_column(String, nullable=False)
+    )
     endpoint: Mapped[str | None] = mapped_column(String, nullable=True)
     api_key_name: Mapped[str] = mapped_column(String, nullable=False)
     template_messages: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)

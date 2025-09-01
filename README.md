@@ -121,13 +121,10 @@ batchling create\
 # │ Provider: openai                               │
 # │ Endpoint: /v1/chat/completions                 │
 # │ Model: gpt-4o                                  │
-# │ is_setup: False                                │
-# │ Input File ID: None                            │
-# │ Output File Path: output/result_capitals.jsonl │
-# │ Batch ID: None                                 │
 # │ Status: created                                │
-# │ Created At: 2025-08-29 17:11:34                │
-# │ Updated At: 2025-08-29 17:11:34                │
+# │ Input File Path: input_capitals_openai.jsonl   │
+# │ Output File Path: output/result_capitals.jsonl │
+# │ Created At: 2025-09-01 13:17:43                │
 # ╰────────────────────────────────────────────────╯
 ```
 
@@ -136,23 +133,11 @@ batchling create\
 ```bash
 batchling setup test
 
-# ╭───────────────────── test ─────────────────────╮
-# │ ID: test                                       │
-# │ ...                                            │
-# │ ...                                            │
-# │ ...                                            │
-# │ Updated At: 2025-08-29 17:11:40                │
-# ╰────────────────────────────────────────────────╯
+# > Experiment with id: test is setup. Path to batch input file: input_capitals_openai.jsonl
 
 batchling start test
 
-# ╭───────────────────── test ─────────────────────╮
-# │ ID: test                                       │
-# │ ...                                            │
-# │ ...                                            │
-# │ ...                                            │
-# │ Updated At: 2025-08-29 17:11:45                │
-# ╰────────────────────────────────────────────────╯
+# > Experiment with id: test is started. Current status: validating
 ```
 
 ### Retrieve results
