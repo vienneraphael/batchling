@@ -1,5 +1,6 @@
 import pytest
 
+from batchling.api_utils import get_default_api_key_name_from_provider
 from batchling.db.crud import (
     create_experiment,
     delete_experiment,
@@ -43,6 +44,7 @@ def test_get_experiment(db):
         model="gpt-4o-mini",
         name="test 2",
         description="test experiment number 2",
+        api_key_name=get_default_api_key_name_from_provider(provider="openai"),
     )
     experiment = get_experiment(db=db, id="experiment-test-2")
     assert experiment is not None
@@ -50,6 +52,7 @@ def test_get_experiment(db):
     assert experiment.id == "experiment-test-2"
     assert experiment.name == "test 2"
     assert experiment.description == "test experiment number 2"
+    assert experiment.api_key_name == "OPENAI_API_KEY"
 
 
 def test_update_experiment(db):

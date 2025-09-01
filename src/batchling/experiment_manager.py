@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
+from batchling.api_utils import get_default_api_key_name_from_provider
 from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import (
     create_experiment,
@@ -62,10 +63,10 @@ class ExperimentManager(BaseModel):
         experiment_id: str,
         model: str,
         name: str,
+        api_key_name: str | None = None,
         description: str | None = None,
         provider: str = "openai",
         endpoint: str = "/v1/chat/completions",
-        api_key_name: str = "OPENAI_API_KEY",
         template_messages: list[dict] | None = None,
         placeholders: list[dict] | None = None,
         response_format: BaseModel | dict | None = None,
@@ -86,7 +87,7 @@ class ExperimentManager(BaseModel):
                 description=description,
                 provider=provider,
                 endpoint=endpoint,
-                api_key_name=api_key_name,
+                api_key_name=api_key_name or get_default_api_key_name_from_provider(provider),
                 template_messages=template_messages,
                 placeholders=placeholders,
                 response_format=response_format,
