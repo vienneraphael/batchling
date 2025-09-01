@@ -77,7 +77,14 @@ class ExperimentManager(BaseModel):
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
         if isinstance(response_format, BaseModel):
-            response_format = response_format.model_dump()
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "schema": response_format.model_json_schema(),
+                    "name": response_format.__class__.__name__,
+                    "strict": True,
+                },
+            }
         with get_db() as db:
             experiment = create_experiment(
                 db=db,
