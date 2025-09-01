@@ -24,25 +24,40 @@ load_dotenv(override=True)
 
 
 def print_experiment(experiment: Experiment):
+    experiment_dict = {
+        "ID": experiment.id,
+        "Name": experiment.name,
+        "Description": experiment.description,
+        "Provider": experiment.provider,
+        "Endpoint": experiment.endpoint,
+        "Model": experiment.model,
+        "Status": experiment.status,
+        "Input File Path": experiment.input_file_path,
+        "Output File Path": experiment.output_file_path,
+        "Input File ID": experiment.input_file_id,
+        "Batch ID": experiment.batch_id,
+        "Created At": datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
+        "Updated At": datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
+    }
+    if experiment.status in ["setup", "created"]:
+        del experiment_dict["Input File ID"]
+        del experiment_dict["Batch ID"]
+        if experiment.status == "created":
+            del experiment_dict["Updated At"]
+    values = "\n".join([f"{key}: {value}" for key, value in experiment_dict.items()])
+    console = Console()
+    console.print(Panel(values, title=experiment.id, expand=False, highlight=True))
+
+
+def print_diff(old_fields: dict, new_fields: dict):
     values = "\n".join(
         [
-            f"ID: {experiment.id}",
-            f"Name: {experiment.name}",
-            f"Description: {experiment.description}",
-            f"Provider: {experiment.provider}",
-            f"Endpoint: {experiment.endpoint}",
-            f"Model: {experiment.model}",
-            f"is_setup: {experiment.is_setup}",
-            f"Input File ID: {experiment.input_file_id}",
-            f"Output File Path: {experiment.output_file_path}",
-            f"Batch ID: {experiment.batch_id}",
-            f"Status: {experiment.status}",
-            f"Created At: {datetime.strftime(experiment.created_at, '%Y-%m-%d %H:%M:%S')}",
-            f"Updated At: {datetime.strftime(experiment.updated_at, '%Y-%m-%d %H:%M:%S')}",
+            f"{key}: [yellow]{old_fields.get(key)}[/yellow] -> [green]{value}[/green]"
+            for key, value in new_fields.items()
         ]
     )
     console = Console()
-    console.print(Panel(values, title=experiment.id, expand=False, highlight=True))
+    console.print(Panel(values, expand=False, highlight=True))
 
 
 @app.command(name="list")
@@ -182,7 +197,9 @@ def setup_experiment(
         )
         raise typer.Exit(1)
     experiment.setup()
-    print_experiment(experiment)
+    print(
+        f"Experiment with id: [green]{id}[/green] is setup. Path to batch input file: [green]{experiment.input_file_path}[/green]"
+    )
 
 
 @app.command(name="start")
@@ -205,7 +222,9 @@ def start_experiment(
         )
         raise typer.Exit(1)
     experiment.start()
-    print_experiment(experiment)
+    print(
+        f"Experiment with id: [green]{id}[/green] is started. Current status is [yellow]{experiment.status}[/yellow]"
+    )
 
 
 @app.command(name="results")
@@ -266,6 +285,11 @@ def update_experiment(
     fields_to_update = {
         key: value for key, value in ctx.params.items() if value is not None and key != "id"
     }
+    experiment = ExperimentManager.retrieve(experiment_id=id)
+    if experiment is None:
+        typer.echo(f"Experiment with id: {id} not found")
+        raise typer.Exit(1)
+    old_fields = {key: getattr(experiment, key) for key in fields_to_update}
     if "template_messages_path" in fields_to_update:
         fields_to_update["template_messages"] = read_jsonl_file(
             fields_to_update["template_messages_path"]
@@ -279,8 +303,8 @@ def update_experiment(
             fields_to_update["response_format_path"].open()
         )
         del fields_to_update["response_format_path"]
-    experiment = ExperimentManager.update_experiment(experiment_id=id, **fields_to_update)
-    print_experiment(experiment)
+    experiment.update(**fields_to_update)
+    print_diff(old_fields, fields_to_update)
 
 
 @app.command(name="delete")
@@ -298,7 +322,7 @@ def delete_experiment(
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
     experiment.delete()
-    typer.echo(f"Experiment with id: {id} deleted")
+    print(f"Experiment with id: [green]{id}[/green] deleted")
 
 
 @app.command()
