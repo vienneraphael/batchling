@@ -11,7 +11,6 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from batchling.cli.callbacks import order_by_callback
 from batchling.db.session import init_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
@@ -69,9 +68,8 @@ def list_experiments(
             "--order-by",
             help="The field to order by",
             rich_help_panel="Ordering",
-            callback=order_by_callback,
         ),
-    ] = "created_at",
+    ] = "updated_at",
     ascending: Annotated[
         bool,
         typer.Option(
