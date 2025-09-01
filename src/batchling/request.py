@@ -62,8 +62,8 @@ class GeminiPart(BaseModel):
 
 
 class GeminiConfig(BaseModel):
-    response_mime_type: str
-    response_schema: dict | None = None
+    response_mime_type: t.Literal["application/json", "text/plain"]
+    response_json_schema: dict | None = None
 
 
 class GeminiMessage(BaseModel):
@@ -95,7 +95,8 @@ class AnthropicBody(Body):
     model: str
     max_tokens: int
     messages: list[Message]
-    response_format: dict | None = None
+    tools: list[dict] | None = None
+    tool_choice: dict | None = None
     system: list[AnthropicPart] | None = None
 
 

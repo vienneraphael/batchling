@@ -99,12 +99,25 @@ class AnthropicExperiment(Experiment):
             messages = [
                 Message(role=message["role"], content=message["content"]) for message in messages
             ]
+            tools = (
+                [
+                    {
+                        "name": "structured_output",
+                        "description": "Output a structured response",
+                        "input_schema": self.response_format["json_schema"]["schema"],
+                    }
+                ]
+                if self.response_format is not None
+                else []
+            )
             batch_request = AnthropicRequest(
                 custom_id=f"{self.id}-sample-{i}",
                 params=AnthropicBody(
                     model=self.model,
                     messages=messages,
                     system=system_instructions,
+                    tools=tools,
+                    tool_choice={"type": "tool", "name": "structured_output"} if tools else {},
                     max_tokens=self.max_tokens_per_request,
                 ),
             )
@@ -113,6 +126,7 @@ class AnthropicExperiment(Experiment):
 
     def create_provider_batch(self) -> str:
         data = read_jsonl_file(self.input_file_path)
+
         return self.client.messages.batches.create(
             requests=[
                 Request(
@@ -122,6 +136,8 @@ class AnthropicExperiment(Experiment):
                         messages=request["params"]["messages"],
                         system=request["params"]["system"],
                         max_tokens=request["params"]["max_tokens"],
+                        tools=request["params"]["tools"],
+                        tool_choice=request["params"]["tool_choice"],
                     ),
                 )
                 for request in data
