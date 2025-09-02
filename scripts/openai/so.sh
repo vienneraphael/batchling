@@ -1,0 +1,12 @@
+batchling create\
+ --id openai\
+ --model "gpt-4o"\
+ --name "exp name"\
+ --description "exp description"\
+ --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --placeholders-path tests/test_data/placeholders_capitals.jsonl\
+ --input-file-path input_capitals_oai.jsonl\
+ --provider openai\
+ --endpoint /v1/chat/completions\
+ --output-file-path output/result_capitals_openai.jsonl\
+ --response-format-path tests/test_data/city_schema.json
