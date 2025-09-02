@@ -42,12 +42,19 @@ Compared to using standard endpoints directly, Batch API offers:
 
 ## Table of contents
 
-- [Common issues with Batch APIs](#common-issues-with-batch-apis)
-- [Why use batchling?](#why-use-batchling)
-- [Installation](#installation)
-- [CLI](#cli)
-- [Python SDK](#python-sdk)
-- [Supported providers](#supported-providers)
+- [batchling](#batchling)
+  - [Table of contents](#table-of-contents)
+  - [Common issues with Batch APIs](#common-issues-with-batch-apis)
+  - [Why use batchling?](#why-use-batchling)
+  - [Installation](#installation)
+  - [CLI](#cli)
+    - [Create an experiment (CLI)](#create-an-experiment-cli)
+    - [Setup and start an experiment (CLI)](#setup-and-start-an-experiment-cli)
+    - [Retrieve results](#retrieve-results)
+  - [Python SDK](#python-sdk)
+    - [Create an experiment (Python)](#create-an-experiment-python)
+    - [Retrieve results (Python)](#retrieve-results-python)
+  - [Supported providers](#supported-providers)
 
 ## Common issues with Batch APIs
 
@@ -102,7 +109,7 @@ We can create an experiment with the following command:
 
 ```bash
 batchling create\
- --id test\
+ --id my-experiment-1\
  --model gpt-4o\
  --name "exp name"\
  --description "exp description"\
@@ -114,8 +121,8 @@ batchling create\
  --output-file-path output/result_capitals.jsonl\
  --max-tokens-per-request 100
 
-# ╭───────────────────── test ─────────────────────╮
-# │ ID: test                                       │
+# ╭─────────────── my-experiment-1 ────────────────╮
+# │ ID: my-experiment-1                            │
 # │ Name: exp name                                 │
 # │ Description: exp description                   │
 # │ Provider: openai                               │
@@ -131,20 +138,20 @@ batchling create\
 ### Setup and start an experiment (CLI)
 
 ```bash
-batchling setup test
+batchling setup my-experiment-1
 
-# > Experiment with id: test is setup. Path to batch input file: input_capitals_openai.jsonl
+# > Experiment with id: my-experiment-1 is setup. Path to batch input file: input_capitals_openai.jsonl
 
-batchling start test
+batchling start my-experiment-1
 
-# > Experiment with id: test is started. Current status: validating
+# > Experiment with id: my-experiment-1 is started. Current status: validating
 ```
 
 ### Retrieve results
 
 ```bash
 # Once batch is completed
-batchling results test
+batchling results my-experiment-1
 
 # > Downloading results..
 # > Results downloaded to output/result_capitals.jsonl
