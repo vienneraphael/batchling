@@ -63,6 +63,7 @@ class ExperimentManager(BaseModel):
         experiment_id: str,
         model: str,
         name: str,
+        input_file_path: str,
         api_key_name: str | None = None,
         description: str | None = None,
         provider: str = "openai",
@@ -71,7 +72,6 @@ class ExperimentManager(BaseModel):
         placeholders: list[dict] | None = None,
         response_format: BaseModel | dict | None = None,
         max_tokens_per_request: int | None = None,
-        input_file_path: str | None = None,
         output_file_path: str = "results.jsonl",
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:

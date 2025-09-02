@@ -55,17 +55,29 @@ class Experiment(BaseModel, ABC):
         description="API key name for the used provider, uses OAI key from env variables by default",
     )
     template_messages: list[dict] | None = Field(
-        default=None, description="messages template to use", repr=False
+        default=None,
+        description="optional, the template messages used to build the batch. Required if input file path does not exist",
+        repr=False,
     )
     placeholders: list[dict] | None = Field(
-        default=None, description="placeholders to map in the template messages", repr=False
+        default=None,
+        description="optional, the placeholders used to build the batch. Required if input file path does not exist",
+        repr=False,
     )
-    response_format: dict | None = Field(default=None, description="response model to use")
+    response_format: dict | None = Field(
+        default=None, description="optional, the response format to use"
+    )
     max_tokens_per_request: int | None = Field(
-        default=None, description="max tokens to use per request"
+        default=None,
+        description="optional, the max tokens per request to use. Required for Anthropic experiments",
     )
-    input_file_path: str | None = Field(default=None, description="input file path")
-    output_file_path: str = Field(default="results.jsonl", description="output file path")
+    input_file_path: str = Field(
+        description="the batch input file path, sent to the provider. Will be used if path exists, else it will be created."
+    )
+    output_file_path: str = Field(
+        default="results.jsonl",
+        description="the path to the output file where batch results will be saved",
+    )
     is_setup: bool = Field(default=False, description="whether the experiment is setup")
     input_file_id: str | None = Field(default=None, description="input file id")
     batch_id: str | None = Field(default=None, description="batch id")

@@ -133,7 +133,13 @@ def create_experiment(
     description: Annotated[
         str, typer.Option(default=..., help="The description of the experiment")
     ],
-    provider: Annotated[str, typer.Option(default=..., help="The provider to use")],
+    provider: Annotated[
+        str,
+        typer.Option(
+            default=...,
+            help="The provider to use, e.g. openai, anthropic, gemini, groq, mistral, together..",
+        ),
+    ],
     endpoint: Annotated[
         str,
         typer.Option(
@@ -141,27 +147,47 @@ def create_experiment(
             help="The generation endpoint to use, e.g. /v1/chat/completions, /v1/embeddings..",
         ),
     ],
-    template_messages_path: Annotated[
-        Path, typer.Option(default=..., help="The path to the template messages file")
+    input_file_path: Annotated[
+        Path,
+        typer.Option(
+            default=...,
+            help="the batch input file path, sent to the provider. Will be used if path exists, else it will be created.",
+        ),
     ],
-    placeholders_path: Annotated[
-        Path, typer.Option(default=..., help="The path to the placeholders file")
-    ],
-    input_file_path: Annotated[Path, typer.Option(default=..., help="The path to the input file")],
     output_file_path: Annotated[
-        Path, typer.Option(default=..., help="The path to the output file")
+        Path,
+        typer.Option(
+            default=..., help="the path to the output file where batch results will be saved"
+        ),
     ],
+    template_messages_path: Annotated[
+        Path | None,
+        typer.Option(
+            default=...,
+            help="optional, the path to the template messages file used to build the batch. Required if input file path does not exist",
+        ),
+    ] = None,
+    placeholders_path: Annotated[
+        Path | None,
+        typer.Option(
+            default=...,
+            help="optional, the path to the placeholders file used to build the batch. Required if input file path does not exist",
+        ),
+    ] = None,
     api_key_name: Annotated[str | None, typer.Option(help="The name of the API key")] = None,
     response_format_path: Annotated[
-        Path | None, typer.Option(help="The path to the response format file")
+        Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
     max_tokens_per_request: Annotated[
-        int | None, typer.Option(help="The max tokens per request to use")
+        int | None,
+        typer.Option(
+            help="optional, the max tokens per request to use. Required for Anthropic experiments"
+        ),
     ] = None,
 ):
     """Create an experiment"""
-    template_messages = read_jsonl_file(template_messages_path)
-    placeholders = read_jsonl_file(placeholders_path)
+    template_messages = read_jsonl_file(template_messages_path) if template_messages_path else None
+    placeholders = read_jsonl_file(placeholders_path) if placeholders_path else None
     response_format = json.load(response_format_path.open()) if response_format_path else None
     experiment = ExperimentManager.start_experiment(
         experiment_id=id,
