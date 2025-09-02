@@ -46,6 +46,7 @@ Compared to using standard endpoints directly, Batch API offers:
   - [Table of contents](#table-of-contents)
   - [Common issues with Batch APIs](#common-issues-with-batch-apis)
   - [Why use batchling?](#why-use-batchling)
+  - [Supported providers](#supported-providers)
   - [Installation](#installation)
   - [CLI](#cli)
     - [Create an experiment (CLI)](#create-an-experiment-cli)
@@ -54,7 +55,6 @@ Compared to using standard endpoints directly, Batch API offers:
   - [Python SDK](#python-sdk)
     - [Create an experiment (Python)](#create-an-experiment-python)
     - [Retrieve results (Python)](#retrieve-results-python)
-  - [Supported providers](#supported-providers)
 
 ## Common issues with Batch APIs
 
@@ -77,6 +77,19 @@ batchling aims to solve the most common issues with Batch APIs:
 - **Structured Output Generation**: batchling takes care of that for you: simply define your pydantic model and batchling will handle the rest.
 - **Batch Creation**: batchling implements a smart templating system to help you design experiments.
 - **Usage**: batchling provides a CLI to create, manage and run experiments with a single command, empowering all kind of users to run batch experimentations.
+
+## Supported providers
+
+As of now, batchling supports the following providers:
+
+| Name        | Batch API Docs URL                                                       |
+|-------------|--------------------------------------------------------------------------|
+| OpenAI      | <https://platform.openai.com/docs/guides/batch>                            |
+| Anthropic   | <https://docs.anthropic.com/en/docs/build-with-claude/batch-processing>    |
+| Gemini      | <https://ai.google.dev/gemini-api/docs/batch-mod>                          |
+| Groq        | <https://console.groq.com/docs/batch>                                      |
+| Mistral     | <https://docs.mistral.ai/capabilities/batch/>                              |
+| Together AI | <https://docs.together.ai/docs/batch-inference>                            |
 
 ## Installation
 
@@ -228,14 +241,3 @@ print(results)
 #     {"id": "batch_req_68b2f87c0e0c88b2f87a872c8dsape2", "custom_id": "my-experiment-1-sample-1", "result": "My name is Alice."},
 # ]
 ```
-
-## Supported providers
-
-As of now, batchling supports the following providers:
-
-- OpenAI
-- Anthropic
-- Gemini
-- Groq
-- Mistral
-- Together AI
