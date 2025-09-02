@@ -1,4 +1,3 @@
-import os
 import typing as t
 from functools import cached_property
 
@@ -27,7 +26,7 @@ class MistralExperiment(Experiment):
         Returns:
             Mistral: The client
         """
-        return Mistral(api_key=os.getenv(self.api_key_name))
+        return Mistral(api_key=self.api_key)
 
     def retrieve_provider_file(self):
         return self.client.files.retrieve(file_id=self.input_file_id)

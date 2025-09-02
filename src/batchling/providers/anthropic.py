@@ -1,4 +1,3 @@
-import os
 import typing as t
 from functools import cached_property
 
@@ -45,7 +44,7 @@ class AnthropicExperiment(Experiment):
         Returns:
             Anthropic: The client
         """
-        return Anthropic(api_key=os.getenv(self.api_key_name))
+        return Anthropic(api_key=self.api_key)
 
     def retrieve_provider_file(self):
         return self.input_file_path

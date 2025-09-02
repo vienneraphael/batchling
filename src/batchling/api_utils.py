@@ -1,16 +1,12 @@
 """API utils"""
 
+import os
 
-def get_default_api_key_name_from_provider(provider: str | None = None) -> str:
-    if provider == "mistral":
-        return "MISTRAL_API_KEY"
-    elif provider == "groq":
-        return "GROQ_API_KEY"
-    elif provider == "together":
-        return "TOGETHER_API_KEY"
-    elif provider == "gemini":
-        return "GEMINI_API_KEY"
-    elif provider == "anthropic":
-        return "ANTHROPIC_API_KEY"
-    else:
-        return "OPENAI_API_KEY"
+
+def get_default_api_key_from_provider(provider: str | None = None) -> str:
+    api_key = os.getenv(f"{provider.upper()}_API_KEY")
+    if not api_key:
+        raise ValueError(
+            f"API key not found for provider: {provider}. Either set the API key in the environment variables or provide it through the api_key parameter."
+        )
+    return api_key

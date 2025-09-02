@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
-from batchling.api_utils import get_default_api_key_name_from_provider
+from batchling.api_utils import get_default_api_key_from_provider
 from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import (
     create_experiment,
@@ -64,7 +64,7 @@ class ExperimentManager(BaseModel):
         model: str,
         name: str,
         input_file_path: str,
-        api_key_name: str | None = None,
+        api_key: str | None = None,
         description: str | None = None,
         provider: str = "openai",
         endpoint: str = "/v1/chat/completions",
@@ -85,6 +85,11 @@ class ExperimentManager(BaseModel):
                     "strict": True,
                 },
             }
+        api_key = api_key or get_default_api_key_from_provider(provider)
+        if not api_key:
+            raise ValueError(
+                f"No API key found in environment variables for provider: {provider}. Either set the API key in the environment variables or provide it through the api_key parameter."
+            )
         with get_db() as db:
             experiment = create_experiment(
                 db=db,
@@ -94,7 +99,7 @@ class ExperimentManager(BaseModel):
                 description=description,
                 provider=provider,
                 endpoint=endpoint,
-                api_key_name=api_key_name or get_default_api_key_name_from_provider(provider),
+                api_key=api_key,
                 template_messages=template_messages,
                 placeholders=placeholders,
                 response_format=response_format,
