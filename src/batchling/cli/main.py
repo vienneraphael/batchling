@@ -174,7 +174,12 @@ def create_experiment(
             help="optional, the path to the placeholders file used to build the batch. Required if input file path does not exist",
         ),
     ] = None,
-    api_key_name: Annotated[str | None, typer.Option(help="The name of the API key")] = None,
+    api_key: Annotated[
+        str | None,
+        typer.Option(
+            help="Optional, the API key to use for the provider if not using standard naming / env variables"
+        ),
+    ] = None,
     response_format_path: Annotated[
         Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
@@ -196,7 +201,7 @@ def create_experiment(
         description=description,
         provider=provider,
         endpoint=endpoint,
-        api_key_name=api_key_name,
+        api_key=api_key,
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,

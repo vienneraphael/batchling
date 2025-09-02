@@ -1,4 +1,3 @@
-import os
 import typing as t
 from functools import cached_property
 
@@ -26,7 +25,7 @@ class GroqExperiment(Experiment):
         Returns:
             Groq: The client
         """
-        return Groq(api_key=os.getenv(self.api_key_name))
+        return Groq(api_key=self.api_key)
 
     def retrieve_provider_file(self):
         return self.client.files.info(file_id=self.input_file_id)

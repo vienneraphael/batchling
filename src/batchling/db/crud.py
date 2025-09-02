@@ -10,7 +10,7 @@ def create_experiment(
     db: Session,
     id: str,
     model: str,
-    api_key_name: str = "OPENAI_API_KEY",
+    api_key: str,
     name: str | None = None,
     description: str | None = None,
     provider: str = "openai",
@@ -35,8 +35,8 @@ def create_experiment(
         The id of the experiment
     model : str
         The model to use for the experiment
-    api_key_name : str
-        The api key name of the experiment
+    api_key : str
+        The api key of the experiment
     name : str | None
         The name of the experiment
     description : str | None
@@ -78,7 +78,7 @@ def create_experiment(
         model=model,
         provider=provider,
         endpoint=endpoint,
-        api_key_name=api_key_name,
+        api_key=api_key,
         template_messages=template_messages,
         placeholders=placeholders,
         response_format=response_format,

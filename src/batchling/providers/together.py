@@ -1,4 +1,3 @@
-import os
 import typing as t
 from functools import cached_property
 
@@ -28,7 +27,7 @@ class TogetherExperiment(Experiment):
         Returns:
             Together: The client
         """
-        return Together(api_key=os.getenv(self.api_key_name))
+        return Together(api_key=self.api_key)
 
     def retrieve_provider_file(self):
         return self.client.files.retrieve(id=self.input_file_id)

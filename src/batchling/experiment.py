@@ -19,7 +19,7 @@ from pydantic import (
     model_validator,
 )
 
-from batchling.api_utils import get_default_api_key_name_from_provider
+from batchling.api_utils import get_default_api_key_from_provider
 from batchling.batch_utils import replace_placeholders
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
@@ -50,9 +50,9 @@ class Experiment(BaseModel, ABC):
         default="/v1/chat/completions",
         description="generation endpoint to use for the provider, e.g. /v1/chat/completions, /v1/embeddings..",
     )
-    api_key_name: str | None = Field(
+    api_key: str | None = Field(
         default=None,
-        description="API key name for the used provider, uses OAI key from env variables by default",
+        description="Optional, the API key to use for the provider if not using standard naming / env variables",
     )
     template_messages: list[dict] | None = Field(
         default=None,
@@ -88,9 +88,9 @@ class Experiment(BaseModel, ABC):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
     @model_validator(mode="after")
-    def set_api_key_name(self):
-        if self.api_key_name is None:
-            self.api_key_name = get_default_api_key_name_from_provider(self.provider)
+    def set_api_key(self):
+        if self.api_key is None:
+            self.api_key = get_default_api_key_from_provider(self.provider)
         return self
 
     def model_post_init(self, context):
@@ -266,10 +266,12 @@ class Experiment(BaseModel, ABC):
                 db=db,
                 id=self.id,
                 model=self.model,
+                api_key=self.api_key,
                 **self.model_dump(
                     exclude={
                         "id",
                         "model",
+                        "api_key",
                         "created_at",
                         "updated_at",
                         "input_file",
