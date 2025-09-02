@@ -1,0 +1,12 @@
+batchling create\
+ --id together\
+ --model "deepseek-ai/DeepSeek-V3"\
+ --name "testing DeepSeek-V3"\
+ --description "experiment testing DeepSeek-V3"\
+ --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --placeholders-path tests/test_data/placeholders_capitals.jsonl\
+ --input-file-path input_capitals_together.jsonl\
+ --provider together\
+ --endpoint /v1/chat/completions\
+ --output-file-path output/result_capitals_together.jsonl\
+ --response-format-path tests/test_data/city_schema.json
