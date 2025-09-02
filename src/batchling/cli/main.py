@@ -134,7 +134,13 @@ def create_experiment(
         str, typer.Option(default=..., help="The description of the experiment")
     ],
     provider: Annotated[str, typer.Option(default=..., help="The provider to use")],
-    endpoint: Annotated[str, typer.Option(default=..., help="The endpoint to use")],
+    endpoint: Annotated[
+        str,
+        typer.Option(
+            default=...,
+            help="The generation endpoint to use, e.g. /v1/chat/completions, /v1/embeddings..",
+        ),
+    ],
     template_messages_path: Annotated[
         Path, typer.Option(default=..., help="The path to the template messages file")
     ],
@@ -271,7 +277,12 @@ def update_experiment(
         Path | None, typer.Option(help="Updated output file, if applicable")
     ] = None,
     provider: Annotated[str | None, typer.Option(help="Updated provider, if applicable")] = None,
-    endpoint: Annotated[str | None, typer.Option(help="Updated endpoint, if applicable")] = None,
+    endpoint: Annotated[
+        str | None,
+        typer.Option(
+            help="Updated generation endpoint, if applicable, e.g. /v1/chat/completions, /v1/embeddings.."
+        ),
+    ] = None,
     response_format_path: Annotated[
         Path | None, typer.Option(help="Updated response format file, if applicable")
     ] = None,
