@@ -48,7 +48,7 @@ class Experiment(BaseModel, ABC):
     )
     endpoint: str = Field(
         default="/v1/chat/completions",
-        description="endpoint to use for the provider",
+        description="generation endpoint to use for the provider, e.g. /v1/chat/completions, /v1/embeddings..",
     )
     api_key_name: str | None = Field(
         default=None,

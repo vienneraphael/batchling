@@ -44,7 +44,7 @@ def create_experiment(
     provider : str
         The provider of the experiment
     endpoint : str
-        The endpoint of the experiment
+        The generation endpoint of the experiment, e.g. /v1/chat/completions, /v1/embeddings..
     template_messages : list[dict] | None
         The template messages of the experiment
     placeholders : list[dict]
