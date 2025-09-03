@@ -88,6 +88,15 @@ class Experiment(BaseModel, ABC):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
     @model_validator(mode="after")
+    def set_created_at_and_updated_at(self):
+        now = datetime.now()
+        if self.created_at is None:
+            self.created_at = now
+        if self.updated_at is None:
+            self.updated_at = now
+        return self
+
+    @model_validator(mode="after")
     def set_api_key(self):
         if self.api_key is None:
             self.api_key = get_default_api_key_from_provider(self.provider)
@@ -258,30 +267,25 @@ class Experiment(BaseModel, ABC):
 
     def save(self):
         if self.status != "created":
-            raise ValueError(
-                f"Can only create an experiment in created status. Found: {self.status}"
-            )
+            raise ValueError(f"Can only save an experiment in created status. Found: {self.status}")
         with get_db() as db:
             create_experiment(
                 db=db,
                 id=self.id,
                 model=self.model,
                 api_key=self.api_key,
-                **self.model_dump(
-                    exclude={
-                        "id",
-                        "model",
-                        "api_key",
-                        "created_at",
-                        "updated_at",
-                        "input_file",
-                        "batch",
-                        "client",
-                        "status",
-                        "body_cls",
-                        "request_cls",
-                    }
-                ),
+                name=self.name,
+                description=self.description,
+                provider=self.provider,
+                endpoint=self.endpoint,
+                template_messages=self.template_messages,
+                placeholders=self.placeholders,
+                response_format=self.response_format,
+                max_tokens_per_request=self.max_tokens_per_request,
+                input_file_path=self.input_file_path,
+                output_file_path=self.output_file_path,
+                created_at=self.created_at,
+                updated_at=self.updated_at,
             )
 
     def delete_local_experiment(self):
@@ -321,12 +325,13 @@ class Experiment(BaseModel, ABC):
             raise ValueError(
                 "id cannot be updated, please delete the experiment and create a new one"
             )
+        kwargs["updated_at"] = datetime.now()
         exp_dict = self.model_dump()
         exp_dict.update(kwargs)
         # validate model first to avoid updating the database with invalid data
-        self.model_validate(exp_dict)
+        updated_experiment = self.__class__.model_validate(exp_dict)
         with get_db() as db:
             db_experiment = update_experiment(db=db, id=self.id, **kwargs)
         if db_experiment is None:
             raise ValueError(f"Experiment with id: {self.id} not found")
-        return self.model_validate(db_experiment)
+        return updated_experiment
