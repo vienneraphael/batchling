@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 
 from batchling.api_utils import get_default_api_key_from_provider
@@ -20,6 +22,7 @@ def db():
 
 
 def test_create_experiment(db):
+    now = datetime.now()
     experiment = create_experiment(
         db=db,
         id="experiment-test-1",
@@ -27,6 +30,8 @@ def test_create_experiment(db):
         name="test 1",
         description="test experiment number 1",
         api_key=get_default_api_key_from_provider(provider="openai"),
+        created_at=now,
+        updated_at=now,
     )
     assert experiment is not None
     assert experiment.model == "gpt-4o-mini"
@@ -39,6 +44,7 @@ def test_create_experiment(db):
 
 
 def test_get_experiment(db):
+    now = datetime.now()
     create_experiment(
         db=db,
         id="experiment-test-2",
@@ -46,6 +52,8 @@ def test_get_experiment(db):
         name="test 2",
         description="test experiment number 2",
         api_key=get_default_api_key_from_provider(provider="openai"),
+        created_at=now,
+        updated_at=now,
     )
     experiment = get_experiment(db=db, id="experiment-test-2")
     assert experiment is not None
@@ -57,6 +65,7 @@ def test_get_experiment(db):
 
 
 def test_update_experiment(db):
+    now = datetime.now()
     experiment = create_experiment(
         db=db,
         id="experiment-test-3",
@@ -64,6 +73,8 @@ def test_update_experiment(db):
         name="test 3",
         description="test experiment number 3",
         api_key=get_default_api_key_from_provider(provider="openai"),
+        created_at=now,
+        updated_at=now,
     )
     update_dict = {"name": "test 3 updated", "description": "test experiment number 3 updated"}
     updated_experiment = update_experiment(db=db, id="experiment-test-3", **update_dict)
@@ -77,6 +88,7 @@ def test_update_experiment(db):
 
 
 def test_delete_experiment(db):
+    now = datetime.now()
     create_experiment(
         db=db,
         id="experiment-test-4",
@@ -84,12 +96,15 @@ def test_delete_experiment(db):
         name="test 4",
         description="test experiment number 4",
         api_key=get_default_api_key_from_provider(provider="openai"),
+        created_at=now,
+        updated_at=now,
     )
     delete_experiment(db=db, id="experiment-test-4")
     assert get_experiment(db=db, id="experiment-test-4") is None
 
 
 def test_get_experiments(db):
+    now = datetime.now()
     create_experiment(
         db=db,
         id="experiment-test-5",
@@ -97,7 +112,10 @@ def test_get_experiments(db):
         name="test 5",
         description="test experiment number 5",
         api_key=get_default_api_key_from_provider(provider="openai"),
+        created_at=now,
+        updated_at=now,
     )
+    after = datetime.now()
     create_experiment(
         db=db,
         id="experiment-test-6",
@@ -105,6 +123,8 @@ def test_get_experiments(db):
         name="test 6",
         description="test experiment number 6",
         api_key=get_default_api_key_from_provider(provider="openai"),
+        created_at=after,
+        updated_at=after,
     )
     experiments = get_experiments(db=db)
     assert len(experiments) == 2

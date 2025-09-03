@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from batchling.db.session import destroy_db, init_db
+from batchling.db.session import destroy_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
 
@@ -14,7 +14,6 @@ def experiment_manager():
 
 @pytest.fixture
 def mock_experiment(tmp_path: Path):
-    init_db()
     experiment_manager = ExperimentManager()
     input_file_path = tmp_path / "input.jsonl"
     template_messages = [

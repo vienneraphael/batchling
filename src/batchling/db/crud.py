@@ -11,6 +11,8 @@ def create_experiment(
     id: str,
     model: str,
     api_key: str,
+    created_at: datetime,
+    updated_at: datetime,
     name: str | None = None,
     description: str | None = None,
     provider: str = "openai",
@@ -37,6 +39,10 @@ def create_experiment(
         The model to use for the experiment
     api_key : str
         The api key of the experiment
+    created_at : datetime
+        Creation time of the experiment
+    updated_at : datetime
+        Last update time of the experiment
     name : str | None
         The name of the experiment
     description : str | None
@@ -68,13 +74,12 @@ def create_experiment(
     Experiment
         The created experiment
     """
-    now = datetime.now()
     experiment = Experiment(
         id=id,
         name=name,
         description=description,
-        created_at=now,
-        updated_at=now,
+        created_at=created_at,
+        updated_at=updated_at,
         model=model,
         provider=provider,
         endpoint=endpoint,

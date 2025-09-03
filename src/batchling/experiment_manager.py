@@ -4,7 +4,6 @@ from pydantic import BaseModel, computed_field
 from batchling.api_utils import get_default_api_key_from_provider
 from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import (
-    create_experiment,
     get_experiment,
     get_experiments,
 )
@@ -90,24 +89,25 @@ class ExperimentManager(BaseModel):
             raise ValueError(
                 f"No API key found in environment variables for provider: {provider}. Either set the API key in the environment variables or provide it through the api_key parameter."
             )
-        with get_db() as db:
-            experiment = create_experiment(
-                db=db,
-                id=experiment_id,
-                model=model,
-                name=name,
-                description=description,
-                provider=provider,
-                endpoint=endpoint,
-                api_key=api_key,
-                template_messages=template_messages,
-                placeholders=placeholders,
-                response_format=response_format,
-                max_tokens_per_request=max_tokens_per_request,
-                input_file_path=input_file_path,
-                output_file_path=output_file_path,
-            )
-        return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
+        experiment = get_experiment_cls_from_provider(provider).model_validate(
+            {
+                "id": experiment_id,
+                "model": model,
+                "name": name,
+                "description": description,
+                "provider": provider,
+                "endpoint": endpoint,
+                "api_key": api_key,
+                "template_messages": template_messages,
+                "placeholders": placeholders,
+                "response_format": response_format,
+                "max_tokens_per_request": max_tokens_per_request,
+                "input_file_path": input_file_path,
+                "output_file_path": output_file_path,
+            }
+        )
+        experiment.save()
+        return experiment
 
     @staticmethod
     def update_experiment(experiment_id: str, **kwargs) -> Experiment:
