@@ -105,19 +105,12 @@ pip install batchling
 
 Suppose we have the following files:
 
-- `tests/test_data/template_messages_countries.jsonl`
+- `input_capitals_openai.jsonl`
 
 ```json
-{"role": "system", "content": "You are a helpful assistant."}
-{"role": "user", "content": "What is the capital of {country}?"}
-```
-
-- `tests/test_data/placeholders_capitals.jsonl`
-
-```json
-{"name": "France"}
-{"name": "Germany"}
-{"name": "Italy"}
+{"custom_id":"openai-sample-0","body":{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is the capital of France?"}],"model":"gpt-4o"},"method":"POST","url":"/v1/chat/completions"}
+{"custom_id":"openai-sample-1","body":{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is the capital of Italy?"}],"model":"gpt-4o"},"method":"POST","url":"/v1/chat/completions"}
+{"custom_id":"openai-sample-2","body":{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is the capital of Belgium?"}],"model":"gpt-4o"},"method":"POST","url":"/v1/chat/completions"}
 ```
 
 We can create an experiment with the following command:
@@ -128,13 +121,10 @@ batchling create\
  --model gpt-4o\
  --name "exp name"\
  --description "exp description"\
- --template-messages-path tests/test_data/template_messages_countries.jsonl\
- --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --provider openai\
  --endpoint /v1/chat/completions\
  --input-file-path input_capitals_openai.jsonl\
- --output-file-path output/result_capitals.jsonl\
- --max-tokens-per-request 100
+ --output-file-path output/result_capitals_openai.jsonl\
 
 # ╭─────────────── my-experiment-1 ────────────────╮
 # │ ID: my-experiment-1                            │
