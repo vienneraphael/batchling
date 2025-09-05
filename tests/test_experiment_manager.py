@@ -16,7 +16,7 @@ def experiment_manager():
 def mock_experiment(tmp_path: Path):
     experiment_manager = ExperimentManager()
     processed_file_path = tmp_path / "processed.jsonl"
-    template_messages = [
+    raw_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "{greeting}, how are you {name}?"},
     ]
@@ -27,7 +27,7 @@ def mock_experiment(tmp_path: Path):
         name="em test",
         description="test experiment with em",
         processed_file_path=processed_file_path.as_posix(),
-        template_messages=template_messages,
+        raw_messages=raw_messages,
         placeholders=placeholders,
     )
     yield experiment

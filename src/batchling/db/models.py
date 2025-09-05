@@ -23,7 +23,7 @@ class Experiment(Base):
     )
     endpoint: Mapped[str | None] = mapped_column(String, nullable=True)
     api_key: Mapped[str] = mapped_column(String, nullable=False)
-    template_messages: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    raw_messages: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     placeholders: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     response_format: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     max_tokens_per_request: Mapped[int | None] = mapped_column(Integer, nullable=True)

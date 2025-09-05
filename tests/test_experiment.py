@@ -133,7 +133,7 @@ def mock_client(provider):
 @pytest.fixture
 def experiment(tmp_path, provider, structured_output):
     name, response_format = structured_output
-    template_messages = [
+    raw_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "{greeting}, how are you {name}?"},
     ]
@@ -146,7 +146,7 @@ def experiment(tmp_path, provider, structured_output):
             "name": "test 1",
             "description": "test experiment number 1",
             "processed_file_path": (tmp_path / "test.jsonl").as_posix(),
-            "template_messages": template_messages,
+            "raw_messages": raw_messages,
             "placeholders": placeholders,
             "max_tokens_per_request": 100,
             "response_format": response_format,

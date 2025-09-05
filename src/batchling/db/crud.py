@@ -17,7 +17,7 @@ def create_experiment(
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
-    template_messages: list[dict] | None = None,
+    raw_messages: list[dict] | None = None,
     placeholders: list[dict] | None = None,
     response_format: dict | None = None,
     max_tokens_per_request: int | None = None,
@@ -51,8 +51,8 @@ def create_experiment(
         The provider of the experiment
     endpoint : str
         The generation endpoint of the experiment, e.g. /v1/chat/completions, /v1/embeddings..
-    template_messages : list[dict] | None
-        The template messages of the experiment
+    raw_messages : list[dict] | None
+        The raw messages of the experiment
     placeholders : list[dict]
         The placeholders of the experiment
     response_format : dict | None
@@ -84,7 +84,7 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
-        template_messages=template_messages,
+        raw_messages=raw_messages,
         placeholders=placeholders,
         response_format=response_format,
         max_tokens_per_request=max_tokens_per_request,

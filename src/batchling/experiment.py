@@ -54,7 +54,7 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="Optional, the API key to use for the provider if not using standard naming / env variables",
     )
-    template_messages: list[dict] | None = Field(
+    raw_messages: list[dict] | None = Field(
         default=None,
         description="optional, the template messages used to build the batch. Required if processed file path does not exist",
         repr=False,
@@ -154,7 +154,7 @@ class Experiment(BaseModel, ABC):
         batch_requests = []
         for i, placeholder_dict in enumerate(self.placeholders):
             clean_messages = replace_placeholders(
-                messages=self.template_messages, placeholder_dict=placeholder_dict
+                messages=self.raw_messages, placeholder_dict=placeholder_dict
             )
             batch_request: Request = self.request_cls.model_validate(
                 {
@@ -278,7 +278,7 @@ class Experiment(BaseModel, ABC):
                 description=self.description,
                 provider=self.provider,
                 endpoint=self.endpoint,
-                template_messages=self.template_messages,
+                raw_messages=self.raw_messages,
                 placeholders=self.placeholders,
                 response_format=self.response_format,
                 max_tokens_per_request=self.max_tokens_per_request,

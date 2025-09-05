@@ -130,7 +130,7 @@ class GeminiExperiment(Experiment):
         batch_requests = []
         for i, placeholder_dict in enumerate(self.placeholders):
             clean_messages = replace_placeholders(
-                messages=self.template_messages, placeholder_dict=placeholder_dict
+                messages=self.raw_messages, placeholder_dict=placeholder_dict
             )
             system_instructions, messages = split_system_instructions_and_messages(clean_messages)
             batch_request = GeminiRequest(

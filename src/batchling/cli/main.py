@@ -160,11 +160,11 @@ def create_experiment(
             default=..., help="the path to the results file where batch results will be saved"
         ),
     ],
-    template_messages_path: Annotated[
+    raw_file_path: Annotated[
         Path | None,
         typer.Option(
             default=...,
-            help="optional, the path to the template messages file used to build the batch. Required if processed file path does not exist",
+            help="optional, the path to the raw messages file used to build the batch. Required if processed file path does not exist",
         ),
     ] = None,
     placeholders_path: Annotated[
@@ -191,7 +191,7 @@ def create_experiment(
     ] = None,
 ):
     """Create an experiment"""
-    template_messages = read_jsonl_file(template_messages_path) if template_messages_path else None
+    raw_messages = read_jsonl_file(raw_file_path) if raw_file_path else None
     placeholders = read_jsonl_file(placeholders_path) if placeholders_path else None
     response_format = json.load(response_format_path.open()) if response_format_path else None
     experiment = ExperimentManager.start_experiment(
@@ -202,7 +202,7 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
-        template_messages=template_messages,
+        raw_messages=raw_messages,
         placeholders=placeholders,
         response_format=response_format,
         max_tokens_per_request=max_tokens_per_request,
@@ -295,7 +295,7 @@ def update_experiment(
     description: Annotated[
         str | None, typer.Option(help="Updated description, if applicable")
     ] = None,
-    template_messages_path: Annotated[
+    raw_file_path: Annotated[
         Path | None, typer.Option(help="Updated template messages file path, if applicable")
     ] = None,
     placeholders_path: Annotated[
@@ -330,11 +330,9 @@ def update_experiment(
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
     old_fields = {key: getattr(experiment, key) for key in fields_to_update}
-    if "template_messages_path" in fields_to_update:
-        fields_to_update["template_messages"] = read_jsonl_file(
-            fields_to_update["template_messages_path"]
-        )
-        del fields_to_update["template_messages_path"]
+    if "raw_file_path" in fields_to_update:
+        fields_to_update["raw_messages"] = read_jsonl_file(fields_to_update["raw_file_path"])
+        del fields_to_update["raw_file_path"]
     if "placeholders_path" in fields_to_update:
         fields_to_update["placeholders"] = read_jsonl_file(fields_to_update["placeholders_path"])
         del fields_to_update["placeholders_path"]
