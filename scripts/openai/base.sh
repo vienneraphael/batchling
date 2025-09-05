@@ -3,9 +3,9 @@ batchling create\
  --model "gpt-4o"\
  --name "exp name"\
  --description "exp description"\
- --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/template_messages_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
- --input-file-path input_capitals_oai.jsonl\
+ --processed-file-path input_capitals_oai.jsonl\
  --provider openai\
  --endpoint /v1/chat/completions\
- --output-file-path output/result_capitals_openai.jsonl
+ --results-file-path output/result_capitals_openai.jsonl

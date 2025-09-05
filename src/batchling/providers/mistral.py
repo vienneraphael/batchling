@@ -29,15 +29,15 @@ class MistralExperiment(Experiment):
         return Mistral(api_key=self.api_key)
 
     def retrieve_provider_file(self):
-        return self.client.files.retrieve(file_id=self.input_file_id)
+        return self.client.files.retrieve(file_id=self.provider_file_id)
 
     def retrieve_provider_batch(self):
         return self.client.batch.jobs.get(job_id=self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> RetrieveFileOut | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> RetrieveFileOut | None:
+        if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
@@ -72,18 +72,18 @@ class MistralExperiment(Experiment):
     def create_provider_file(self) -> str:
         return self.client.files.upload(
             file={
-                "file_name": self.input_file_path.split("/")[-1],
-                "content": open(self.input_file_path, "rb"),
+                "file_name": self.processed_file_path.split("/")[-1],
+                "content": open(self.processed_file_path, "rb"),
             },
             purpose="batch",
         ).id
 
     def delete_provider_file(self):
-        self.client.files.delete(file_id=self.input_file_id)
+        self.client.files.delete(file_id=self.provider_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batch.jobs.create(
-            input_files=[self.input_file_id],
+            input_files=[self.provider_file_id],
             endpoint=self.endpoint,
             model=self.model,
             metadata={"description": self.description},
@@ -110,7 +110,7 @@ class MistralExperiment(Experiment):
 
     def get_provider_results(self) -> list[dict]:
         output = self.client.files.download(file_id=self.batch.output_file)
-        with open(self.output_file_path, "w") as f:
+        with open(self.results_file_path, "w") as f:
             for chunk in output.stream:
                 f.write(chunk.decode("utf-8"))
-        return read_jsonl_file(self.output_file_path)
+        return read_jsonl_file(self.results_file_path)

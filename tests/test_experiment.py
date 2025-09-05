@@ -145,7 +145,7 @@ def experiment(tmp_path, provider, structured_output):
             "model": "gpt-4o-mini",
             "name": "test 1",
             "description": "test experiment number 1",
-            "input_file_path": (tmp_path / "test.jsonl").as_posix(),
+            "processed_file_path": (tmp_path / "test.jsonl").as_posix(),
             "template_messages": template_messages,
             "placeholders": placeholders,
             "max_tokens_per_request": 100,
@@ -168,14 +168,14 @@ def started_experiment(setup_experiment: Experiment, mock_client):
     return setup_experiment
 
 
-def test_invalid_input_file_path():
-    with pytest.raises(ValueError, match="input_file_path must be a .jsonl file"):
+def test_invalid_processed_file_path():
+    with pytest.raises(ValueError, match="processed_file_path must be a .jsonl file"):
         OpenAIExperiment(
             id="experiment-test-1",
             model="gpt-4o-mini",
             name="test 1",
             description="test experiment number 1",
-            input_file_path="test.txt",
+            processed_file_path="test.txt",
         )
 
 
@@ -189,7 +189,7 @@ def test_double_setup(setup_experiment: Experiment):
 
 def test_setup(setup_experiment: Experiment):
     assert setup_experiment.is_setup
-    assert os.path.exists(setup_experiment.input_file_path)
+    assert os.path.exists(setup_experiment.processed_file_path)
 
 
 def test_start_without_setup(experiment: Experiment):
@@ -202,7 +202,7 @@ def test_start_without_setup(experiment: Experiment):
 
 def test_start(started_experiment: Experiment):
     assert started_experiment.batch is not None
-    assert started_experiment.input_file is not None
+    assert started_experiment.provider_file is not None
 
 
 def test_cancel_without_start(setup_experiment: Experiment):

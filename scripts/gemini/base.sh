@@ -3,9 +3,9 @@ batchling create\
  --model "gemini-2.0-flash"\
  --name "exp name"\
  --description "exp description"\
- --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/template_messages_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
- --input-file-path input_capitals_gemini.jsonl\
+ --processed-file-path input_capitals_gemini.jsonl\
  --provider gemini\
  --endpoint /v1/chat/completions\
- --output-file-path output/result_capitals_gemini.jsonl
+ --results-file-path output/result_capitals_gemini.jsonl

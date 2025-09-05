@@ -3,10 +3,10 @@ batchling create\
  --model "openai/gpt-oss-20b"\
  --name "testing openai/gpt-oss-20b"\
  --description "experiment testing openai/gpt-oss-20b"\
- --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/template_messages_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
- --input-file-path input_capitals_groq.jsonl\
+ --processed-file-path input_capitals_groq.jsonl\
  --provider groq\
  --endpoint /v1/chat/completions\
- --output-file-path output/result_capitals_groq.jsonl\
+ --results-file-path output/result_capitals_groq.jsonl\
  --response-format-path tests/test_data/city_schema.json

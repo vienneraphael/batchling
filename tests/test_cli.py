@@ -26,9 +26,9 @@ def test_create_experiment():
             "tests/test_data/template_messages_countries.jsonl",
             "--placeholders-path",
             "tests/test_data/placeholders_capitals.jsonl",
-            "--input-file-path",
+            "--processed-file-path",
             "input_capitals.jsonl",
-            "--output-file-path",
+            "--results-file-path",
             "output/result_capitals.jsonl",
         ],
     )

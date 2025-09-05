@@ -28,15 +28,15 @@ class GroqExperiment(Experiment):
         return Groq(api_key=self.api_key)
 
     def retrieve_provider_file(self):
-        return self.client.files.info(file_id=self.input_file_id)
+        return self.client.files.info(file_id=self.provider_file_id)
 
     def retrieve_provider_batch(self):
         return self.client.batches.retrieve(batch_id=self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> FileInfoResponse | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> FileInfoResponse | None:
+        if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
@@ -70,16 +70,18 @@ class GroqExperiment(Experiment):
         return self.batch.status
 
     def create_provider_file(self) -> str:
-        return self.client.files.create(file=open(self.input_file_path, "rb"), purpose="batch").id
+        return self.client.files.create(
+            file=open(self.processed_file_path, "rb"), purpose="batch"
+        ).id
 
     def delete_provider_file(self):
-        self.client.files.delete(file_id=self.input_file_id)
+        self.client.files.delete(file_id=self.provider_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batches.create(
             completion_window="24h",
             endpoint=self.endpoint,
-            input_file_id=self.input_file_id,
+            input_file_id=self.provider_file_id,
             metadata={"description": self.description},
         ).id
 
@@ -104,5 +106,5 @@ class GroqExperiment(Experiment):
 
     def get_provider_results(self) -> list[dict]:
         output = self.client.files.content(file_id=self.batch.output_file_id)
-        output.write_to_file(self.output_file_path)
-        return read_jsonl_file(self.output_file_path)
+        output.write_to_file(self.results_file_path)
+        return read_jsonl_file(self.results_file_path)

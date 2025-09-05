@@ -47,17 +47,17 @@ class AnthropicExperiment(Experiment):
         return Anthropic(api_key=self.api_key)
 
     def retrieve_provider_file(self):
-        return self.input_file_path
+        return self.processed_file_path
 
     def retrieve_provider_batch(self):
         return self.client.messages.batches.retrieve(message_batch_id=self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> str | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> str | None:
+        if self.provider_file_id is None:
             return None
-        return self.input_file_path
+        return self.processed_file_path
 
     @computed_field
     @property
@@ -78,12 +78,12 @@ class AnthropicExperiment(Experiment):
         return self.batch.processing_status
 
     def create_provider_file(self) -> str:
-        return self.input_file_path
+        return self.processed_file_path
 
     def delete_provider_file(self):
         pass
 
-    def write_input_batch_file(self) -> None:
+    def write_processed_batch_file(self) -> None:
         if self.placeholders is None:
             self.placeholders = []
         batch_requests = []
@@ -121,10 +121,10 @@ class AnthropicExperiment(Experiment):
                 ),
             )
             batch_requests.append(batch_request.model_dump_json(exclude_none=True))
-        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
+        write_jsonl_file(file_path=self.processed_file_path, data=batch_requests)
 
     def create_provider_batch(self) -> str:
-        data = read_jsonl_file(self.input_file_path)
+        data = read_jsonl_file(self.processed_file_path)
 
         return self.client.messages.batches.create(
             requests=[
@@ -165,5 +165,5 @@ class AnthropicExperiment(Experiment):
             result.model_dump_json()
             for result in self.client.messages.batches.results(message_batch_id=self.batch_id)
         ]
-        write_jsonl_file(file_path=self.output_file_path, data=output)
+        write_jsonl_file(file_path=self.results_file_path, data=output)
         return output

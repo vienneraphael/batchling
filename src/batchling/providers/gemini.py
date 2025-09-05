@@ -40,15 +40,15 @@ class GeminiExperiment(Experiment):
         return Client(api_key=self.api_key)
 
     def retrieve_provider_file(self):
-        return self.client.files.get(name=self.input_file_id)
+        return self.client.files.get(name=self.provider_file_id)
 
     def retrieve_provider_batch(self):
         return self.client.batches.get(name=self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> File | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> File | None:
+        if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
@@ -87,20 +87,20 @@ class GeminiExperiment(Experiment):
 
     def create_provider_file(self) -> str:
         return self.client.files.upload(
-            file=self.input_file_path,
+            file=self.processed_file_path,
             config=UploadFileConfig(
-                display_name=self.input_file_path.split("/")[-1], mime_type="jsonl"
+                display_name=self.processed_file_path.split("/")[-1], mime_type="jsonl"
             ),
         ).name
 
     def delete_provider_file(self):
-        self.client.files.delete(name=self.input_file_id)
+        self.client.files.delete(name=self.provider_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batches.create(
             model=self.model,
-            src=self.input_file_id,
-            config={"display_name": self.input_file_path.split("/")[-1]},
+            src=self.provider_file_id,
+            config={"display_name": self.processed_file_path.split("/")[-1]},
         ).name
 
     def raise_not_in_running_status(self):
@@ -124,7 +124,7 @@ class GeminiExperiment(Experiment):
         elif self.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
             self.delete_provider_file()
 
-    def write_input_batch_file(self) -> None:
+    def write_processed_batch_file(self) -> None:
         if self.placeholders is None:
             self.placeholders = []
         batch_requests = []
@@ -156,7 +156,7 @@ class GeminiExperiment(Experiment):
                 ),
             )
             batch_requests.append(batch_request.model_dump_json())
-        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
+        write_jsonl_file(file_path=self.processed_file_path, data=batch_requests)
 
     def get_provider_results(self) -> list[dict]:
         output = (
@@ -165,5 +165,5 @@ class GeminiExperiment(Experiment):
             .strip("\n")
             .split("\n")
         )
-        write_jsonl_file(file_path=self.output_file_path, data=output)
-        return read_jsonl_file(file_path=self.output_file_path)
+        write_jsonl_file(file_path=self.results_file_path, data=output)
+        return read_jsonl_file(file_path=self.results_file_path)

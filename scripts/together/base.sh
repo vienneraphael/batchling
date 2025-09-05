@@ -3,9 +3,9 @@ batchling create\
  --model "deepseek-ai/DeepSeek-V3"\
  --name "testing DeepSeek-V3"\
  --description "experiment testing DeepSeek-V3"\
- --template-messages-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/template_messages_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
- --input-file-path input_capitals_together.jsonl\
+ --processed-file-path input_capitals_together.jsonl\
  --provider together\
  --endpoint /v1/chat/completions\
- --output-file-path output/result_capitals_together.jsonl
+ --results-file-path output/result_capitals_together.jsonl

@@ -62,7 +62,7 @@ class ExperimentManager(BaseModel):
         experiment_id: str,
         model: str,
         name: str,
-        input_file_path: str,
+        processed_file_path: str,
         api_key: str | None = None,
         description: str | None = None,
         provider: str = "openai",
@@ -71,7 +71,7 @@ class ExperimentManager(BaseModel):
         placeholders: list[dict] | None = None,
         response_format: BaseModel | dict | None = None,
         max_tokens_per_request: int | None = None,
-        output_file_path: str = "results.jsonl",
+        results_file_path: str = "results.jsonl",
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
@@ -102,8 +102,8 @@ class ExperimentManager(BaseModel):
                 "placeholders": placeholders,
                 "response_format": response_format,
                 "max_tokens_per_request": max_tokens_per_request,
-                "input_file_path": input_file_path,
-                "output_file_path": output_file_path,
+                "processed_file_path": processed_file_path,
+                "results_file_path": results_file_path,
             }
         )
         experiment.save()

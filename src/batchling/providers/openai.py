@@ -30,15 +30,15 @@ class OpenAIExperiment(Experiment):
         return OpenAI(api_key=self.api_key)
 
     def retrieve_provider_file(self):
-        return self.client.files.retrieve(self.input_file_id)
+        return self.client.files.retrieve(self.provider_file_id)
 
     def retrieve_provider_batch(self):
         return self.client.batches.retrieve(self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> FileObject | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> FileObject | None:
+        if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
@@ -72,14 +72,16 @@ class OpenAIExperiment(Experiment):
         return self.batch.status
 
     def create_provider_file(self) -> str:
-        return self.client.files.create(file=open(self.input_file_path, "rb"), purpose="batch").id
+        return self.client.files.create(
+            file=open(self.processed_file_path, "rb"), purpose="batch"
+        ).id
 
     def delete_provider_file(self):
-        self.client.files.delete(file_id=self.input_file_id)
+        self.client.files.delete(file_id=self.provider_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batches.create(
-            input_file_id=self.input_file_id,
+            input_file_id=self.provider_file_id,
             endpoint=self.endpoint,
             completion_window="24h",
             metadata={"description": self.description},
@@ -103,6 +105,6 @@ class OpenAIExperiment(Experiment):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        with open(self.output_file_path, "w") as f:
+        with open(self.results_file_path, "w") as f:
             f.write(self.client.files.content(file_id=self.batch.output_file_id).text)
-        return read_jsonl_file(self.output_file_path)
+        return read_jsonl_file(self.results_file_path)

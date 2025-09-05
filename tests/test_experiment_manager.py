@@ -15,7 +15,7 @@ def experiment_manager():
 @pytest.fixture
 def mock_experiment(tmp_path: Path):
     experiment_manager = ExperimentManager()
-    input_file_path = tmp_path / "input.jsonl"
+    processed_file_path = tmp_path / "processed.jsonl"
     template_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "{greeting}, how are you {name}?"},
@@ -26,7 +26,7 @@ def mock_experiment(tmp_path: Path):
         model="gpt-4o-mini",
         name="em test",
         description="test experiment with em",
-        input_file_path=input_file_path.as_posix(),
+        processed_file_path=processed_file_path.as_posix(),
         template_messages=template_messages,
         placeholders=placeholders,
     )
