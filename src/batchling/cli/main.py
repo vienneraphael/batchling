@@ -180,7 +180,7 @@ def create_experiment(
         else None
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
-    experiment = ExperimentManager().start_experiment(
+    experiment = ExperimentManager().create_experiment(
         experiment_id=id,
         model=model,
         name=name,

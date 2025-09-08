@@ -70,7 +70,7 @@ class ExperimentManager(BaseModel):
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
     @staticmethod
-    def start_experiment(
+    def create_experiment(
         experiment_id: str,
         model: str,
         name: str,

@@ -25,7 +25,7 @@ def mock_experiment(tmp_path: Path):
             ]
         ),
     ]
-    experiment = experiment_manager.start_experiment(
+    experiment = experiment_manager.create_experiment(
         experiment_id="em-test",
         model="gpt-4o-mini",
         name="em test",
