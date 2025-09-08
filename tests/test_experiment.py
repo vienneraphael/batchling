@@ -24,7 +24,7 @@ def provider(request):
 
 @pytest.fixture(
     params=[
-        ("None", None),
+        ("None", dict()),
         (
             "json",
             {
@@ -137,7 +137,7 @@ def experiment(tmp_path, provider, structured_output):
     raw_requests = [
         RawRequest(
             messages=[
-                RawMessage(role="user", content="{greeting}, how are you {name}?"),
+                RawMessage(role="user", content="Hello, how are you Dan?"),
             ],
             max_tokens=100,
         ),

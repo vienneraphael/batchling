@@ -20,7 +20,7 @@ def mock_experiment(tmp_path: Path):
     raw_requests = [
         RawRequest(
             messages=[
-                RawMessage(role="user", content="{greeting}, how are you {name}?"),
+                RawMessage(role="user", content="Hello, how are you Dan?"),
             ]
         ),
     ]

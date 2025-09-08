@@ -51,12 +51,12 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="Optional, the API key to use for the provider if not using standard naming / env variables",
     )
-    raw_requests: list[RawRequest] = Field(
+    raw_requests: list[RawRequest] | None = Field(
         default_factory=list,
         description="optional, the raw requests used to build the batch. Required if processed file path does not exist",
         repr=False,
     )
-    response_format: dict = Field(
+    response_format: dict | None = Field(
         default_factory=dict, description="optional, the response format to use"
     )
     max_tokens_per_request: int | None = Field(
