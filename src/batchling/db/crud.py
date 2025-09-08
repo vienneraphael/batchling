@@ -78,6 +78,14 @@ def create_experiment(
     Experiment
         The created experiment
     """
+    raw_requests = (
+        [raw_request.model_dump_json() for raw_request in raw_requests] if raw_requests else None
+    )
+    processed_requests = (
+        [processed_request.model_dump_json() for processed_request in processed_requests]
+        if processed_requests
+        else None
+    )
     experiment = Experiment(
         id=id,
         name=name,
