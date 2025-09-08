@@ -138,7 +138,8 @@ def experiment(tmp_path, provider, structured_output):
         RawRequest(
             messages=[
                 RawMessage(role="user", content="{greeting}, how are you {name}?"),
-            ]
+            ],
+            max_tokens=100,
         ),
     ]
     placeholders = [{"name": "John", "greeting": "Hello"}]
@@ -152,7 +153,6 @@ def experiment(tmp_path, provider, structured_output):
             "processed_file_path": (tmp_path / "test.jsonl").as_posix(),
             "raw_requests": raw_requests,
             "placeholders": placeholders,
-            "max_tokens_per_request": 100,
             "response_format": response_format,
         }
     )
