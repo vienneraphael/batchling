@@ -1,10 +1,6 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
-from batchling.db.crud import (
-    get_experiment,
-    get_experiments,
-)
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
 from batchling.request import RawRequest
@@ -33,6 +29,8 @@ class ExperimentManager(BaseModel):
         starts_with_field: str | None = None,
         starts_with: str | None = None,
     ) -> list[Experiment]:
+        from batchling.db.crud import get_experiments
+
         with get_db() as db:
             experiments = get_experiments(
                 db=db,
@@ -52,6 +50,8 @@ class ExperimentManager(BaseModel):
 
     @staticmethod
     def retrieve(experiment_id: str) -> Experiment | None:
+        from batchling.db.crud import get_experiment
+
         with get_db() as db:
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
