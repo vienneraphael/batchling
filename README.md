@@ -191,7 +191,7 @@ raw_requests = [
 ]
 
 
-experiment = em.start_experiment(
+experiment = em.create_experiment(
     experiment_id="my-experiment-1",
     model="gpt-4o-mini",
     provider="openai",
