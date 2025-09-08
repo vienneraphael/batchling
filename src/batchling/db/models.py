@@ -25,7 +25,6 @@ class Experiment(Base):
     api_key: Mapped[str] = mapped_column(String, nullable=False)
     raw_requests: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     processed_requests: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
-    placeholders: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     response_format: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     max_tokens_per_request: Mapped[int | None] = mapped_column(Integer, nullable=True)
     processed_file_path: Mapped[str | None] = mapped_column(String, nullable=True)

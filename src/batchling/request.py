@@ -1,4 +1,3 @@
-import copy
 import typing as t
 
 from pydantic import BaseModel, Field
@@ -13,12 +12,6 @@ class RawRequest(BaseModel):
     system_prompt: str = "You are a helpful assistant."
     messages: list[RawMessage]
     max_tokens: int | None = None
-
-    def replace_placeholders(self, placeholder_dict: dict) -> None:
-        messages_copy = copy.deepcopy(self.messages)
-        for message in messages_copy:
-            message.content = message.content.format(**placeholder_dict)
-        self.messages = messages_copy
 
 
 class RawFile(BaseModel):

@@ -24,8 +24,6 @@ def test_create_experiment():
             "/v1/chat/completions",
             "--raw-file-path",
             "tests/test_data/raw_file_countries.jsonl",
-            "--placeholders-path",
-            "tests/test_data/placeholders_capitals.jsonl",
             "--processed-file-path",
             "input_capitals.jsonl",
             "--results-file-path",

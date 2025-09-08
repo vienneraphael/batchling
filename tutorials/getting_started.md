@@ -24,21 +24,15 @@ pip install batchling
 Create a `raw_requests.jsonl` file with the following content:
 
 ```json
-{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of {country}?"}]}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of France?"}]}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of Italy?"}]}
 ```
 
 NOTE: if you use the `anthropic` provider, you will need to provide the `max_tokens` parameter as it is required by anthropic. You can set it to 100 for this tutorial.
 
 ```json
-{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of {country}?"}], "max_tokens": 100}
-```
-
-Create a `placeholders.jsonl` file with the following content:
-
-```json
-{"country": "France"}
-{"country": "Germany"}
-{"country": "Italy"}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of France?"}], "max_tokens": 100}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of Italy?"}], "max_tokens": 100}
 ```
 
 ## 3. Create an experiment
@@ -61,7 +55,6 @@ batchling create\
  --name "exp name"\
  --description "exp description"\
  --raw-file-path raw_requests.jsonl\
- --placeholders-path placeholders.jsonl\
  --provider your-provider\
  --endpoint /v1/chat/completions\
  --processed-file-path input_capitals_openai.jsonl\

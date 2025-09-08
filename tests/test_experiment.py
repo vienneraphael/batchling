@@ -142,7 +142,6 @@ def experiment(tmp_path, provider, structured_output):
             max_tokens=100,
         ),
     ]
-    placeholders = [{"name": "John", "greeting": "Hello"}]
     experiment_cls = get_experiment_cls_from_provider(provider)
     experiment = experiment_cls.model_validate(
         {
@@ -152,7 +151,6 @@ def experiment(tmp_path, provider, structured_output):
             "description": "test experiment number 1",
             "processed_file_path": (tmp_path / "test.jsonl").as_posix(),
             "raw_requests": raw_requests,
-            "placeholders": placeholders,
             "response_format": response_format,
         }
     )

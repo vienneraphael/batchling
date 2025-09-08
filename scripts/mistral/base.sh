@@ -4,7 +4,6 @@ batchling create\
  --name "testing mistral-small-latest"\
  --description "experiment testing mistral-small-latest"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
- --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_mistral.jsonl\
  --provider mistral\
  --endpoint /v1/chat/completions\

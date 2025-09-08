@@ -4,7 +4,6 @@ batchling create\
  --name "exp name"\
  --description "exp description"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
- --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_oai.jsonl\
  --provider openai\
  --endpoint /v1/chat/completions\

@@ -20,7 +20,6 @@ def create_experiment(
     endpoint: str = "/v1/chat/completions",
     raw_requests: list[RawRequest] | None = None,
     processed_requests: list[ProcessedRequest] | None = None,
-    placeholders: list[dict] | None = None,
     response_format: dict | None = None,
     max_tokens_per_request: int | None = None,
     processed_file_path: str | None = None,
@@ -57,8 +56,6 @@ def create_experiment(
         The raw requests of the experiment
     processed_requests : list[ProcessedRequest] | None
         The processed requests of the experiment
-    placeholders : list[dict]
-        The placeholders of the experiment
     response_format : dict | None
         The response format of the experiment
     max_tokens_per_request : int
@@ -98,7 +95,6 @@ def create_experiment(
         api_key=api_key,
         raw_requests=raw_requests,
         processed_requests=processed_requests,
-        placeholders=placeholders,
         response_format=response_format,
         max_tokens_per_request=max_tokens_per_request,
         processed_file_path=processed_file_path,

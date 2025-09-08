@@ -105,12 +105,12 @@ pip install batchling
 
 Suppose we have the following files:
 
-- `input_capitals_openai.jsonl`
+- `request_file.jsonl`
 
 ```json
-{"custom_id":"openai-sample-0","body":{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is the capital of France?"}],"model":"gpt-4o"},"method":"POST","url":"/v1/chat/completions"}
-{"custom_id":"openai-sample-1","body":{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is the capital of Italy?"}],"model":"gpt-4o"},"method":"POST","url":"/v1/chat/completions"}
-{"custom_id":"openai-sample-2","body":{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is the capital of Belgium?"}],"model":"gpt-4o"},"method":"POST","url":"/v1/chat/completions"}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of France?"}]}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of Italy?"}]}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of Belgium?"}]}
 ```
 
 We can create an experiment with the following command:
@@ -123,6 +123,7 @@ batchling create\
  --description "exp description"\
  --provider openai\
  --endpoint /v1/chat/completions\
+ --raw-file-path request_file.jsonl\
  --processed-file-path input_capitals_openai.jsonl\
  --results-file-path output/result_capitals_openai.jsonl\
 
@@ -145,7 +146,7 @@ batchling create\
 ```bash
 batchling setup my-experiment-1
 
-# > Experiment with id: my-experiment-1 is setup. Path to batch input file: input_capitals_openai.jsonl
+# > Experiment with id: my-experiment-1 is setup. Path to processed input file: input_capitals_openai.jsonl
 
 batchling start my-experiment-1
 
@@ -184,15 +185,11 @@ raw_requests = [
     RawRequest(
         system_prompt="You are a helpful assistant.",
         messages=[
-            RawMessage(role="user", content="What is your name? Mine is {name}")
+            RawMessage(role="user", content="What is your name? Mine is Bob.")
         ]
     )
 ]
 
-placeholders = [
-    {"name": "John Doe"},
-    {"name": "Jane Doe"},
-]
 
 experiment = em.start_experiment(
     experiment_id="my-experiment-1",
@@ -202,7 +199,6 @@ experiment = em.start_experiment(
     name="My first experiment",
     description="Experimenting with gpt-4o-mini",
     raw_requests=raw_requests,
-    placeholders=placeholders,
     processed_file_path="path/to/write/input.jsonl",
     results_file_path="path/to/write/output.jsonl",
 )

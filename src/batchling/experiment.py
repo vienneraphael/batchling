@@ -51,18 +51,13 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="Optional, the API key to use for the provider if not using standard naming / env variables",
     )
-    raw_requests: list[RawRequest] | None = Field(
-        default=None,
+    raw_requests: list[RawRequest] = Field(
+        default_factory=list,
         description="optional, the raw requests used to build the batch. Required if processed file path does not exist",
         repr=False,
     )
-    placeholders: list[dict] | None = Field(
-        default=None,
-        description="optional, the placeholders used to build the processed requests. Required if processed file path does not exist",
-        repr=False,
-    )
-    response_format: dict | None = Field(
-        default=None, description="optional, the response format to use"
+    response_format: dict = Field(
+        default_factory=dict, description="optional, the response format to use"
     )
     max_tokens_per_request: int | None = Field(
         default=None,
@@ -265,7 +260,6 @@ class Experiment(BaseModel, ABC):
                 provider=self.provider,
                 endpoint=self.endpoint,
                 raw_requests=self.raw_requests,
-                placeholders=self.placeholders,
                 response_format=self.response_format,
                 max_tokens_per_request=self.max_tokens_per_request,
                 processed_file_path=self.processed_file_path,

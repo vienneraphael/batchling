@@ -4,7 +4,6 @@ batchling create\
  --name "testing DeepSeek-V3"\
  --description "experiment testing DeepSeek-V3"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
- --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_together.jsonl\
  --provider together\
  --endpoint /v1/chat/completions\

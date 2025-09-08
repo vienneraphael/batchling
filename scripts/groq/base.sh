@@ -4,7 +4,6 @@ batchling create\
  --name "testing llama-3.1-8b-instant"\
  --description "experiment testing llama-3.1-8b-instant"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
- --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_groq.jsonl\
  --provider groq\
  --endpoint /v1/chat/completions\

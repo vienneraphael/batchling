@@ -24,7 +24,6 @@ def mock_experiment(tmp_path: Path):
             ]
         ),
     ]
-    placeholders = [{"name": "John", "greeting": "Hello"}]
     experiment = experiment_manager.start_experiment(
         experiment_id="em-test",
         model="gpt-4o-mini",
@@ -32,7 +31,6 @@ def mock_experiment(tmp_path: Path):
         description="test experiment with em",
         processed_file_path=processed_file_path.as_posix(),
         raw_requests=raw_requests,
-        placeholders=placeholders,
     )
     yield experiment
     destroy_db()

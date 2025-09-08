@@ -168,13 +168,6 @@ def create_experiment(
             help="optional, the path to the raw messages file used to build the batch. Required if processed file path does not exist",
         ),
     ] = None,
-    placeholders_path: Annotated[
-        Path | None,
-        typer.Option(
-            default=...,
-            help="optional, the path to the placeholders file used to build the batch. Required if processed file path does not exist",
-        ),
-    ] = None,
     api_key: Annotated[
         str | None,
         typer.Option(
@@ -301,9 +294,6 @@ def update_experiment(
     raw_file_path: Annotated[
         Path | None, typer.Option(help="Updated template messages file path, if applicable")
     ] = None,
-    placeholders_path: Annotated[
-        Path | None, typer.Option(help="Updated placeholders file path, if applicable")
-    ] = None,
     processed_file_path: Annotated[
         Path | None, typer.Option(help="Updated processed file path, if applicable")
     ] = None,
@@ -336,9 +326,6 @@ def update_experiment(
     if "raw_file_path" in fields_to_update:
         fields_to_update["raw_requests"] = read_jsonl_file(fields_to_update["raw_file_path"])
         del fields_to_update["raw_file_path"]
-    if "placeholders_path" in fields_to_update:
-        fields_to_update["placeholders"] = read_jsonl_file(fields_to_update["placeholders_path"])
-        del fields_to_update["placeholders_path"]
     if "response_format_path" in fields_to_update:
         fields_to_update["response_format"] = json.load(
             fields_to_update["response_format_path"].open()
