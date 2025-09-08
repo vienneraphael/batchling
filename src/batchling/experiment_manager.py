@@ -9,6 +9,7 @@ from batchling.db.crud import (
 )
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
+from batchling.request import RawRequest
 
 
 class ExperimentManager(BaseModel):
@@ -67,7 +68,7 @@ class ExperimentManager(BaseModel):
         description: str | None = None,
         provider: str = "openai",
         endpoint: str = "/v1/chat/completions",
-        raw_messages: list[dict] | None = None,
+        raw_requests: list[RawRequest] | None = None,
         placeholders: list[dict] | None = None,
         response_format: BaseModel | dict | None = None,
         max_tokens_per_request: int | None = None,
@@ -98,7 +99,7 @@ class ExperimentManager(BaseModel):
                 "provider": provider,
                 "endpoint": endpoint,
                 "api_key": api_key,
-                "raw_messages": raw_messages,
+                "raw_requests": raw_requests,
                 "placeholders": placeholders,
                 "response_format": response_format,
                 "max_tokens_per_request": max_tokens_per_request,

@@ -3,12 +3,8 @@ from functools import cached_property
 
 from google.genai import Client
 from google.genai.types import BatchJob, File, UploadFileConfig
-from pydantic import Field, computed_field
+from pydantic import computed_field
 
-from batchling.batch_utils import (
-    replace_placeholders,
-    split_system_instructions_and_messages,
-)
 from batchling.experiment import Experiment
 from batchling.file_utils import read_jsonl_file, write_jsonl_file
 from batchling.request import (
@@ -18,17 +14,11 @@ from batchling.request import (
     GeminiPart,
     GeminiRequest,
     GeminiSystemInstruction,
+    RawMessage,
 )
 
 
 class GeminiExperiment(Experiment):
-    body_cls: type[GeminiBody] = Field(
-        default=GeminiBody, description="body class to use", init=False
-    )
-    request_cls: type[GeminiRequest] = Field(
-        default=GeminiRequest, description="request class to use", init=False
-    )
-
     @computed_field(repr=False)
     @cached_property
     def client(self) -> Client:
@@ -38,6 +28,41 @@ class GeminiExperiment(Experiment):
             Client: The client
         """
         return Client(api_key=self.api_key)
+
+    @computed_field
+    @cached_property
+    def processed_requests(self) -> list[GeminiRequest]:
+        processed_requests: list[GeminiRequest] = []
+        for i, raw_request in enumerate(self.raw_requests):
+            messages = [
+                RawMessage(role=message.role, content=message.content)
+                for message in raw_request.messages
+            ]
+            processed_requests.append(
+                GeminiRequest(
+                    key=f"{self.id}-sample-{i}",
+                    request=GeminiBody(
+                        system_instruction=GeminiSystemInstruction(
+                            parts=[GeminiPart(text=raw_request.system_prompt)]
+                        )
+                        if raw_request.system_prompt
+                        else None,
+                        contents=[
+                            GeminiMessage(
+                                role=message.role, parts=[GeminiPart(text=message.content)]
+                            )
+                            for message in messages
+                        ],
+                        generation_config=GeminiConfig(
+                            response_mime_type="application/json",
+                            response_json_schema=self.response_format["json_schema"]["schema"],
+                        )
+                        if self.response_format
+                        else None,
+                    ),
+                )
+            )
+        return processed_requests
 
     def retrieve_provider_file(self):
         return self.client.files.get(name=self.provider_file_id)
@@ -123,40 +148,6 @@ class GeminiExperiment(Experiment):
             self.cancel_provider_batch()
         elif self.status == "JOB_STATE_SUCCEEDED" and self.batch.output_file_id:
             self.delete_provider_file()
-
-    def write_processed_batch_file(self) -> None:
-        if self.placeholders is None:
-            self.placeholders = []
-        batch_requests = []
-        for i, placeholder_dict in enumerate(self.placeholders):
-            clean_messages = replace_placeholders(
-                messages=self.raw_messages, placeholder_dict=placeholder_dict
-            )
-            system_instructions, messages = split_system_instructions_and_messages(clean_messages)
-            batch_request = GeminiRequest(
-                key=f"{self.id}-sample-{i}",
-                request=GeminiBody(
-                    system_instruction=GeminiSystemInstruction(
-                        parts=[GeminiPart(text=system_instructions["content"])]
-                    )
-                    if system_instructions
-                    else None,
-                    contents=[
-                        GeminiMessage(
-                            role=message["role"], parts=[GeminiPart(text=message["content"])]
-                        )
-                        for message in messages
-                    ],
-                    generation_config=GeminiConfig(
-                        response_mime_type="application/json",
-                        response_json_schema=self.response_format["json_schema"]["schema"],
-                    )
-                    if self.response_format
-                    else None,
-                ),
-            )
-            batch_requests.append(batch_request.model_dump_json())
-        write_jsonl_file(file_path=self.processed_file_path, data=batch_requests)
 
     def get_provider_results(self) -> list[dict]:
         output = (

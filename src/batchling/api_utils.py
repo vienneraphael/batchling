@@ -3,7 +3,7 @@
 import os
 
 
-def get_default_api_key_from_provider(provider: str | None = None) -> str:
+def get_default_api_key_from_provider(provider: str) -> str:
     api_key = os.getenv(f"{provider.upper()}_API_KEY")
     if not api_key:
         raise ValueError(

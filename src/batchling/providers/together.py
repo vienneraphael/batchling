@@ -1,24 +1,17 @@
 import typing as t
 from functools import cached_property
 
-from pydantic import Field, computed_field
+from pydantic import computed_field
 from together import Together
 from together.resources.batch import BatchJob
 from together.resources.files import FileResponse
 
 from batchling.experiment import Experiment
 from batchling.file_utils import read_jsonl_file
-from batchling.request import TogetherBody, TogetherRequest
+from batchling.request import ProcessedMessage, TogetherBody, TogetherRequest
 
 
 class TogetherExperiment(Experiment):
-    body_cls: type[TogetherBody] = Field(
-        default=TogetherBody, description="body class to use", init=False
-    )
-    request_cls: type[TogetherRequest] = Field(
-        default=TogetherRequest, description="request class to use", init=False
-    )
-
     @computed_field(repr=False)
     @cached_property
     def client(self) -> Together:
@@ -28,6 +21,33 @@ class TogetherExperiment(Experiment):
             Together: The client
         """
         return Together(api_key=self.api_key)
+
+    @computed_field
+    @cached_property
+    def processed_requests(self) -> list[TogetherRequest]:
+        processed_requests: list[TogetherRequest] = []
+        for i, raw_request in enumerate(self.raw_requests):
+            messages: list[ProcessedMessage] = []
+            if raw_request.system_prompt is not None:
+                messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
+            messages.extend(
+                [
+                    ProcessedMessage(role=message.role, content=message.content)
+                    for message in raw_request.messages
+                ]
+            )
+            processed_requests.append(
+                TogetherRequest(
+                    custom_id=f"{self.id}-sample-{i}",
+                    body=TogetherBody(
+                        messages=messages,
+                        max_tokens=raw_request.max_tokens,
+                        model=self.model,
+                        response_format=self.response_format,
+                    ),
+                )
+            )
+        return processed_requests
 
     def retrieve_provider_file(self):
         return self.client.files.retrieve(id=self.provider_file_id)

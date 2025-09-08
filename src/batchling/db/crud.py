@@ -4,6 +4,7 @@ from sqlalchemy import asc, delete, desc, select, update
 from sqlalchemy.orm import Session
 
 from batchling.db.models import Experiment
+from batchling.request import RawRequest
 
 
 def create_experiment(
@@ -17,7 +18,7 @@ def create_experiment(
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
-    raw_messages: list[dict] | None = None,
+    raw_requests: list[RawRequest] | None = None,
     placeholders: list[dict] | None = None,
     response_format: dict | None = None,
     max_tokens_per_request: int | None = None,
@@ -51,8 +52,8 @@ def create_experiment(
         The provider of the experiment
     endpoint : str
         The generation endpoint of the experiment, e.g. /v1/chat/completions, /v1/embeddings..
-    raw_messages : list[dict] | None
-        The raw messages of the experiment
+    raw_requests : list[RawRequest] | None
+        The raw requests of the experiment
     placeholders : list[dict]
         The placeholders of the experiment
     response_format : dict | None
@@ -84,7 +85,7 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
-        raw_messages=raw_messages,
+        raw_requests=raw_requests,
         placeholders=placeholders,
         response_format=response_format,
         max_tokens_per_request=max_tokens_per_request,

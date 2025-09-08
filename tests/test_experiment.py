@@ -9,6 +9,7 @@ from batchling.db.crud import get_experiment
 from batchling.db.session import get_db
 from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
+from batchling.request import RawMessage, RawRequest
 
 
 class City(BaseModel):
@@ -133,9 +134,12 @@ def mock_client(provider):
 @pytest.fixture
 def experiment(tmp_path, provider, structured_output):
     name, response_format = structured_output
-    raw_messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "{greeting}, how are you {name}?"},
+    raw_requests = [
+        RawRequest(
+            messages=[
+                RawMessage(role="user", content="{greeting}, how are you {name}?"),
+            ]
+        ),
     ]
     placeholders = [{"name": "John", "greeting": "Hello"}]
     experiment_cls = get_experiment_cls_from_provider(provider)
@@ -146,7 +150,7 @@ def experiment(tmp_path, provider, structured_output):
             "name": "test 1",
             "description": "test experiment number 1",
             "processed_file_path": (tmp_path / "test.jsonl").as_posix(),
-            "raw_messages": raw_messages,
+            "raw_requests": raw_requests,
             "placeholders": placeholders,
             "max_tokens_per_request": 100,
             "response_format": response_format,

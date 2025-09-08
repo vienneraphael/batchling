@@ -3,21 +3,14 @@ from functools import cached_property
 
 from mistralai import Mistral
 from mistralai.models import BatchJobOut, RetrieveFileOut
-from pydantic import Field, computed_field
+from pydantic import computed_field
 
 from batchling.experiment import Experiment
 from batchling.file_utils import read_jsonl_file
-from batchling.request import MistralBody, MistralRequest
+from batchling.request import MistralBody, MistralRequest, ProcessedMessage
 
 
 class MistralExperiment(Experiment):
-    body_cls: type[MistralBody] = Field(
-        default=MistralBody, description="body class to use", init=False
-    )
-    request_cls: type[MistralRequest] = Field(
-        default=MistralRequest, description="request class to use", init=False
-    )
-
     @computed_field(repr=False)
     @cached_property
     def client(self) -> Mistral:
@@ -27,6 +20,32 @@ class MistralExperiment(Experiment):
             Mistral: The client
         """
         return Mistral(api_key=self.api_key)
+
+    @computed_field
+    @cached_property
+    def processed_requests(self) -> list[MistralRequest]:
+        processed_requests: list[MistralRequest] = []
+        for i, raw_request in enumerate(self.raw_requests):
+            messages: list[ProcessedMessage] = []
+            if raw_request.system_prompt is not None:
+                messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
+            messages.extend(
+                [
+                    ProcessedMessage(role=message.role, content=message.content)
+                    for message in raw_request.messages
+                ]
+            )
+            processed_requests.append(
+                MistralRequest(
+                    custom_id=f"{self.id}-sample-{i}",
+                    body=MistralBody(
+                        messages=messages,
+                        max_tokens=raw_request.max_tokens,
+                        response_format=self.response_format,
+                    ),
+                )
+            )
+        return processed_requests
 
     def retrieve_provider_file(self):
         return self.client.files.retrieve(file_id=self.provider_file_id)

@@ -4,7 +4,10 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
+from anthropic import Anthropic
 from dotenv import load_dotenv
+from google.genai import Client as GeminiClient
+from groq import Groq
 from mistralai import Mistral
 from mistralai.models import BatchJobOut, RetrieveFileOut
 from openai import OpenAI
@@ -18,17 +21,15 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from together import Together
 
 from batchling.api_utils import get_default_api_key_from_provider
-from batchling.batch_utils import replace_placeholders
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
 from batchling.file_utils import write_jsonl_file
 from batchling.request import (
-    Body,
-    OpenAIBody,
-    OpenAIRequest,
-    Request,
+    ProcessedRequest,
+    RawRequest,
 )
 
 
@@ -42,10 +43,6 @@ class Experiment(BaseModel, ABC):
         default="openai",
         description="provider to use",
     )
-    body_cls: type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
-    request_cls: type[Request] = Field(
-        default=OpenAIRequest, description="request class to use", init=False
-    )
     endpoint: str = Field(
         default="/v1/chat/completions",
         description="generation endpoint to use for the provider, e.g. /v1/chat/completions, /v1/embeddings..",
@@ -54,14 +51,14 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="Optional, the API key to use for the provider if not using standard naming / env variables",
     )
-    raw_messages: list[dict] | None = Field(
+    raw_requests: list[RawRequest] | None = Field(
         default=None,
-        description="optional, the template messages used to build the batch. Required if processed file path does not exist",
+        description="optional, the raw requests used to build the batch. Required if processed file path does not exist",
         repr=False,
     )
     placeholders: list[dict] | None = Field(
         default=None,
-        description="optional, the placeholders used to build the batch. Required if processed file path does not exist",
+        description="optional, the placeholders used to build the processed requests. Required if processed file path does not exist",
         repr=False,
     )
     response_format: dict | None = Field(
@@ -109,7 +106,13 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @cached_property
-    def client(self) -> OpenAI | Mistral:
+    def client(self) -> OpenAI | Mistral | Together | Groq | GeminiClient | Anthropic:
+        pass
+
+    @abstractmethod
+    @computed_field(repr=False)
+    @cached_property
+    def processed_requests(self) -> list[ProcessedRequest]:
         pass
 
     @abstractmethod
@@ -149,30 +152,13 @@ class Experiment(BaseModel, ABC):
         pass
 
     def write_processed_batch_file(self) -> None:
-        if self.placeholders is None:
-            self.placeholders = []
-        batch_requests = []
-        for i, placeholder_dict in enumerate(self.placeholders):
-            clean_messages = replace_placeholders(
-                messages=self.raw_messages, placeholder_dict=placeholder_dict
-            )
-            batch_request: Request = self.request_cls.model_validate(
-                {
-                    "custom_id": f"{self.id}-sample-{i}",
-                    "body": self.body_cls.model_validate(
-                        {
-                            "model": self.model,
-                            "messages": clean_messages,
-                            "response_format": self.response_format,
-                            "max_tokens": self.max_tokens_per_request,
-                        }
-                    ),
-                    "method": "POST",
-                    "url": self.endpoint,
-                }
-            )
-            batch_requests.append(batch_request.model_dump_json(exclude_none=True))
-        write_jsonl_file(file_path=self.processed_file_path, data=batch_requests)
+        write_jsonl_file(
+            file_path=self.processed_file_path,
+            data=[
+                processed_request.model_dump_json(exclude_none=True)
+                for processed_request in self.processed_requests
+            ],
+        )
 
     @abstractmethod
     def get_provider_results(self) -> t.Any:
@@ -278,7 +264,7 @@ class Experiment(BaseModel, ABC):
                 description=self.description,
                 provider=self.provider,
                 endpoint=self.endpoint,
-                raw_messages=self.raw_messages,
+                raw_requests=self.raw_requests,
                 placeholders=self.placeholders,
                 response_format=self.response_format,
                 max_tokens_per_request=self.max_tokens_per_request,

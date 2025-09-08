@@ -1,59 +1,81 @@
+import copy
 import typing as t
 
 from pydantic import BaseModel, Field
 
 
-class Message(BaseModel):
+class RawMessage(BaseModel):
+    role: t.Literal["user", "assistant"]
+    content: str
+
+
+class RawRequest(BaseModel):
+    system_prompt: str = "You are a helpful assistant."
+    messages: list[RawMessage]
+    max_tokens: int | None = None
+
+    def replace_placeholders(self, placeholder_dict: dict) -> None:
+        messages_copy = copy.deepcopy(self.messages)
+        for message in messages_copy:
+            message.content = message.content.format(**placeholder_dict)
+        self.messages = messages_copy
+
+
+class RawFile(BaseModel):
+    content: list[RawRequest]
+
+
+class ProcessedMessage(RawMessage):
     role: t.Literal["system", "user", "assistant"]
     content: str
 
 
-class Body(BaseModel):
-    messages: list[Message]
+class ProcessedBody(BaseModel):
+    messages: list[ProcessedMessage]
     max_tokens: int | None = None
 
 
-class Request(BaseModel):
+class ProcessedRequest(BaseModel):
     custom_id: str
-    body: Body
+    body: ProcessedBody
 
 
-class MistralBody(Body):
+class MistralBody(ProcessedBody):
     response_format: dict | None = None
 
 
-class MistralRequest(Request):
+class MistralRequest(ProcessedRequest):
     body: MistralBody
 
 
-class OpenAIBody(Body):
+class OpenAIBody(ProcessedBody):
     model: str
     response_format: dict | None = None
 
 
-class OpenAIRequest(Request):
+class OpenAIRequest(ProcessedRequest):
     method: t.Literal["POST"] = Field(default="POST", init=False)
     url: str
     body: OpenAIBody
 
 
-class GroqBody(Body):
+class GroqBody(ProcessedBody):
     model: str
     response_format: dict | None = None
 
 
-class GroqRequest(Request):
+class GroqRequest(ProcessedRequest):
     method: t.Literal["POST"] = Field(default="POST", init=False)
     url: str
     body: GroqBody
 
 
-class TogetherBody(Body):
+class TogetherBody(ProcessedBody):
     model: str
     response_format: dict | None = None
 
 
-class TogetherRequest(Request):
+class TogetherRequest(ProcessedRequest):
     body: TogetherBody
 
 
@@ -91,10 +113,10 @@ class AnthropicPart(BaseModel):
     text: str
 
 
-class AnthropicBody(Body):
+class AnthropicBody(BaseModel):
     model: str
     max_tokens: int
-    messages: list[Message]
+    messages: list[RawMessage]
     tools: list[dict] | None = None
     tool_choice: dict | None = None
     system: list[AnthropicPart] | None = None

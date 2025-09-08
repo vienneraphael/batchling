@@ -5,6 +5,7 @@ import pytest
 from batchling.db.session import destroy_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
+from batchling.request import RawMessage, RawRequest
 
 
 @pytest.fixture
@@ -16,9 +17,12 @@ def experiment_manager():
 def mock_experiment(tmp_path: Path):
     experiment_manager = ExperimentManager()
     processed_file_path = tmp_path / "processed.jsonl"
-    raw_messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "{greeting}, how are you {name}?"},
+    raw_requests = [
+        RawRequest(
+            messages=[
+                RawMessage(role="user", content="{greeting}, how are you {name}?"),
+            ]
+        ),
     ]
     placeholders = [{"name": "John", "greeting": "Hello"}]
     experiment = experiment_manager.start_experiment(
@@ -27,7 +31,7 @@ def mock_experiment(tmp_path: Path):
         name="em test",
         description="test experiment with em",
         processed_file_path=processed_file_path.as_posix(),
-        raw_messages=raw_messages,
+        raw_requests=raw_requests,
         placeholders=placeholders,
     )
     yield experiment
