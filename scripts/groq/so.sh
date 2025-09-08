@@ -3,7 +3,7 @@ batchling create\
  --model "openai/gpt-oss-20b"\
  --name "testing openai/gpt-oss-20b"\
  --description "experiment testing openai/gpt-oss-20b"\
- --raw-file-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_groq.jsonl\
  --provider groq\

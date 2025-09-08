@@ -168,6 +168,13 @@ def create_experiment(
             help="optional, the path to the raw messages file used to build the batch. Required if processed file path does not exist",
         ),
     ] = None,
+    placeholders_path: Annotated[
+        Path | None,
+        typer.Option(
+            default=...,
+            help="optional, the path to the placeholders file used to build the batch. Required if processed file path does not exist",
+        ),
+    ] = None,
     api_key: Annotated[
         str | None,
         typer.Option(

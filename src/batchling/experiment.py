@@ -315,6 +315,9 @@ class Experiment(BaseModel, ABC):
         exp_dict = self.model_dump()
         exp_dict.update(kwargs)
         # validate model first to avoid updating the database with invalid data
+        exp_dict["raw_requests"] = [
+            RawRequest.model_validate(raw_request) for raw_request in exp_dict["raw_requests"]
+        ]
         updated_experiment = self.__class__.model_validate(exp_dict)
         with get_db() as db:
             db_experiment = update_experiment(db=db, id=self.id, **kwargs)

@@ -3,7 +3,7 @@ batchling create\
  --model "llama-3.1-8b-instant"\
  --name "testing llama-3.1-8b-instant"\
  --description "experiment testing llama-3.1-8b-instant"\
- --raw-file-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_groq.jsonl\
  --provider groq\

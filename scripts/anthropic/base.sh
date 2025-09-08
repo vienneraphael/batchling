@@ -3,7 +3,7 @@ batchling create\
  --model "claude-3-haiku-20240307"\
  --name "experiment haiku"\
  --description "experiment testing claude-3-haiku-20240307"\
- --raw-file-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_anthropic.jsonl\
  --provider anthropic\

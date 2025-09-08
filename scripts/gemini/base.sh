@@ -3,7 +3,7 @@ batchling create\
  --model "gemini-2.0-flash"\
  --name "exp name"\
  --description "exp description"\
- --raw-file-path tests/test_data/template_messages_countries.jsonl\
+ --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --placeholders-path tests/test_data/placeholders_capitals.jsonl\
  --processed-file-path input_capitals_gemini.jsonl\
  --provider gemini\
