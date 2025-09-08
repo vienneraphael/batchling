@@ -21,19 +21,24 @@ pip install batchling
 
 ## 2. Prepare the data
 
-Create a `template_messages.jsonl` file with the following content:
+Create a `raw_requests.jsonl` file with the following content:
 
 ```json
-{"role": "system", "content": "You are a helpful assistant."}
-{"role": "user", "content": "What is the capital of {country}?"}
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of {country}?"}]}
+```
+
+NOTE: if you use the `anthropic` provider, you will need to provide the `max_tokens` parameter as it is required by anthropic. You can set it to 100 for this tutorial.
+
+```json
+{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of {country}?"}], "max_tokens": 100}
 ```
 
 Create a `placeholders.jsonl` file with the following content:
 
 ```json
-{"name": "France"}
-{"name": "Germany"}
-{"name": "Italy"}
+{"country": "France"}
+{"country": "Germany"}
+{"country": "Italy"}
 ```
 
 ## 3. Create an experiment
@@ -55,15 +60,13 @@ batchling create\
  --model gpt-4o\
  --name "exp name"\
  --description "exp description"\
- --template-messages-path template_messages.jsonl\
+ --raw-file-path raw_requests.jsonl\
  --placeholders-path placeholders.jsonl\
  --provider your-provider\
  --endpoint /v1/chat/completions\
- --input-file-path input_capitals_openai.jsonl\
- --output-file-path result_capitals.jsonl\
+ --processed-file-path input_capitals_openai.jsonl\
+ --results-file-path result_capitals.jsonl\
 ```
-
-NOTE: if you use the `anthropic` provider, you will need to provide the `max-tokens-per-request` parameter as it is required by anthropic. You can set it to 100 for this tutorial.
 
 ## 4. Setup your experiment
 
@@ -81,9 +84,9 @@ Run this command to start your experiment:
 batchling start test
 ```
 
-## 6. Poll for results
+## 6. Check experiment status
 
-Run this command to poll for results:
+Run this command to check the experiment status:
 
 ```bash
 batchling get test
@@ -93,7 +96,7 @@ For this tutorial, it should take a few seconds to a few minutes to complete bec
 
 ## 7. Retrieve the results
 
-Once the experiment is completed (check that by polling), you can retrieve the results:
+Once the experiment is completed (check that by checking the status), you can retrieve the results:
 
 ```bash
 batchling results test

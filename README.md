@@ -123,21 +123,21 @@ batchling create\
  --description "exp description"\
  --provider openai\
  --endpoint /v1/chat/completions\
- --input-file-path input_capitals_openai.jsonl\
- --output-file-path output/result_capitals_openai.jsonl\
+ --processed-file-path input_capitals_openai.jsonl\
+ --results-file-path output/result_capitals_openai.jsonl\
 
-# ╭─────────────── my-experiment-1 ────────────────╮
-# │ ID: my-experiment-1                            │
-# │ Name: exp name                                 │
-# │ Description: exp description                   │
-# │ Provider: openai                               │
-# │ Endpoint: /v1/chat/completions                 │
-# │ Model: gpt-4o                                  │
-# │ Status: created                                │
-# │ Input File Path: input_capitals_openai.jsonl   │
-# │ Output File Path: output/result_capitals.jsonl │
-# │ Created At: 2025-09-01 13:17:43                │
-# ╰────────────────────────────────────────────────╯
+# ╭──────────────── my-experiment-1 ─────────────────╮
+# │ ID: my-experiment-1                              │
+# │ Name: exp name                                   │
+# │ Description: exp description                     │
+# │ Provider: openai                                 │
+# │ Endpoint: /v1/chat/completions                   │
+# │ Model: gpt-4o                                    │
+# │ Status: created                                  │
+# │ Processed File Path: input_capitals_openai.jsonl │
+# │ Results File Path: output/result_capitals.jsonl  │
+# │ Created At: 2025-09-01 13:17:43                  │
+# ╰──────────────────────────────────────────────────╯
 ```
 
 ### Setup and start an experiment (CLI)
@@ -163,6 +163,7 @@ batchling results my-experiment-1
 
 cat output/result_capitals.jsonl
 
+```json
 {"id": "batch_req_68b2f87a872c8190b1b5bdc9fdd9c3e0", "custom_id": "test-sample-0", "result": "The capital of France is Paris."}
 {"id": "batch_req_68b2f87c0e0c819095904fe9a1f5430d", "custom_id": "test-sample-1", "result": "The capital of Italy is Rome."}
 {"id": "batch_req_68b2f87aadc08190a0ee50b9a8453b4c", "custom_id": "test-sample-2", "result": "The capital of Belgium is Brussels."}
@@ -174,18 +175,18 @@ cat output/result_capitals.jsonl
 
 ```python
 from batchling import ExperimentManager
+from batchling.request import RawRequest, RawMessage
 
 em = ExperimentManager()
 
-messages = [
-    {
-        "role": "system",
-        "content": "You are a helpful assistant."
-    },
-    {
-        "role": "user",
-        "content": "What is your name? Mine is {name}"
-    }
+# Create raw requests with system prompt and messages
+raw_requests = [
+    RawRequest(
+        system_prompt="You are a helpful assistant.",
+        messages=[
+            RawMessage(role="user", content="What is your name? Mine is {name}")
+        ]
+    )
 ]
 
 placeholders = [
@@ -200,10 +201,10 @@ experiment = em.start_experiment(
     endpoint="/v1/chat/completions",
     name="My first experiment",
     description="Experimenting with gpt-4o-mini",
-    template_messages=messages,
+    raw_requests=raw_requests,
     placeholders=placeholders,
-    input_file_path="path/to/write/input.jsonl",
-    output_file_path="path/to/write/output.jsonl",
+    processed_file_path="path/to/write/input.jsonl",
+    results_file_path="path/to/write/output.jsonl",
 )
 
 # write a local input file with the right format
