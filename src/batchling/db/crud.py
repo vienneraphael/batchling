@@ -23,7 +23,6 @@ def create_experiment(
     raw_requests: list["RawRequest"] | None = None,
     processed_requests: list["ProcessedRequest"] | None = None,
     response_format: dict | None = None,
-    max_tokens_per_request: int | None = None,
     processed_file_path: str | None = None,
     results_file_path: str = "results.jsonl",
     provider_file_id: str | None = None,
@@ -60,8 +59,6 @@ def create_experiment(
         The processed requests of the experiment
     response_format : dict | None
         The response format of the experiment
-    max_tokens_per_request : int
-        The max tokens per request of the experiment
     processed_file_path : str | None
         The path to the processed file
     results_file_path : str
@@ -98,7 +95,6 @@ def create_experiment(
         raw_requests=raw_requests,
         processed_requests=processed_requests,
         response_format=response_format,
-        max_tokens_per_request=max_tokens_per_request,
         processed_file_path=processed_file_path,
         results_file_path=results_file_path,
         provider_file_id=provider_file_id,

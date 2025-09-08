@@ -1,7 +1,7 @@
 import typing as t
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -26,7 +26,6 @@ class Experiment(Base):
     raw_requests: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     processed_requests: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
     response_format: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    max_tokens_per_request: Mapped[int | None] = mapped_column(Integer, nullable=True)
     processed_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
     results_file_path: Mapped[str] = mapped_column(String, nullable=False)
     provider_file_id: Mapped[str | None] = mapped_column(String, nullable=True)

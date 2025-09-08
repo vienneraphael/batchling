@@ -50,10 +50,6 @@ class Experiment(BaseModel, ABC):
     response_format: dict | None = Field(
         default_factory=dict, description="optional, the response format to use"
     )
-    max_tokens_per_request: int | None = Field(
-        default=None,
-        description="optional, the max tokens per request to use. Required for Anthropic experiments",
-    )
     processed_file_path: str = Field(
         description="the processed batch input file path, sent to the provider. Will be used if path exists, else it will be created by batchling."
     )
@@ -254,7 +250,6 @@ class Experiment(BaseModel, ABC):
                 endpoint=self.endpoint,
                 raw_requests=self.raw_requests,
                 response_format=self.response_format,
-                max_tokens_per_request=self.max_tokens_per_request,
                 processed_file_path=self.processed_file_path,
                 results_file_path=self.results_file_path,
                 created_at=self.created_at,
