@@ -1,14 +1,15 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
-from batchling.api_utils import get_default_api_key_from_provider
-from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import (
     get_experiment,
     get_experiments,
 )
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
+from batchling.request import RawRequest
+from batchling.utils.api import get_default_api_key_from_provider
+from batchling.utils.classes import get_experiment_cls_from_provider
 
 
 class ExperimentManager(BaseModel):
@@ -62,16 +63,15 @@ class ExperimentManager(BaseModel):
         experiment_id: str,
         model: str,
         name: str,
-        input_file_path: str,
+        processed_file_path: str,
         api_key: str | None = None,
         description: str | None = None,
         provider: str = "openai",
         endpoint: str = "/v1/chat/completions",
-        template_messages: list[dict] | None = None,
-        placeholders: list[dict] | None = None,
+        raw_requests: list[RawRequest] | None = None,
         response_format: BaseModel | dict | None = None,
         max_tokens_per_request: int | None = None,
-        output_file_path: str = "results.jsonl",
+        results_file_path: str = "results.jsonl",
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
             raise ValueError(f"Experiment with id: {experiment_id} already exists")
@@ -98,12 +98,11 @@ class ExperimentManager(BaseModel):
                 "provider": provider,
                 "endpoint": endpoint,
                 "api_key": api_key,
-                "template_messages": template_messages,
-                "placeholders": placeholders,
+                "raw_requests": raw_requests,
                 "response_format": response_format,
                 "max_tokens_per_request": max_tokens_per_request,
-                "input_file_path": input_file_path,
-                "output_file_path": output_file_path,
+                "processed_file_path": processed_file_path,
+                "results_file_path": results_file_path,
             }
         )
         experiment.save()

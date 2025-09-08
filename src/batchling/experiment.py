@@ -4,7 +4,10 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
+from anthropic import Anthropic
 from dotenv import load_dotenv
+from google.genai import Client as GeminiClient
+from groq import Groq
 from mistralai import Mistral
 from mistralai.models import BatchJobOut, RetrieveFileOut
 from openai import OpenAI
@@ -18,18 +21,16 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from together import Together
 
-from batchling.api_utils import get_default_api_key_from_provider
-from batchling.batch_utils import replace_placeholders
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
-from batchling.file_utils import write_jsonl_file
 from batchling.request import (
-    Body,
-    OpenAIBody,
-    OpenAIRequest,
-    Request,
+    ProcessedRequest,
+    RawRequest,
 )
+from batchling.utils.api import get_default_api_key_from_provider
+from batchling.utils.files import write_jsonl_file
 
 
 class Experiment(BaseModel, ABC):
@@ -42,10 +43,6 @@ class Experiment(BaseModel, ABC):
         default="openai",
         description="provider to use",
     )
-    body_cls: type[Body] = Field(default=OpenAIBody, description="body class to use", init=False)
-    request_cls: type[Request] = Field(
-        default=OpenAIRequest, description="request class to use", init=False
-    )
     endpoint: str = Field(
         default="/v1/chat/completions",
         description="generation endpoint to use for the provider, e.g. /v1/chat/completions, /v1/embeddings..",
@@ -54,33 +51,28 @@ class Experiment(BaseModel, ABC):
         default=None,
         description="Optional, the API key to use for the provider if not using standard naming / env variables",
     )
-    template_messages: list[dict] | None = Field(
-        default=None,
-        description="optional, the template messages used to build the batch. Required if input file path does not exist",
-        repr=False,
-    )
-    placeholders: list[dict] | None = Field(
-        default=None,
-        description="optional, the placeholders used to build the batch. Required if input file path does not exist",
+    raw_requests: list[RawRequest] | None = Field(
+        default_factory=list,
+        description="optional, the raw requests used to build the batch. Required if processed file path does not exist",
         repr=False,
     )
     response_format: dict | None = Field(
-        default=None, description="optional, the response format to use"
+        default_factory=dict, description="optional, the response format to use"
     )
     max_tokens_per_request: int | None = Field(
         default=None,
         description="optional, the max tokens per request to use. Required for Anthropic experiments",
     )
-    input_file_path: str = Field(
-        description="the batch input file path, sent to the provider. Will be used if path exists, else it will be created."
+    processed_file_path: str = Field(
+        description="the processed batch input file path, sent to the provider. Will be used if path exists, else it will be created by batchling."
     )
-    output_file_path: str = Field(
+    results_file_path: str = Field(
         default="results.jsonl",
         description="the path to the output file where batch results will be saved",
     )
     is_setup: bool = Field(default=False, description="whether the experiment is setup")
-    input_file_id: str | None = Field(default=None, description="input file id")
-    batch_id: str | None = Field(default=None, description="batch id")
+    provider_file_id: str | None = Field(default=None, description="provider batch file id")
+    batch_id: str | None = Field(default=None, description="provider batch id")
     created_at: datetime | None = Field(default=None, description="created at")
     updated_at: datetime | None = Field(default=None, description="updated at")
 
@@ -109,7 +101,13 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @cached_property
-    def client(self) -> OpenAI | Mistral:
+    def client(self) -> OpenAI | Mistral | Together | Groq | GeminiClient | Anthropic:
+        pass
+
+    @abstractmethod
+    @computed_field(repr=False)
+    @cached_property
+    def processed_requests(self) -> list[ProcessedRequest]:
         pass
 
     @abstractmethod
@@ -148,31 +146,14 @@ class Experiment(BaseModel, ABC):
     def delete_provider_batch(self):
         pass
 
-    def write_input_batch_file(self) -> None:
-        if self.placeholders is None:
-            self.placeholders = []
-        batch_requests = []
-        for i, placeholder_dict in enumerate(self.placeholders):
-            clean_messages = replace_placeholders(
-                messages=self.template_messages, placeholder_dict=placeholder_dict
-            )
-            batch_request: Request = self.request_cls.model_validate(
-                {
-                    "custom_id": f"{self.id}-sample-{i}",
-                    "body": self.body_cls.model_validate(
-                        {
-                            "model": self.model,
-                            "messages": clean_messages,
-                            "response_format": self.response_format,
-                            "max_tokens": self.max_tokens_per_request,
-                        }
-                    ),
-                    "method": "POST",
-                    "url": self.endpoint,
-                }
-            )
-            batch_requests.append(batch_request.model_dump_json(exclude_none=True))
-        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
+    def write_processed_batch_file(self) -> None:
+        write_jsonl_file(
+            file_path=self.processed_file_path,
+            data=[
+                processed_request.model_dump_json(exclude_none=True)
+                for processed_request in self.processed_requests
+            ],
+        )
 
     @abstractmethod
     def get_provider_results(self) -> t.Any:
@@ -181,7 +162,7 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @property
-    def input_file(self) -> FileObject | RetrieveFileOut | None:
+    def provider_file(self) -> FileObject | RetrieveFileOut | None:
         pass
 
     @abstractmethod
@@ -202,16 +183,16 @@ class Experiment(BaseModel, ABC):
     def set_datetime(cls, value: datetime | None):
         return value or datetime.now()
 
-    @field_validator("input_file_path")
+    @field_validator("processed_file_path")
     def check_jsonl_format(cls, value: str):
         if isinstance(value, str):
             if not value.endswith(".jsonl"):
-                raise ValueError("input_file_path must be a .jsonl file")
+                raise ValueError("processed_file_path must be a .jsonl file")
         return value
 
     def setup(self) -> None:
         """Setup the experiment locally:
-        - write the local input file if it does not exist already
+        - write the local processed file if it does not exist already
         - update the experiment status to setup
         - update the database status and updated_at in the local db
 
@@ -220,15 +201,15 @@ class Experiment(BaseModel, ABC):
         """
         if self.status != "created":
             raise ValueError(f"Experiment in status {self.status} is not in created status")
-        if not os.path.exists(self.input_file_path):
-            self.write_input_batch_file()
+        if not os.path.exists(self.processed_file_path):
+            self.write_processed_batch_file()
         self.is_setup = True
         with get_db() as db:
             update_experiment(db=db, id=self.id, is_setup=self.is_setup, updated_at=datetime.now())
 
     def start(self) -> None:
         """Start the experiment:
-        - create the input file in the provider
+        - create the processed file in the provider
         - create the batch in the provider
         - update the database updated_at in the local db
 
@@ -237,7 +218,7 @@ class Experiment(BaseModel, ABC):
         """
         if self.status != "setup":
             raise ValueError(f"Experiment in status {self.status} is not in setup status")
-        self.input_file_id = self.create_provider_file()
+        self.provider_file_id = self.create_provider_file()
         self.batch_id = self.create_provider_batch()
         with get_db() as db:
             update_experiment(
@@ -245,7 +226,7 @@ class Experiment(BaseModel, ABC):
                 id=self.id,
                 updated_at=datetime.now(),
                 batch_id=self.batch_id,
-                input_file_id=self.input_file_id,
+                provider_file_id=self.provider_file_id,
             )
 
     def cancel(self) -> None:
@@ -278,12 +259,11 @@ class Experiment(BaseModel, ABC):
                 description=self.description,
                 provider=self.provider,
                 endpoint=self.endpoint,
-                template_messages=self.template_messages,
-                placeholders=self.placeholders,
+                raw_requests=self.raw_requests,
                 response_format=self.response_format,
                 max_tokens_per_request=self.max_tokens_per_request,
-                input_file_path=self.input_file_path,
-                output_file_path=self.output_file_path,
+                processed_file_path=self.processed_file_path,
+                results_file_path=self.results_file_path,
                 created_at=self.created_at,
                 updated_at=self.updated_at,
             )
@@ -291,8 +271,8 @@ class Experiment(BaseModel, ABC):
     def delete_local_experiment(self):
         with get_db() as db:
             delete_experiment(db=db, id=self.id)
-        if os.path.exists(self.input_file_path):
-            os.remove(self.input_file_path)
+        if os.path.exists(self.processed_file_path):
+            os.remove(self.processed_file_path)
 
     def delete(self):
         """Delete:
@@ -306,7 +286,7 @@ class Experiment(BaseModel, ABC):
             None
         """
         self.delete_local_experiment()
-        if self.input_file_id is not None:
+        if self.provider_file_id is not None:
             self.delete_provider_file()
         if self.batch_id is not None:
             self.delete_provider_batch()
@@ -329,6 +309,9 @@ class Experiment(BaseModel, ABC):
         exp_dict = self.model_dump()
         exp_dict.update(kwargs)
         # validate model first to avoid updating the database with invalid data
+        exp_dict["raw_requests"] = [
+            RawRequest.model_validate(raw_request) for raw_request in exp_dict["raw_requests"]
+        ]
         updated_experiment = self.__class__.model_validate(exp_dict)
         with get_db() as db:
             db_experiment = update_experiment(db=db, id=self.id, **kwargs)

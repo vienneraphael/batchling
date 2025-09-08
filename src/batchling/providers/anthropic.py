@@ -5,35 +5,23 @@ from anthropic import Anthropic
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
 from anthropic.types.messages import MessageBatch
 from anthropic.types.messages.batch_create_params import Request
-from pydantic import Field, computed_field, field_validator
+from pydantic import computed_field, field_validator
 
-from batchling.batch_utils import (
-    replace_placeholders,
-    split_system_instructions_and_messages,
-)
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file, write_jsonl_file
-from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, Message
+from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
+from batchling.utils.files import read_jsonl_file, write_jsonl_file
 
 
 class AnthropicExperiment(Experiment):
-    body_cls: type[AnthropicBody] = Field(
-        default=AnthropicBody, description="body class to use", init=False
-    )
-    request_cls: type[AnthropicRequest] = Field(
-        default=AnthropicRequest, description="request class to use", init=False
-    )
-    max_tokens_per_request: int = Field(description="max tokens to use per request")
-
-    @field_validator("max_tokens_per_request", mode="before")
+    @field_validator("raw_requests", mode="before")
     @classmethod
-    def check_max_tokens_per_request_not_none(cls, value: int | None) -> int:
+    def check_raw_requests_not_none(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
         if value is None:
+            return None
+        if any(request.max_tokens is None for request in value):
             raise ValueError(
-                "max_tokens_per_request is required to be set for Anthropic experiments and cannot be None"
+                "max_tokens is required to be set for each request for Anthropic experiments and cannot be None"
             )
-        if value <= 0:
-            raise ValueError("max_tokens_per_request must be a positive integer")
         return value
 
     @computed_field(repr=False)
@@ -46,18 +34,48 @@ class AnthropicExperiment(Experiment):
         """
         return Anthropic(api_key=self.api_key)
 
+    @computed_field
+    @cached_property
+    def processed_requests(self) -> list[AnthropicRequest]:
+        processed_requests: list[AnthropicRequest] = []
+        for i, raw_request in enumerate(self.raw_requests):
+            processed_requests.append(
+                AnthropicRequest(
+                    custom_id=f"{self.id}-sample-{i}",
+                    params=AnthropicBody(
+                        model=self.model,
+                        max_tokens=raw_request.max_tokens,
+                        messages=raw_request.messages,
+                        tools=[
+                            {
+                                "name": "structured_output",
+                                "description": "Output a structured response",
+                                "input_schema": self.response_format["json_schema"]["schema"],
+                            }
+                        ]
+                        if self.response_format
+                        else [],
+                        tool_choice={"type": "tool", "name": "structured_output"}
+                        if self.response_format
+                        else {},
+                        system=[AnthropicPart(type="text", text=raw_request.system_prompt)],
+                    ),
+                )
+            )
+        return processed_requests
+
     def retrieve_provider_file(self):
-        return self.input_file_path
+        return self.processed_file_path
 
     def retrieve_provider_batch(self):
         return self.client.messages.batches.retrieve(message_batch_id=self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> str | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> str | None:
+        if self.provider_file_id is None:
             return None
-        return self.input_file_path
+        return self.processed_file_path
 
     @computed_field
     @property
@@ -78,53 +96,13 @@ class AnthropicExperiment(Experiment):
         return self.batch.processing_status
 
     def create_provider_file(self) -> str:
-        return self.input_file_path
+        return self.processed_file_path
 
     def delete_provider_file(self):
         pass
 
-    def write_input_batch_file(self) -> None:
-        if self.placeholders is None:
-            self.placeholders = []
-        batch_requests = []
-        for i, placeholder_dict in enumerate(self.placeholders):
-            clean_messages = replace_placeholders(
-                messages=self.template_messages, placeholder_dict=placeholder_dict
-            )
-            system_dict, messages = split_system_instructions_and_messages(messages=clean_messages)
-            system_instructions = (
-                [AnthropicPart(type="text", text=system_dict["content"])] if system_dict else None
-            )
-            messages = [
-                Message(role=message["role"], content=message["content"]) for message in messages
-            ]
-            tools = (
-                [
-                    {
-                        "name": "structured_output",
-                        "description": "Output a structured response",
-                        "input_schema": self.response_format["json_schema"]["schema"],
-                    }
-                ]
-                if self.response_format is not None
-                else []
-            )
-            batch_request = AnthropicRequest(
-                custom_id=f"{self.id}-sample-{i}",
-                params=AnthropicBody(
-                    model=self.model,
-                    messages=messages,
-                    system=system_instructions,
-                    tools=tools,
-                    tool_choice={"type": "tool", "name": "structured_output"} if tools else {},
-                    max_tokens=self.max_tokens_per_request,
-                ),
-            )
-            batch_requests.append(batch_request.model_dump_json(exclude_none=True))
-        write_jsonl_file(file_path=self.input_file_path, data=batch_requests)
-
     def create_provider_batch(self) -> str:
-        data = read_jsonl_file(self.input_file_path)
+        data = read_jsonl_file(self.processed_file_path)
 
         return self.client.messages.batches.create(
             requests=[
@@ -161,9 +139,11 @@ class AnthropicExperiment(Experiment):
             self.client.messages.batches.delete(message_batch_id=self.batch_id)
 
     def get_provider_results(self) -> list[dict]:
-        output = [
-            result.model_dump_json()
-            for result in self.client.messages.batches.results(message_batch_id=self.batch_id)
-        ]
-        write_jsonl_file(file_path=self.output_file_path, data=output)
-        return output
+        write_jsonl_file(
+            file_path=self.results_file_path,
+            data=[
+                result.model_dump_json()
+                for result in self.client.messages.batches.results(message_batch_id=self.batch_id)
+            ],
+        )
+        return read_jsonl_file(self.results_file_path)

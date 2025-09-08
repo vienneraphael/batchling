@@ -14,7 +14,8 @@ from rich.table import Table
 from batchling.db.session import init_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
-from batchling.file_utils import read_jsonl_file
+from batchling.request import RawRequest
+from batchling.utils.files import read_jsonl_file
 
 app = typer.Typer(no_args_is_help=True)
 init_db()
@@ -31,15 +32,15 @@ def print_experiment(experiment: Experiment):
         "Endpoint": experiment.endpoint,
         "Model": experiment.model,
         "Status": experiment.status,
-        "Input File Path": experiment.input_file_path,
-        "Output File Path": experiment.output_file_path,
-        "Input File ID": experiment.input_file_id,
+        "Processed File Path": experiment.processed_file_path,
+        "Results File Path": experiment.results_file_path,
+        "Provider File ID": experiment.provider_file_id,
         "Batch ID": experiment.batch_id,
         "Created At": datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
         "Updated At": datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
     }
     if experiment.status in ["setup", "created"]:
-        del experiment_dict["Input File ID"]
+        del experiment_dict["Provider File ID"]
         del experiment_dict["Batch ID"]
         if experiment.status == "created":
             del experiment_dict["Updated At"]
@@ -147,31 +148,24 @@ def create_experiment(
             help="The generation endpoint to use, e.g. /v1/chat/completions, /v1/embeddings..",
         ),
     ],
-    input_file_path: Annotated[
+    processed_file_path: Annotated[
         Path,
         typer.Option(
             default=...,
             help="the batch input file path, sent to the provider. Will be used if path exists, else it will be created.",
         ),
     ],
-    output_file_path: Annotated[
+    results_file_path: Annotated[
         Path,
         typer.Option(
-            default=..., help="the path to the output file where batch results will be saved"
+            default=..., help="the path to the results file where batch results will be saved"
         ),
     ],
-    template_messages_path: Annotated[
+    raw_file_path: Annotated[
         Path | None,
         typer.Option(
             default=...,
-            help="optional, the path to the template messages file used to build the batch. Required if input file path does not exist",
-        ),
-    ] = None,
-    placeholders_path: Annotated[
-        Path | None,
-        typer.Option(
-            default=...,
-            help="optional, the path to the placeholders file used to build the batch. Required if input file path does not exist",
+            help="optional, the path to the raw messages file used to build the batch. Required if processed file path does not exist",
         ),
     ] = None,
     api_key: Annotated[
@@ -191,8 +185,11 @@ def create_experiment(
     ] = None,
 ):
     """Create an experiment"""
-    template_messages = read_jsonl_file(template_messages_path) if template_messages_path else None
-    placeholders = read_jsonl_file(placeholders_path) if placeholders_path else None
+    raw_requests = (
+        [RawRequest.model_validate(request) for request in read_jsonl_file(raw_file_path)]
+        if raw_file_path
+        else None
+    )
     response_format = json.load(response_format_path.open()) if response_format_path else None
     experiment = ExperimentManager.start_experiment(
         experiment_id=id,
@@ -202,12 +199,11 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
-        template_messages=template_messages,
-        placeholders=placeholders,
+        raw_requests=raw_requests,
         response_format=response_format,
         max_tokens_per_request=max_tokens_per_request,
-        input_file_path=input_file_path.as_posix(),
-        output_file_path=output_file_path.as_posix(),
+        processed_file_path=processed_file_path.as_posix(),
+        results_file_path=results_file_path.as_posix(),
     )
     print_experiment(experiment)
 
@@ -233,7 +229,7 @@ def setup_experiment(
         raise typer.Exit(1)
     experiment.setup()
     print(
-        f"Experiment with id: [green]{id}[/green] is setup. Path to batch input file: [green]{experiment.input_file_path}[/green]"
+        f"Experiment with id: [green]{id}[/green] is setup. Path to batch input file: [green]{experiment.processed_file_path}[/green]"
     )
 
 
@@ -278,7 +274,7 @@ def get_results(
         raise typer.Exit(1)
     print("Downloading results..")
     experiment.get_results()
-    print(f"Results downloaded to [green]{experiment.output_file_path}[/green]")
+    print(f"Results downloaded to [green]{experiment.results_file_path}[/green]")
 
 
 @app.command(name="update")
@@ -295,17 +291,14 @@ def update_experiment(
     description: Annotated[
         str | None, typer.Option(help="Updated description, if applicable")
     ] = None,
-    template_messages_path: Annotated[
-        Path | None, typer.Option(help="Updated template messages file, if applicable")
+    raw_file_path: Annotated[
+        Path | None, typer.Option(help="Updated template messages file path, if applicable")
     ] = None,
-    placeholders_path: Annotated[
-        Path | None, typer.Option(help="Updated placeholders file, if applicable")
+    processed_file_path: Annotated[
+        Path | None, typer.Option(help="Updated processed file path, if applicable")
     ] = None,
-    input_file_path: Annotated[
-        Path | None, typer.Option(help="Updated input file, if applicable")
-    ] = None,
-    output_file_path: Annotated[
-        Path | None, typer.Option(help="Updated output file, if applicable")
+    results_file_path: Annotated[
+        Path | None, typer.Option(help="Updated results file path, if applicable")
     ] = None,
     provider: Annotated[str | None, typer.Option(help="Updated provider, if applicable")] = None,
     endpoint: Annotated[
@@ -315,7 +308,7 @@ def update_experiment(
         ),
     ] = None,
     response_format_path: Annotated[
-        Path | None, typer.Option(help="Updated response format file, if applicable")
+        Path | None, typer.Option(help="Updated response format file path, if applicable")
     ] = None,
     max_tokens_per_request: Annotated[
         int | None, typer.Option(help="Updated max tokens per request, if applicable")
@@ -330,14 +323,9 @@ def update_experiment(
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
     old_fields = {key: getattr(experiment, key) for key in fields_to_update}
-    if "template_messages_path" in fields_to_update:
-        fields_to_update["template_messages"] = read_jsonl_file(
-            fields_to_update["template_messages_path"]
-        )
-        del fields_to_update["template_messages_path"]
-    if "placeholders_path" in fields_to_update:
-        fields_to_update["placeholders"] = read_jsonl_file(fields_to_update["placeholders_path"])
-        del fields_to_update["placeholders_path"]
+    if "raw_file_path" in fields_to_update:
+        fields_to_update["raw_requests"] = read_jsonl_file(fields_to_update["raw_file_path"])
+        del fields_to_update["raw_file_path"]
     if "response_format_path" in fields_to_update:
         fields_to_update["response_format"] = json.load(
             fields_to_update["response_format_path"].open()

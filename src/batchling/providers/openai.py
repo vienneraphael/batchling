@@ -4,21 +4,14 @@ from functools import cached_property
 from openai import OpenAI
 from openai.types.batch import Batch
 from openai.types.file_object import FileObject
-from pydantic import Field, computed_field
+from pydantic import computed_field
 
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file
-from batchling.request import OpenAIBody, OpenAIRequest
+from batchling.request import OpenAIBody, OpenAIRequest, ProcessedMessage
+from batchling.utils.files import read_jsonl_file
 
 
 class OpenAIExperiment(Experiment):
-    body_cls: type[OpenAIBody] = Field(
-        default=OpenAIBody, description="body class to use", init=False
-    )
-    request_cls: type[OpenAIRequest] = Field(
-        default=OpenAIRequest, description="request class to use", init=False
-    )
-
     @computed_field(repr=False)
     @cached_property
     def client(self) -> OpenAI:
@@ -29,16 +22,44 @@ class OpenAIExperiment(Experiment):
         """
         return OpenAI(api_key=self.api_key)
 
+    @computed_field
+    @cached_property
+    def processed_requests(self) -> list[OpenAIRequest]:
+        processed_requests: list[OpenAIRequest] = []
+        for i, raw_request in enumerate(self.raw_requests):
+            messages: list[ProcessedMessage] = []
+            if raw_request.system_prompt is not None:
+                messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
+            messages.extend(
+                [
+                    ProcessedMessage(role=message.role, content=message.content)
+                    for message in raw_request.messages
+                ]
+            )
+            processed_requests.append(
+                OpenAIRequest(
+                    custom_id=f"{self.id}-sample-{i}",
+                    body=OpenAIBody(
+                        messages=messages,
+                        max_tokens=raw_request.max_tokens,
+                        model=self.model,
+                        response_format=self.response_format,
+                    ),
+                    url=self.endpoint,
+                )
+            )
+        return processed_requests
+
     def retrieve_provider_file(self):
-        return self.client.files.retrieve(self.input_file_id)
+        return self.client.files.retrieve(self.provider_file_id)
 
     def retrieve_provider_batch(self):
         return self.client.batches.retrieve(self.batch_id)
 
     @computed_field
     @property
-    def input_file(self) -> FileObject | None:
-        if self.input_file_id is None:
+    def provider_file(self) -> FileObject | None:
+        if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
@@ -72,14 +93,16 @@ class OpenAIExperiment(Experiment):
         return self.batch.status
 
     def create_provider_file(self) -> str:
-        return self.client.files.create(file=open(self.input_file_path, "rb"), purpose="batch").id
+        return self.client.files.create(
+            file=open(self.processed_file_path, "rb"), purpose="batch"
+        ).id
 
     def delete_provider_file(self):
-        self.client.files.delete(file_id=self.input_file_id)
+        self.client.files.delete(file_id=self.provider_file_id)
 
     def create_provider_batch(self) -> str:
         return self.client.batches.create(
-            input_file_id=self.input_file_id,
+            input_file_id=self.provider_file_id,
             endpoint=self.endpoint,
             completion_window="24h",
             metadata={"description": self.description},
@@ -103,6 +126,6 @@ class OpenAIExperiment(Experiment):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        with open(self.output_file_path, "w") as f:
+        with open(self.results_file_path, "w") as f:
             f.write(self.client.files.content(file_id=self.batch.output_file_id).text)
-        return read_jsonl_file(self.output_file_path)
+        return read_jsonl_file(self.results_file_path)

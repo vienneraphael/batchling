@@ -4,6 +4,7 @@ from sqlalchemy import asc, delete, desc, select, update
 from sqlalchemy.orm import Session
 
 from batchling.db.models import Experiment
+from batchling.request import ProcessedRequest, RawRequest
 
 
 def create_experiment(
@@ -17,13 +18,13 @@ def create_experiment(
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
-    template_messages: list[dict] | None = None,
-    placeholders: list[dict] | None = None,
+    raw_requests: list[RawRequest] | None = None,
+    processed_requests: list[ProcessedRequest] | None = None,
     response_format: dict | None = None,
     max_tokens_per_request: int | None = None,
-    input_file_path: str | None = None,
-    output_file_path: str = "results.jsonl",
-    input_file_id: str | None = None,
+    processed_file_path: str | None = None,
+    results_file_path: str = "results.jsonl",
+    provider_file_id: str | None = None,
     is_setup: bool = False,
     batch_id: str | None = None,
 ) -> Experiment:
@@ -51,20 +52,20 @@ def create_experiment(
         The provider of the experiment
     endpoint : str
         The generation endpoint of the experiment, e.g. /v1/chat/completions, /v1/embeddings..
-    template_messages : list[dict] | None
-        The template messages of the experiment
-    placeholders : list[dict]
-        The placeholders of the experiment
+    raw_requests : list[RawRequest] | None
+        The raw requests of the experiment
+    processed_requests : list[ProcessedRequest] | None
+        The processed requests of the experiment
     response_format : dict | None
         The response format of the experiment
     max_tokens_per_request : int
         The max tokens per request of the experiment
-    input_file_path : str | None
-        The path to the input file
-    output_file_path : str
-        The path to the output file
-    input_file_id : str | None
-        The id of the input file
+    processed_file_path : str | None
+        The path to the processed file
+    results_file_path : str
+        The path to the results file
+    provider_file_id : str | None
+        The id of the provider file
     is_setup : bool
         Whether the experiment is setup
     batch_id : str | None
@@ -74,6 +75,14 @@ def create_experiment(
     Experiment
         The created experiment
     """
+    raw_requests = (
+        [raw_request.model_dump() for raw_request in raw_requests] if raw_requests else None
+    )
+    processed_requests = (
+        [processed_request.model_dump() for processed_request in processed_requests]
+        if processed_requests
+        else None
+    )
     experiment = Experiment(
         id=id,
         name=name,
@@ -84,13 +93,13 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
-        template_messages=template_messages,
-        placeholders=placeholders,
+        raw_requests=raw_requests,
+        processed_requests=processed_requests,
         response_format=response_format,
         max_tokens_per_request=max_tokens_per_request,
-        input_file_path=input_file_path,
-        output_file_path=output_file_path,
-        input_file_id=input_file_id,
+        processed_file_path=processed_file_path,
+        results_file_path=results_file_path,
+        provider_file_id=provider_file_id,
         is_setup=is_setup,
         batch_id=batch_id,
     )

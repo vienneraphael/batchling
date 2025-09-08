@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from batchling.file_utils import write_jsonl_file
+from batchling.utils.files import write_jsonl_file
 
 
 @pytest.fixture

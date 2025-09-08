@@ -5,6 +5,7 @@ import pytest
 from batchling.db.session import destroy_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
+from batchling.request import RawMessage, RawRequest
 
 
 @pytest.fixture
@@ -15,20 +16,21 @@ def experiment_manager():
 @pytest.fixture
 def mock_experiment(tmp_path: Path):
     experiment_manager = ExperimentManager()
-    input_file_path = tmp_path / "input.jsonl"
-    template_messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "{greeting}, how are you {name}?"},
+    processed_file_path = tmp_path / "processed.jsonl"
+    raw_requests = [
+        RawRequest(
+            messages=[
+                RawMessage(role="user", content="Hello, how are you Dan?"),
+            ]
+        ),
     ]
-    placeholders = [{"name": "John", "greeting": "Hello"}]
     experiment = experiment_manager.start_experiment(
         experiment_id="em-test",
         model="gpt-4o-mini",
         name="em test",
         description="test experiment with em",
-        input_file_path=input_file_path.as_posix(),
-        template_messages=template_messages,
-        placeholders=placeholders,
+        processed_file_path=processed_file_path.as_posix(),
+        raw_requests=raw_requests,
     )
     yield experiment
     destroy_db()
