@@ -4,15 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
-from anthropic import Anthropic
 from dotenv import load_dotenv
-from google.genai import Client as GeminiClient
-from groq import Groq
-from mistralai import Mistral
-from mistralai.models import BatchJobOut, RetrieveFileOut
-from openai import OpenAI
-from openai.types.batch import Batch
-from openai.types.file_object import FileObject
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -21,7 +13,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from together import Together
 
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
@@ -31,6 +22,17 @@ from batchling.request import (
 )
 from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.files import write_jsonl_file
+
+if t.TYPE_CHECKING:
+    from anthropic import Anthropic
+    from google.genai import Client as GeminiClient
+    from groq import Groq
+    from mistralai import Mistral
+    from mistralai.models import BatchJobOut, RetrieveFileOut
+    from openai import OpenAI
+    from openai.types.batch import Batch
+    from openai.types.file_object import FileObject
+    from together import Together
 
 
 class Experiment(BaseModel, ABC):
@@ -101,7 +103,9 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @cached_property
-    def client(self) -> OpenAI | Mistral | Together | Groq | GeminiClient | Anthropic:
+    def client(
+        self,
+    ) -> t.Union["OpenAI", "Mistral", "Together", "Groq", "GeminiClient", "Anthropic"]:
         pass
 
     @abstractmethod
@@ -162,13 +166,13 @@ class Experiment(BaseModel, ABC):
     @abstractmethod
     @computed_field(repr=False)
     @property
-    def provider_file(self) -> FileObject | RetrieveFileOut | None:
+    def provider_file(self) -> t.Union["FileObject", "RetrieveFileOut", None]:
         pass
 
     @abstractmethod
     @computed_field(repr=False)
     @property
-    def batch(self) -> Batch | BatchJobOut | None:
+    def batch(self) -> t.Union["Batch", "BatchJobOut", None]:
         pass
 
     @abstractmethod

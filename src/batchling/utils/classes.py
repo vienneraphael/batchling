@@ -1,22 +1,28 @@
 from batchling.experiment import Experiment
-from batchling.providers.anthropic import AnthropicExperiment
-from batchling.providers.gemini import GeminiExperiment
-from batchling.providers.groq import GroqExperiment
-from batchling.providers.mistral import MistralExperiment
-from batchling.providers.openai import OpenAIExperiment
-from batchling.providers.together import TogetherExperiment
 
 
 def get_experiment_cls_from_provider(provider: str | None = None) -> type[Experiment]:
     if provider == "mistral":
+        from batchling.providers.mistral import MistralExperiment
+
         return MistralExperiment
     elif provider == "groq":
+        from batchling.providers.groq import GroqExperiment
+
         return GroqExperiment
     elif provider == "together":
+        from batchling.providers.together import TogetherExperiment
+
         return TogetherExperiment
     elif provider == "gemini":
+        from batchling.providers.gemini import GeminiExperiment
+
         return GeminiExperiment
     elif provider == "anthropic":
+        from batchling.providers.anthropic import AnthropicExperiment
+
         return AnthropicExperiment
     else:
+        from batchling.providers.openai import OpenAIExperiment
+
         return OpenAIExperiment
