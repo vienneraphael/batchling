@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id groq\
  --model "openai/gpt-oss-20b"\

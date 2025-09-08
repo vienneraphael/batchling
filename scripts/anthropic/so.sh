@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id anthropic\
  --model "claude-3-haiku-20240307"\

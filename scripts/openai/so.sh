@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id openai\
  --model "gpt-4o"\

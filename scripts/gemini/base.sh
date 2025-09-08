@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id gemini\
  --model "gemini-2.0-flash"\
