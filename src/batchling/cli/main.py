@@ -88,7 +88,7 @@ def list_experiments(
         "Updated At",
         title="Experiments",
     )
-    experiments = ExperimentManager.list_experiments(order_by=order_by, ascending=ascending)
+    experiments = ExperimentManager().list_experiments(order_by=order_by, ascending=ascending)
     for experiment in experiments:
         table.add_row(
             experiment.id,
@@ -114,7 +114,7 @@ def get_experiment(
     ],
 ):
     """Get an experiment by id"""
-    experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    experiment = ExperimentManager().retrieve(experiment_id=experiment_id)
     if experiment is None:
         typer.echo(f"Experiment with id: {experiment_id} not found")
         raise typer.Exit(1)
@@ -186,7 +186,7 @@ def create_experiment(
         else None
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
-    experiment = ExperimentManager.start_experiment(
+    experiment = ExperimentManager().start_experiment(
         experiment_id=id,
         model=model,
         name=name,
@@ -213,7 +213,7 @@ def setup_experiment(
     ],
 ):
     """Setup an experiment by writing the jsonl batch input file"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -238,7 +238,7 @@ def start_experiment(
     ],
 ):
     """Start an experiment by submitting the batch to the provider"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -263,7 +263,7 @@ def get_results(
     ],
 ):
     """Download the results of an experiment locally"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -313,7 +313,7 @@ def update_experiment(
     fields_to_update = {
         key: value for key, value in ctx.params.items() if value is not None and key != "id"
     }
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -340,7 +340,7 @@ def delete_experiment(
     ],
 ):
     """Delete an experiment"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
