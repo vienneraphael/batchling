@@ -1,8 +1,6 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
-from batchling.api_utils import get_default_api_key_from_provider
-from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import (
     get_experiment,
     get_experiments,
@@ -10,6 +8,8 @@ from batchling.db.crud import (
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
 from batchling.request import RawRequest
+from batchling.utils.api import get_default_api_key_from_provider
+from batchling.utils.classes import get_experiment_cls_from_provider
 
 
 class ExperimentManager(BaseModel):

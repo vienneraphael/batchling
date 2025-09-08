@@ -4,12 +4,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from batchling.cls_utils import get_experiment_cls_from_provider
 from batchling.db.crud import get_experiment
 from batchling.db.session import get_db
 from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
 from batchling.request import RawMessage, RawRequest
+from batchling.utils.classes import get_experiment_cls_from_provider
 
 
 class City(BaseModel):

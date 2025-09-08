@@ -8,8 +8,8 @@ from anthropic.types.messages.batch_create_params import Request
 from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file, write_jsonl_file
 from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
+from batchling.utils.files import read_jsonl_file, write_jsonl_file
 
 
 class AnthropicExperiment(Experiment):

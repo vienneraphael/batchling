@@ -7,8 +7,8 @@ from together.resources.batch import BatchJob
 from together.resources.files import FileResponse
 
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file
 from batchling.request import ProcessedMessage, TogetherBody, TogetherRequest
+from batchling.utils.files import read_jsonl_file
 
 
 class TogetherExperiment(Experiment):

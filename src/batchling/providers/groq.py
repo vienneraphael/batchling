@@ -7,8 +7,8 @@ from groq.resources.files import FileInfoResponse
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file
 from batchling.request import GroqBody, GroqRequest, ProcessedMessage
+from batchling.utils.files import read_jsonl_file
 
 
 class GroqExperiment(Experiment):

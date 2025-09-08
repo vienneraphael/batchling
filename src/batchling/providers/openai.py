@@ -7,8 +7,8 @@ from openai.types.file_object import FileObject
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file
 from batchling.request import OpenAIBody, OpenAIRequest, ProcessedMessage
+from batchling.utils.files import read_jsonl_file
 
 
 class OpenAIExperiment(Experiment):

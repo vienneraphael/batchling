@@ -6,7 +6,6 @@ from google.genai.types import BatchJob, File, UploadFileConfig
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
-from batchling.file_utils import read_jsonl_file, write_jsonl_file
 from batchling.request import (
     GeminiBody,
     GeminiConfig,
@@ -16,6 +15,7 @@ from batchling.request import (
     GeminiSystemInstruction,
     RawMessage,
 )
+from batchling.utils.files import read_jsonl_file, write_jsonl_file
 
 
 class GeminiExperiment(Experiment):

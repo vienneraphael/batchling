@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 
-from batchling.api_utils import get_default_api_key_from_provider
 from batchling.db.crud import (
     create_experiment,
     delete_experiment,
@@ -11,6 +10,7 @@ from batchling.db.crud import (
     update_experiment,
 )
 from batchling.db.session import destroy_db, get_db, init_db
+from batchling.utils.api import get_default_api_key_from_provider
 
 
 @pytest.fixture
