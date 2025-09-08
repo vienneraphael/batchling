@@ -172,12 +172,6 @@ def create_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
-    max_tokens_per_request: Annotated[
-        int | None,
-        typer.Option(
-            help="optional, the max tokens per request to use. Required for Anthropic experiments"
-        ),
-    ] = None,
 ):
     """Create an experiment"""
     raw_requests = (
@@ -196,7 +190,6 @@ def create_experiment(
         api_key=api_key,
         raw_requests=raw_requests,
         response_format=response_format,
-        max_tokens_per_request=max_tokens_per_request,
         processed_file_path=processed_file_path.as_posix(),
         results_file_path=results_file_path.as_posix(),
     )
@@ -304,9 +297,6 @@ def update_experiment(
     ] = None,
     response_format_path: Annotated[
         Path | None, typer.Option(help="Updated response format file path, if applicable")
-    ] = None,
-    max_tokens_per_request: Annotated[
-        int | None, typer.Option(help="Updated max tokens per request, if applicable")
     ] = None,
 ):
     """Update an experiment"""

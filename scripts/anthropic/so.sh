@@ -10,5 +10,4 @@ batchling create\
  --provider anthropic\
  --endpoint /v1/chat/completions\
  --results-file-path output/result_capitals_anthropic.jsonl\
- --max-tokens-per-request 100\
  --response-format-path tests/test_data/city_schema.json
