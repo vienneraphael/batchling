@@ -199,6 +199,7 @@ pygments==2.19.2
     #   ipython-pygments-lexers
     #   pytest
     #   rich
+pyinstrument==5.1.1
 pytest==8.4.1
 python-dateutil==2.9.0.post0
     # via

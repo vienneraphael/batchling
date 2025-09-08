@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id mistral\
  --model "mistral-small-latest"\

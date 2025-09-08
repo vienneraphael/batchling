@@ -1,14 +1,16 @@
+import typing as t
 from datetime import datetime
 
-from sqlalchemy import asc, delete, desc, select, update
-from sqlalchemy.orm import Session
-
 from batchling.db.models import Experiment
-from batchling.request import ProcessedRequest, RawRequest
+
+if t.TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+    from batchling.request import ProcessedRequest, RawRequest
 
 
 def create_experiment(
-    db: Session,
+    db: "Session",
     id: str,
     model: str,
     api_key: str,
@@ -18,10 +20,9 @@ def create_experiment(
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
-    raw_requests: list[RawRequest] | None = None,
-    processed_requests: list[ProcessedRequest] | None = None,
+    raw_requests: list["RawRequest"] | None = None,
+    processed_requests: list["ProcessedRequest"] | None = None,
     response_format: dict | None = None,
-    max_tokens_per_request: int | None = None,
     processed_file_path: str | None = None,
     results_file_path: str = "results.jsonl",
     provider_file_id: str | None = None,
@@ -58,8 +59,6 @@ def create_experiment(
         The processed requests of the experiment
     response_format : dict | None
         The response format of the experiment
-    max_tokens_per_request : int
-        The max tokens per request of the experiment
     processed_file_path : str | None
         The path to the processed file
     results_file_path : str
@@ -96,7 +95,6 @@ def create_experiment(
         raw_requests=raw_requests,
         processed_requests=processed_requests,
         response_format=response_format,
-        max_tokens_per_request=max_tokens_per_request,
         processed_file_path=processed_file_path,
         results_file_path=results_file_path,
         provider_file_id=provider_file_id,
@@ -109,7 +107,7 @@ def create_experiment(
     return experiment
 
 
-def get_experiment(db: Session, id: str) -> Experiment | None:
+def get_experiment(db: "Session", id: str) -> Experiment | None:
     """Get an experiment
 
     Parameters
@@ -124,12 +122,14 @@ def get_experiment(db: Session, id: str) -> Experiment | None:
     Experiment
         The experiment
     """
+    from sqlalchemy import select
+
     stmt = select(Experiment).where(Experiment.id == id)
     return db.execute(stmt).scalar_one_or_none()
 
 
 def get_experiments(
-    db: Session,
+    db: "Session",
     limit: int | None = None,
     offset: int | None = None,
     order_by: str | None = "updated_at",
@@ -166,6 +166,8 @@ def get_experiments(
     list[Experiment]
         The list of experiments
     """
+    from sqlalchemy import asc, desc, select
+
     direction = asc if ascending else desc
     stmt = select(Experiment)
     if filter_by is not None and filter_value is not None:
@@ -181,7 +183,7 @@ def get_experiments(
 
 
 def update_experiment(
-    db: Session,
+    db: "Session",
     id: str,
     **kwargs: dict,
 ) -> Experiment | None:
@@ -201,6 +203,8 @@ def update_experiment(
     Experiment
         The updated experiment
     """
+    from sqlalchemy import update
+
     kwargs["updated_at"] = datetime.now()
     stmt = update(Experiment).where(Experiment.id == id).values(**kwargs)
     db.execute(stmt)
@@ -208,7 +212,7 @@ def update_experiment(
     return get_experiment(db=db, id=id)
 
 
-def delete_experiment(db: Session, id: str) -> bool:
+def delete_experiment(db: "Session", id: str) -> bool:
     """Delete an experiment
 
     Parameters
@@ -218,6 +222,8 @@ def delete_experiment(db: Session, id: str) -> bool:
     id : str
         The id of the experiment
     """
+    from sqlalchemy import delete
+
     stmt = delete(Experiment).where(Experiment.id == id)
     db.execute(stmt)
     db.commit()

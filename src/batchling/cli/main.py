@@ -5,22 +5,17 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from dotenv import load_dotenv
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from batchling.db.session import init_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
 from batchling.request import RawRequest
 from batchling.utils.files import read_jsonl_file
 
 app = typer.Typer(no_args_is_help=True)
-init_db()
-
-load_dotenv(override=True)
 
 
 def print_experiment(experiment: Experiment):
@@ -93,7 +88,7 @@ def list_experiments(
         "Updated At",
         title="Experiments",
     )
-    experiments = ExperimentManager.list_experiments(order_by=order_by, ascending=ascending)
+    experiments = ExperimentManager().list_experiments(order_by=order_by, ascending=ascending)
     for experiment in experiments:
         table.add_row(
             experiment.id,
@@ -119,7 +114,7 @@ def get_experiment(
     ],
 ):
     """Get an experiment by id"""
-    experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    experiment = ExperimentManager().retrieve(experiment_id=experiment_id)
     if experiment is None:
         typer.echo(f"Experiment with id: {experiment_id} not found")
         raise typer.Exit(1)
@@ -177,12 +172,6 @@ def create_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
-    max_tokens_per_request: Annotated[
-        int | None,
-        typer.Option(
-            help="optional, the max tokens per request to use. Required for Anthropic experiments"
-        ),
-    ] = None,
 ):
     """Create an experiment"""
     raw_requests = (
@@ -191,7 +180,7 @@ def create_experiment(
         else None
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
-    experiment = ExperimentManager.start_experiment(
+    experiment = ExperimentManager().start_experiment(
         experiment_id=id,
         model=model,
         name=name,
@@ -201,7 +190,6 @@ def create_experiment(
         api_key=api_key,
         raw_requests=raw_requests,
         response_format=response_format,
-        max_tokens_per_request=max_tokens_per_request,
         processed_file_path=processed_file_path.as_posix(),
         results_file_path=results_file_path.as_posix(),
     )
@@ -218,7 +206,7 @@ def setup_experiment(
     ],
 ):
     """Setup an experiment by writing the jsonl batch input file"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -243,7 +231,7 @@ def start_experiment(
     ],
 ):
     """Start an experiment by submitting the batch to the provider"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -268,7 +256,7 @@ def get_results(
     ],
 ):
     """Download the results of an experiment locally"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -310,15 +298,12 @@ def update_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="Updated response format file path, if applicable")
     ] = None,
-    max_tokens_per_request: Annotated[
-        int | None, typer.Option(help="Updated max tokens per request, if applicable")
-    ] = None,
 ):
     """Update an experiment"""
     fields_to_update = {
         key: value for key, value in ctx.params.items() if value is not None and key != "id"
     }
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -345,7 +330,7 @@ def delete_experiment(
     ],
 ):
     """Delete an experiment"""
-    experiment = ExperimentManager.retrieve(experiment_id=id)
+    experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)

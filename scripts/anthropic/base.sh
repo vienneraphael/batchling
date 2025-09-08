@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id anthropic\
  --model "claude-3-haiku-20240307"\
@@ -8,4 +10,3 @@ batchling create\
  --provider anthropic\
  --endpoint /v1/chat/completions\
  --results-file-path output/result_capitals_anthropic.jsonl\
- --max-tokens-per-request 100

@@ -10,6 +10,7 @@ from batchling.request import RawMessage, RawRequest
 
 @pytest.fixture
 def experiment_manager():
+    Experiment.model_rebuild()
     return ExperimentManager()
 
 

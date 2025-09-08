@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling create\
  --id together\
  --model "deepseek-ai/DeepSeek-V3"\

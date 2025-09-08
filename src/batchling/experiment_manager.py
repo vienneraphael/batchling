@@ -1,10 +1,6 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
-from batchling.db.crud import (
-    get_experiment,
-    get_experiments,
-)
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
 from batchling.request import RawRequest
@@ -33,6 +29,8 @@ class ExperimentManager(BaseModel):
         starts_with_field: str | None = None,
         starts_with: str | None = None,
     ) -> list[Experiment]:
+        from batchling.db.crud import get_experiments
+
         with get_db() as db:
             experiments = get_experiments(
                 db=db,
@@ -45,6 +43,12 @@ class ExperimentManager(BaseModel):
                 starts_with_field=starts_with_field,
                 starts_with=starts_with,
             )
+        for experiment in experiments:
+            experiment.raw_requests = (
+                [RawRequest.model_validate(raw_request) for raw_request in experiment.raw_requests]
+                if experiment.raw_requests
+                else None
+            )
         return [
             get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
             for experiment in experiments
@@ -52,10 +56,17 @@ class ExperimentManager(BaseModel):
 
     @staticmethod
     def retrieve(experiment_id: str) -> Experiment | None:
+        from batchling.db.crud import get_experiment
+
         with get_db() as db:
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             return None
+        experiment.raw_requests = (
+            [RawRequest.model_validate(raw_request) for raw_request in experiment.raw_requests]
+            if experiment.raw_requests
+            else None
+        )
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
     @staticmethod
@@ -70,7 +81,6 @@ class ExperimentManager(BaseModel):
         endpoint: str = "/v1/chat/completions",
         raw_requests: list[RawRequest] | None = None,
         response_format: BaseModel | dict | None = None,
-        max_tokens_per_request: int | None = None,
         results_file_path: str = "results.jsonl",
     ) -> Experiment:
         if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
@@ -100,7 +110,6 @@ class ExperimentManager(BaseModel):
                 "api_key": api_key,
                 "raw_requests": raw_requests,
                 "response_format": response_format,
-                "max_tokens_per_request": max_tokens_per_request,
                 "processed_file_path": processed_file_path,
                 "results_file_path": results_file_path,
             }
