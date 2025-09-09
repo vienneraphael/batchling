@@ -208,6 +208,7 @@ class Experiment(BaseModel, ABC):
             update_experiment(db=db, id=self.id, updated_at=datetime.now())
 
     def get_results(self):
+        os.makedirs(os.path.dirname(self.results_file_path), exist_ok=True)
         self.raise_not_in_completed_status()
         return self.get_provider_results()
 
