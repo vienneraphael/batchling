@@ -50,7 +50,7 @@ Compared to using standard endpoints directly, Batch API offers:
   - [Installation](#installation)
   - [CLI](#cli)
     - [Create an experiment (CLI)](#create-an-experiment-cli)
-    - [Setup and start an experiment (CLI)](#setup-and-start-an-experiment-cli)
+    - [Start an experiment (CLI)](#start-an-experiment-cli)
     - [Retrieve results](#retrieve-results)
   - [Python SDK](#python-sdk)
     - [Create an experiment (Python)](#create-an-experiment-python)
@@ -141,12 +141,9 @@ batchling create\
 # ╰──────────────────────────────────────────────────╯
 ```
 
-### Setup and start an experiment (CLI)
+### Start an experiment (CLI)
 
 ```bash
-batchling setup my-experiment-1
-
-# > Experiment with id: my-experiment-1 is setup. Path to processed input file: input_capitals_openai.jsonl
 
 batchling start my-experiment-1
 
@@ -165,9 +162,9 @@ batchling results my-experiment-1
 cat output/result_capitals.jsonl
 
 ```json
-{"id": "batch_req_68b2f87a872c8190b1b5bdc9fdd9c3e0", "custom_id": "test-sample-0", "result": "The capital of France is Paris."}
-{"id": "batch_req_68b2f87c0e0c819095904fe9a1f5430d", "custom_id": "test-sample-1", "result": "The capital of Italy is Rome."}
-{"id": "batch_req_68b2f87aadc08190a0ee50b9a8453b4c", "custom_id": "test-sample-2", "result": "The capital of Belgium is Brussels."}
+{"id": "batch_req_68b2f87a872c8190b1b5bdc9fdd9c3e0", "custom_id": "my-experiment-1-sample-0", "result": "The capital of France is Paris."}
+{"id": "batch_req_68b2f87c0e0c819095904fe9a1f5430d", "custom_id": "my-experiment-1-sample-1", "result": "The capital of Italy is Rome."}
+{"id": "batch_req_68b2f87aadc08190a0ee50b9a8453b4c", "custom_id": "my-experiment-1-sample-2", "result": "The capital of Belgium is Brussels."}
 ```
 
 ## Python SDK
@@ -202,9 +199,6 @@ experiment = em.create_experiment(
     processed_file_path="path/to/write/input.jsonl",
     results_file_path="path/to/write/output.jsonl",
 )
-
-# write a local input file with the right format
-experiment.setup()
 
 # submit the local input file and batch to provider
 experiment.start()
