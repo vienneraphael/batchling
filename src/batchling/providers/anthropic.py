@@ -53,10 +53,10 @@ class AnthropicExperiment(Experiment):
                             }
                         ]
                         if self.response_format
-                        else [],
+                        else None,
                         tool_choice={"type": "tool", "name": "structured_output"}
                         if self.response_format
-                        else {},
+                        else None,
                         system=[AnthropicPart(type="text", text=raw_request.system_prompt)],
                     ),
                 )
@@ -110,8 +110,10 @@ class AnthropicExperiment(Experiment):
                         messages=request["params"]["messages"],
                         system=request["params"]["system"],
                         max_tokens=request["params"]["max_tokens"],
-                        tools=request["params"]["tools"],
-                        tool_choice=request["params"]["tool_choice"],
+                        tools=request["params"]["tools"] if "tools" in request["params"] else None,
+                        tool_choice=request["params"]["tool_choice"]
+                        if "tool_choice" in request["params"]
+                        else None,
                     ),
                 )
                 for request in data
