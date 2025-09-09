@@ -1,24 +1,28 @@
 import typing as t
 from functools import cached_property
 
-from openai import OpenAI
-from openai.types.batch import Batch
-from openai.types.file_object import FileObject
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
 from batchling.request import OpenAIBody, OpenAIRequest, ProcessedMessage
 from batchling.utils.files import read_jsonl_file
 
+if t.TYPE_CHECKING:
+    from openai import OpenAI
+    from openai.types.batch import Batch
+    from openai.types.file_object import FileObject
+
 
 class OpenAIExperiment(Experiment):
     @cached_property
-    def client(self) -> OpenAI:
+    def client(self) -> "OpenAI":
         """Get the client
 
         Returns:
             OpenAI: The client
         """
+        from openai import OpenAI
+
         return OpenAI(api_key=self.api_key)
 
     @computed_field
@@ -55,16 +59,14 @@ class OpenAIExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.batches.retrieve(self.batch_id)
 
-    @computed_field
     @property
-    def provider_file(self) -> FileObject | None:
+    def provider_file(self) -> t.Union["FileObject", None]:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
-    @computed_field
     @property
-    def batch(self) -> Batch | None:
+    def batch(self) -> t.Union["Batch", None]:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()

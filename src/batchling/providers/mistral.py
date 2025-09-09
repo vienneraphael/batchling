@@ -1,23 +1,27 @@
 import typing as t
 from functools import cached_property
 
-from mistralai import Mistral
-from mistralai.models import BatchJobOut, RetrieveFileOut
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
 from batchling.request import MistralBody, MistralRequest, ProcessedMessage
 from batchling.utils.files import read_jsonl_file
 
+if t.TYPE_CHECKING:
+    from mistralai import Mistral
+    from mistralai.models import BatchJobOut, RetrieveFileOut
+
 
 class MistralExperiment(Experiment):
     @cached_property
-    def client(self) -> Mistral:
+    def client(self) -> "Mistral":
         """Get the client
 
         Returns:
             Mistral: The client
         """
+        from mistralai import Mistral
+
         return Mistral(api_key=self.api_key)
 
     @computed_field
@@ -52,16 +56,14 @@ class MistralExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.batch.jobs.get(job_id=self.batch_id)
 
-    @computed_field
     @property
-    def provider_file(self) -> RetrieveFileOut | None:
+    def provider_file(self) -> t.Union["RetrieveFileOut", None]:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
-    @computed_field
     @property
-    def batch(self) -> BatchJobOut | None:
+    def batch(self) -> t.Union["BatchJobOut", None]:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -120,7 +122,7 @@ class MistralExperiment(Experiment):
     def delete_provider_batch(self):
         if self.batch.status in ["QUEUED", "RUNNING"]:
             self.cancel_provider_batch()
-        elif self.batch.status == "SUCCESS" and self.batch.output_file_id:
+        elif self.batch.status == "SUCCESS" and self.batch.output_file:
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
