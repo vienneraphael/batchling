@@ -24,7 +24,6 @@ class AnthropicExperiment(Experiment):
             )
         return value
 
-    @computed_field(repr=False)
     @cached_property
     def client(self) -> Anthropic:
         """Get the client
@@ -88,10 +87,8 @@ class AnthropicExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal["setup", "created", "in_progress", "canceling", "ended"]:
+    ) -> t.Literal["created", "in_progress", "canceling", "ended"]:
         if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
             return "created"
         return self.batch.processing_status
 

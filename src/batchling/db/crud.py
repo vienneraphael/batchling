@@ -26,7 +26,6 @@ def create_experiment(
     processed_file_path: str | None = None,
     results_file_path: str = "results.jsonl",
     provider_file_id: str | None = None,
-    is_setup: bool = False,
     batch_id: str | None = None,
 ) -> Experiment:
     """Create an experiment
@@ -65,8 +64,6 @@ def create_experiment(
         The path to the results file
     provider_file_id : str | None
         The id of the provider file
-    is_setup : bool
-        Whether the experiment is setup
     batch_id : str | None
         The id of the batch
     Returns
@@ -98,7 +95,6 @@ def create_experiment(
         processed_file_path=processed_file_path,
         results_file_path=results_file_path,
         provider_file_id=provider_file_id,
-        is_setup=is_setup,
         batch_id=batch_id,
     )
     db.add(experiment)

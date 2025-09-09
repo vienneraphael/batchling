@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
@@ -114,6 +116,8 @@ class ExperimentManager(BaseModel):
                 "results_file_path": results_file_path,
             }
         )
+        if not os.path.exists(processed_file_path):
+            experiment.write_processed_batch_file()
         experiment.save()
         return experiment
 

@@ -1,7 +1,7 @@
 import typing as t
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, String
+from sqlalchemy import JSON, DateTime, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -29,5 +29,4 @@ class Experiment(Base):
     processed_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
     results_file_path: Mapped[str] = mapped_column(String, nullable=False)
     provider_file_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    is_setup: Mapped[bool] = mapped_column(Boolean, nullable=False)
     batch_id: Mapped[str | None] = mapped_column(String, nullable=True)

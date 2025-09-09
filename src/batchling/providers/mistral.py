@@ -11,7 +11,6 @@ from batchling.utils.files import read_jsonl_file
 
 
 class MistralExperiment(Experiment):
-    @computed_field(repr=False)
     @cached_property
     def client(self) -> Mistral:
         """Get the client
@@ -72,7 +71,6 @@ class MistralExperiment(Experiment):
     def status(
         self,
     ) -> t.Literal[
-        "setup",
         "created",
         "QUEUED",
         "RUNNING",
@@ -83,8 +81,6 @@ class MistralExperiment(Experiment):
         "CANCELLED",
     ]:
         if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
             return "created"
         return self.batch.status
 

@@ -19,7 +19,6 @@ from batchling.utils.files import read_jsonl_file, write_jsonl_file
 
 
 class GeminiExperiment(Experiment):
-    @computed_field(repr=False)
     @cached_property
     def client(self) -> Client:
         """Get the client
@@ -89,7 +88,6 @@ class GeminiExperiment(Experiment):
     def status(
         self,
     ) -> t.Literal[
-        "setup",
         "created",
         "JOB_STATE_UNSPECIFIED",
         "JOB_STATE_QUEUED",
@@ -105,8 +103,6 @@ class GeminiExperiment(Experiment):
         "JOB_STATE_PARTIALLY_SUCCEEDED",
     ]:
         if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
             return "created"
         return self.batch.state.name
 
