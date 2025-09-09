@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 from pydantic import BaseModel, computed_field
 
@@ -70,7 +72,7 @@ class ExperimentManager(BaseModel):
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
     @staticmethod
-    def start_experiment(
+    def create_experiment(
         experiment_id: str,
         model: str,
         name: str,
@@ -114,6 +116,8 @@ class ExperimentManager(BaseModel):
                 "results_file_path": results_file_path,
             }
         )
+        if not os.path.exists(processed_file_path):
+            experiment.write_processed_batch_file()
         experiment.save()
         return experiment
 
@@ -122,7 +126,14 @@ class ExperimentManager(BaseModel):
         experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
         if experiment is None:
             raise ValueError(f"Experiment with id: {experiment_id} not found")
-        return experiment.update(**kwargs)
+        updated_experiment = experiment.update(**kwargs)
+        if set(
+            ["raw_requests", "response_format", "endpoint", "model", "processed_file_path"]
+        ) & set(kwargs):
+            updated_experiment.write_processed_batch_file()
+        if "processed_file_path" in kwargs and os.path.exists(experiment.processed_file_path):
+            os.remove(experiment.processed_file_path)
+        return updated_experiment
 
     @staticmethod
     def delete_experiment(experiment_id: str) -> bool:

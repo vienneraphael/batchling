@@ -12,7 +12,6 @@ from batchling.utils.files import read_jsonl_file
 
 
 class GroqExperiment(Experiment):
-    @computed_field(repr=False)
     @cached_property
     def client(self) -> Groq:
         """Get the client
@@ -75,7 +74,6 @@ class GroqExperiment(Experiment):
     def status(
         self,
     ) -> t.Literal[
-        "setup",
         "created",
         "validating",
         "failed",
@@ -87,8 +85,6 @@ class GroqExperiment(Experiment):
         "cancelled",
     ]:
         if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
             return "created"
         return self.batch.status
 

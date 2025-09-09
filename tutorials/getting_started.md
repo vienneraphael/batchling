@@ -50,7 +50,7 @@ We recommend using a provider from which you already have an API key from to get
 
 ```bash
 batchling create\
- --id test\
+ --id my-experiment-1\
  --model gpt-4o\
  --name "exp name"\
  --description "exp description"\
@@ -61,28 +61,20 @@ batchling create\
  --results-file-path result_capitals.jsonl\
 ```
 
-## 4. Setup your experiment
-
-Run this command to setup your experiment:
-
-```bash
-batchling setup test
-```
-
-## 5. Start your experiment
+## 4. Start your experiment
 
 Run this command to start your experiment:
 
 ```bash
-batchling start test
+batchling start my-experiment-1
 ```
 
-## 6. Check experiment status
+## 5. Check experiment status
 
 Run this command to check the experiment status:
 
 ```bash
-batchling get test
+batchling get my-experiment-1
 ```
 
 For this tutorial, it should take a few seconds to a few minutes to complete because we only have 3 requests in the batch.
@@ -92,7 +84,7 @@ For this tutorial, it should take a few seconds to a few minutes to complete bec
 Once the experiment is completed (check that by checking the status), you can retrieve the results:
 
 ```bash
-batchling results test
+batchling results my-experiment-1
 ```
 
 Take a look at the `result_capitals.jsonl` file to see the results.

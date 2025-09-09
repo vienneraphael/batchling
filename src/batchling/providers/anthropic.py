@@ -24,7 +24,6 @@ class AnthropicExperiment(Experiment):
             )
         return value
 
-    @computed_field(repr=False)
     @cached_property
     def client(self) -> Anthropic:
         """Get the client
@@ -54,10 +53,10 @@ class AnthropicExperiment(Experiment):
                             }
                         ]
                         if self.response_format
-                        else [],
+                        else None,
                         tool_choice={"type": "tool", "name": "structured_output"}
                         if self.response_format
-                        else {},
+                        else None,
                         system=[AnthropicPart(type="text", text=raw_request.system_prompt)],
                     ),
                 )
@@ -88,10 +87,8 @@ class AnthropicExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal["setup", "created", "in_progress", "canceling", "ended"]:
+    ) -> t.Literal["created", "in_progress", "canceling", "ended"]:
         if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
             return "created"
         return self.batch.processing_status
 
@@ -103,23 +100,21 @@ class AnthropicExperiment(Experiment):
 
     def create_provider_batch(self) -> str:
         data = read_jsonl_file(self.processed_file_path)
-
-        return self.client.messages.batches.create(
-            requests=[
-                Request(
-                    custom_id=request.get("custom_id"),
-                    params=MessageCreateParamsNonStreaming(
-                        model=self.model,
-                        messages=request["params"]["messages"],
-                        system=request["params"]["system"],
-                        max_tokens=request["params"]["max_tokens"],
-                        tools=request["params"]["tools"],
-                        tool_choice=request["params"]["tool_choice"],
-                    ),
-                )
-                for request in data
-            ]
-        ).id
+        requests = []
+        for request in data:
+            params_dict = {
+                "model": self.model,
+                "messages": request["params"]["messages"],
+                "system": request["params"]["system"],
+                "max_tokens": request["params"]["max_tokens"],
+            }
+            if "tools" in request["params"]:
+                params_dict["tools"] = request["params"]["tools"]
+            if "tool_choice" in request["params"]:
+                params_dict["tool_choice"] = request["params"]["tool_choice"]
+            params = MessageCreateParamsNonStreaming(**params_dict)
+            requests.append(Request(custom_id=request.get("custom_id"), params=params))
+        return self.client.messages.batches.create(requests=requests).id
 
     def raise_not_in_running_status(self):
         if self.status not in ["in_progress"]:

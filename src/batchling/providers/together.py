@@ -12,7 +12,6 @@ from batchling.utils.files import read_jsonl_file
 
 
 class TogetherExperiment(Experiment):
-    @computed_field(repr=False)
     @cached_property
     def client(self) -> Together:
         """Get the client
@@ -74,7 +73,6 @@ class TogetherExperiment(Experiment):
     def status(
         self,
     ) -> t.Literal[
-        "setup",
         "created",
         "VALIDATING",
         "IN_PROGRESS",
@@ -84,8 +82,6 @@ class TogetherExperiment(Experiment):
         "CANCELLED",
     ]:
         if self.batch_id is None:
-            if self.is_setup:
-                return "setup"
             return "created"
         return self.batch.status
 

@@ -34,7 +34,7 @@ def print_experiment(experiment: Experiment):
         "Created At": datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
         "Updated At": datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
     }
-    if experiment.status in ["setup", "created"]:
+    if experiment.status == "created":
         del experiment_dict["Provider File ID"]
         del experiment_dict["Batch ID"]
         if experiment.status == "created":
@@ -180,7 +180,7 @@ def create_experiment(
         else None
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
-    experiment = ExperimentManager().start_experiment(
+    experiment = ExperimentManager().create_experiment(
         experiment_id=id,
         model=model,
         name=name,
@@ -196,31 +196,6 @@ def create_experiment(
     print_experiment(experiment)
 
 
-@app.command(name="setup")
-def setup_experiment(
-    id: Annotated[
-        str,
-        typer.Argument(
-            help="The id of the experiment",
-        ),
-    ],
-):
-    """Setup an experiment by writing the jsonl batch input file"""
-    experiment = ExperimentManager().retrieve(experiment_id=id)
-    if experiment is None:
-        typer.echo(f"Experiment with id: {id} not found")
-        raise typer.Exit(1)
-    if experiment.status != "created":
-        typer.echo(
-            f"Experiment with id: {id} is not in created status, current status: {experiment.status}"
-        )
-        raise typer.Exit(1)
-    experiment.setup()
-    print(
-        f"Experiment with id: [green]{id}[/green] is setup. Path to batch input file: [green]{experiment.processed_file_path}[/green]"
-    )
-
-
 @app.command(name="start")
 def start_experiment(
     id: Annotated[
@@ -234,11 +209,6 @@ def start_experiment(
     experiment = ExperimentManager().retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
-        raise typer.Exit(1)
-    if experiment.status != "setup":
-        typer.echo(
-            f"Experiment with id: {id} is not in setup status, current status: {experiment.status}"
-        )
         raise typer.Exit(1)
     experiment.start()
     print(

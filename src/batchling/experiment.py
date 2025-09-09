@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
-from dotenv import load_dotenv
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -15,7 +14,7 @@ from pydantic import (
 )
 
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
-from batchling.db.session import get_db, init_db
+from batchling.db.session import get_db
 from batchling.request import (
     ProcessedRequest,
     RawRequest,
@@ -57,7 +56,6 @@ class Experiment(BaseModel, ABC):
         default="results.jsonl",
         description="the path to the output file where batch results will be saved",
     )
-    is_setup: bool = Field(default=False, description="whether the experiment is setup")
     provider_file_id: str | None = Field(default=None, description="provider batch file id")
     batch_id: str | None = Field(default=None, description="provider batch id")
     created_at: datetime | None = Field(default=None, description="created at")
@@ -81,12 +79,7 @@ class Experiment(BaseModel, ABC):
             self.api_key = get_default_api_key_from_provider(self.provider)
         return self
 
-    def model_post_init(self, context):
-        load_dotenv(override=True)
-        init_db()
-
     @abstractmethod
-    @computed_field(repr=False)
     @cached_property
     def client(
         self,
@@ -179,23 +172,6 @@ class Experiment(BaseModel, ABC):
                 raise ValueError("processed_file_path must be a .jsonl file")
         return value
 
-    def setup(self) -> None:
-        """Setup the experiment locally:
-        - write the local processed file if it does not exist already
-        - update the experiment status to setup
-        - update the database status and updated_at in the local db
-
-        Returns:
-            None
-        """
-        if self.status != "created":
-            raise ValueError(f"Experiment in status {self.status} is not in created status")
-        if not os.path.exists(self.processed_file_path):
-            self.write_processed_batch_file()
-        self.is_setup = True
-        with get_db() as db:
-            update_experiment(db=db, id=self.id, is_setup=self.is_setup, updated_at=datetime.now())
-
     def start(self) -> None:
         """Start the experiment:
         - create the processed file in the provider
@@ -205,8 +181,8 @@ class Experiment(BaseModel, ABC):
         Returns:
             None
         """
-        if self.status != "setup":
-            raise ValueError(f"Experiment in status {self.status} is not in setup status")
+        if self.status != "created":
+            raise ValueError(f"Experiment in status {self.status} cannot be started")
         self.provider_file_id = self.create_provider_file()
         self.batch_id = self.create_provider_batch()
         with get_db() as db:
@@ -232,6 +208,7 @@ class Experiment(BaseModel, ABC):
             update_experiment(db=db, id=self.id, updated_at=datetime.now())
 
     def get_results(self):
+        os.makedirs(os.path.dirname(self.results_file_path), exist_ok=True)
         self.raise_not_in_completed_status()
         return self.get_provider_results()
 
@@ -285,7 +262,7 @@ class Experiment(BaseModel, ABC):
         Returns:
             Experiment: The updated experiment
         """
-        if self.is_setup:
+        if self.status != "created":
             raise ValueError(
                 f"Can only update an experiment in created status. Found: {self.status}"
             )
