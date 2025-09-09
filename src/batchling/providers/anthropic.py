@@ -1,15 +1,15 @@
 import typing as t
 from functools import cached_property
 
-from anthropic import Anthropic
-from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
-from anthropic.types.messages import MessageBatch
-from anthropic.types.messages.batch_create_params import Request
 from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
 from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
 from batchling.utils.files import read_jsonl_file, write_jsonl_file
+
+if t.TYPE_CHECKING:
+    from anthropic import Anthropic
+    from anthropic.types.messages import MessageBatch
 
 
 class AnthropicExperiment(Experiment):
@@ -25,12 +25,14 @@ class AnthropicExperiment(Experiment):
         return value
 
     @cached_property
-    def client(self) -> Anthropic:
+    def client(self) -> "Anthropic":
         """Get the client
 
         Returns:
             Anthropic: The client
         """
+        from anthropic import Anthropic
+
         return Anthropic(api_key=self.api_key)
 
     @computed_field
@@ -76,9 +78,8 @@ class AnthropicExperiment(Experiment):
             return None
         return self.processed_file_path
 
-    @computed_field
     @property
-    def batch(self) -> MessageBatch | None:
+    def batch(self) -> t.Union["MessageBatch", None]:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -99,6 +100,11 @@ class AnthropicExperiment(Experiment):
         pass
 
     def create_provider_batch(self) -> str:
+        from anthropic.types.message_create_params import (
+            MessageCreateParamsNonStreaming,
+        )
+        from anthropic.types.messages.batch_create_params import Request
+
         data = read_jsonl_file(self.processed_file_path)
         requests = []
         for request in data:

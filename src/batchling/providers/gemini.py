@@ -1,8 +1,6 @@
 import typing as t
 from functools import cached_property
 
-from google.genai import Client
-from google.genai.types import BatchJob, File, UploadFileConfig
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
@@ -17,15 +15,21 @@ from batchling.request import (
 )
 from batchling.utils.files import read_jsonl_file, write_jsonl_file
 
+if t.TYPE_CHECKING:
+    from google.genai import Client
+    from google.genai.types import BatchJob, File
+
 
 class GeminiExperiment(Experiment):
     @cached_property
-    def client(self) -> Client:
+    def client(self) -> "Client":
         """Get the client
 
         Returns:
             Client: The client
         """
+        from google.genai import Client
+
         return Client(api_key=self.api_key)
 
     @computed_field
@@ -69,16 +73,14 @@ class GeminiExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.batches.get(name=self.batch_id)
 
-    @computed_field
     @property
-    def provider_file(self) -> File | None:
+    def provider_file(self) -> t.Union["File", None]:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
-    @computed_field
     @property
-    def batch(self) -> BatchJob | None:
+    def batch(self) -> t.Union["BatchJob", None]:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -107,6 +109,8 @@ class GeminiExperiment(Experiment):
         return self.batch.state.name
 
     def create_provider_file(self) -> str:
+        from google.genai.types import UploadFileConfig
+
         return self.client.files.upload(
             file=self.processed_file_path,
             config=UploadFileConfig(

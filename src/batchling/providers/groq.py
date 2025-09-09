@@ -1,24 +1,28 @@
 import typing as t
 from functools import cached_property
 
-from groq import Groq
-from groq.resources.batches import BatchRetrieveResponse
-from groq.resources.files import FileInfoResponse
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
 from batchling.request import GroqBody, GroqRequest, ProcessedMessage
 from batchling.utils.files import read_jsonl_file
 
+if t.TYPE_CHECKING:
+    from groq import Groq
+    from groq.resources.batches import BatchRetrieveResponse
+    from groq.resources.files import FileInfoResponse
+
 
 class GroqExperiment(Experiment):
     @cached_property
-    def client(self) -> Groq:
+    def client(self) -> "Groq":
         """Get the client
 
         Returns:
             Groq: The client
         """
+        from groq import Groq
+
         return Groq(api_key=self.api_key)
 
     @computed_field
@@ -55,16 +59,14 @@ class GroqExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.batches.retrieve(batch_id=self.batch_id)
 
-    @computed_field
     @property
-    def provider_file(self) -> FileInfoResponse | None:
+    def provider_file(self) -> t.Union["FileInfoResponse", None]:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
-    @computed_field
     @property
-    def batch(self) -> BatchRetrieveResponse | None:
+    def batch(self) -> t.Union["BatchRetrieveResponse", None]:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()

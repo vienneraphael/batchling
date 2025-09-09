@@ -2,23 +2,27 @@ import typing as t
 from functools import cached_property
 
 from pydantic import computed_field
-from together import Together
-from together.resources.batch import BatchJob
-from together.resources.files import FileResponse
 
 from batchling.experiment import Experiment
 from batchling.request import ProcessedMessage, TogetherBody, TogetherRequest
 from batchling.utils.files import read_jsonl_file
 
+if t.TYPE_CHECKING:
+    from together import Together
+    from together.resources.batch import BatchJob
+    from together.resources.files import FileResponse
+
 
 class TogetherExperiment(Experiment):
     @cached_property
-    def client(self) -> Together:
+    def client(self) -> "Together":
         """Get the client
 
         Returns:
             Together: The client
         """
+        from together import Together
+
         return Together(api_key=self.api_key)
 
     @computed_field
@@ -54,16 +58,14 @@ class TogetherExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.batches.get_batch(batch_job_id=self.batch_id)
 
-    @computed_field
     @property
-    def provider_file(self) -> FileResponse | None:
+    def provider_file(self) -> t.Union["FileResponse", None]:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
-    @computed_field
     @property
-    def batch(self) -> BatchJob | None:
+    def batch(self) -> t.Union["BatchJob", None]:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
