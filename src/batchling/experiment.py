@@ -141,18 +141,18 @@ class Experiment(BaseModel, ABC):
     def get_provider_results(self) -> t.Any:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def provider_file(self) -> t.Any:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def batch(self) -> t.Any:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def status(
         self,
     ) -> str:
