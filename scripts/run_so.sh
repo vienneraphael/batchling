@@ -1,0 +1,13 @@
+./scripts/anthropic/so.sh
+./scripts/mistral/so.sh
+./scripts/openai/so.sh
+./scripts/together/so.sh
+./scripts/groq/so.sh
+./scripts/gemini/so.sh
+
+batchling start anthropic
+batchling start mistral
+batchling start openai
+batchling start together
+batchling start groq
+batchling start gemini
