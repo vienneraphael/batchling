@@ -100,25 +100,21 @@ class AnthropicExperiment(Experiment):
 
     def create_provider_batch(self) -> str:
         data = read_jsonl_file(self.processed_file_path)
-
-        return self.client.messages.batches.create(
-            requests=[
-                Request(
-                    custom_id=request.get("custom_id"),
-                    params=MessageCreateParamsNonStreaming(
-                        model=self.model,
-                        messages=request["params"]["messages"],
-                        system=request["params"]["system"],
-                        max_tokens=request["params"]["max_tokens"],
-                        tools=request["params"]["tools"] if "tools" in request["params"] else None,
-                        tool_choice=request["params"]["tool_choice"]
-                        if "tool_choice" in request["params"]
-                        else None,
-                    ),
-                )
-                for request in data
-            ]
-        ).id
+        requests = []
+        for request in data:
+            params_dict = {
+                "model": self.model,
+                "messages": request["params"]["messages"],
+                "system": request["params"]["system"],
+                "max_tokens": request["params"]["max_tokens"],
+            }
+            if "tools" in request["params"]:
+                params_dict["tools"] = request["params"]["tools"]
+            if "tool_choice" in request["params"]:
+                params_dict["tool_choice"] = request["params"]["tool_choice"]
+            params = MessageCreateParamsNonStreaming(**params_dict)
+            requests.append(Request(custom_id=request.get("custom_id"), params=params))
+        return self.client.messages.batches.create(requests=requests).id
 
     def raise_not_in_running_status(self):
         if self.status not in ["in_progress"]:
