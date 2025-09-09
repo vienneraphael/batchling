@@ -142,19 +142,16 @@ class Experiment(BaseModel, ABC):
         pass
 
     @abstractmethod
-    @computed_field(repr=False)
     @property
     def provider_file(self) -> t.Any:
         pass
 
     @abstractmethod
-    @computed_field(repr=False)
     @property
     def batch(self) -> t.Any:
         pass
 
     @abstractmethod
-    @computed_field
     @property
     def status(
         self,

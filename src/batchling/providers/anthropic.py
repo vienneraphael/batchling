@@ -71,7 +71,6 @@ class AnthropicExperiment(Experiment):
     def retrieve_provider_batch(self):
         return self.client.messages.batches.retrieve(message_batch_id=self.batch_id)
 
-    @computed_field
     @property
     def provider_file(self) -> str | None:
         if self.provider_file_id is None:
@@ -84,7 +83,6 @@ class AnthropicExperiment(Experiment):
             return None
         return self.retrieve_provider_batch()
 
-    @computed_field
     @property
     def status(
         self,
