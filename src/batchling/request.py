@@ -1,6 +1,6 @@
 import typing as t
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter
 
 
 class RawMessage(BaseModel):
@@ -14,8 +14,7 @@ class RawRequest(BaseModel):
     max_tokens: int | None = None
 
 
-class RawFile(BaseModel):
-    content: list[RawRequest]
+raw_request_list_adapter = TypeAdapter(list[RawRequest])
 
 
 class ProcessedMessage(RawMessage):
@@ -31,6 +30,9 @@ class ProcessedBody(BaseModel):
 class ProcessedRequest(BaseModel):
     custom_id: str
     body: ProcessedBody
+
+
+processed_request_list_adapter = TypeAdapter(list[ProcessedRequest])
 
 
 class MistralBody(ProcessedBody):

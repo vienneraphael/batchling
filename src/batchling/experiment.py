@@ -15,6 +15,7 @@ from pydantic import (
 from batchling.request import (
     ProcessedRequest,
     RawRequest,
+    raw_request_list_adapter,
 )
 from batchling.utils.files import write_jsonl_file
 
@@ -197,10 +198,11 @@ class Experiment(BaseModel, ABC):
         updated_dict_experiment = self.model_dump()
         updated_dict_experiment.update(kwargs)
         # validate model first to avoid updating the database with invalid data
-        updated_dict_experiment["raw_requests"] = [
-            RawRequest.model_validate(raw_request)
-            for raw_request in updated_dict_experiment["raw_requests"]
-        ]
+        updated_dict_experiment["raw_requests"] = (
+            raw_request_list_adapter.validate_python(updated_dict_experiment["raw_requests"])
+            if updated_dict_experiment["raw_requests"]
+            else None
+        )
         updated_experiment = self.__class__.model_validate(updated_dict_experiment)
         if set(
             ["raw_requests", "response_format", "endpoint", "model", "processed_file_path"]

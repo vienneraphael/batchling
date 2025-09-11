@@ -21,4 +21,4 @@ def read_jsonl_file(file_path: str | Path) -> list[dict]:
         file_path (str | Path): The path to the file to read
     """
     with open(file_path, "r") as f:
-        return [json.loads(line) for line in f.readlines()]
+        return [json.loads(line) for line in f]

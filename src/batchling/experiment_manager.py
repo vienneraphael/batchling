@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
-from batchling.request import RawRequest
+from batchling.request import RawRequest, raw_request_list_adapter
 from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.classes import get_experiment_cls_from_provider
 
@@ -43,10 +43,8 @@ class ExperimentManager(BaseModel):
                 starts_with=starts_with,
             )
         for experiment in experiments:
-            experiment.raw_requests = (
-                [RawRequest.model_validate(raw_request) for raw_request in experiment.raw_requests]
-                if experiment.raw_requests
-                else None
+            experiment.raw_requests = raw_request_list_adapter.validate_python(
+                experiment.raw_requests
             )
         return [
             get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
@@ -61,11 +59,7 @@ class ExperimentManager(BaseModel):
             experiment = get_experiment(db=db, id=experiment_id)
         if experiment is None:
             return None
-        experiment.raw_requests = (
-            [RawRequest.model_validate(raw_request) for raw_request in experiment.raw_requests]
-            if experiment.raw_requests
-            else None
-        )
+        experiment.raw_requests = raw_request_list_adapter.validate_python(experiment.raw_requests)
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
     @staticmethod
