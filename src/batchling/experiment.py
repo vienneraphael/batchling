@@ -10,14 +10,12 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
-    model_validator,
 )
 
 from batchling.request import (
     ProcessedRequest,
     RawRequest,
 )
-from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.files import write_jsonl_file
 
 
@@ -61,20 +59,12 @@ class Experiment(BaseModel, ABC):
     def __repr__(self):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
-    @model_validator(mode="after")
-    def set_api_key(self):
-        if self.api_key is None:
-            self.api_key: str = get_default_api_key_from_provider(self.provider)
-        return self
-
-    @model_validator(mode="after")
-    def set_created_at_and_updated_at(self):
-        now = datetime.now()
-        if self.created_at is None:
-            self.created_at: datetime = now
-        if self.updated_at is None:
-            self.updated_at: datetime = now
-        return self
+    @field_validator("processed_file_path")
+    def check_jsonl_format(cls, value: str):
+        if isinstance(value, str):
+            if not value.endswith(".jsonl"):
+                raise ValueError("processed_file_path must be a .jsonl file")
+        return value
 
     @abstractmethod
     @cached_property
@@ -154,17 +144,6 @@ class Experiment(BaseModel, ABC):
         self,
     ) -> str:
         pass
-
-    @field_validator("created_at", "updated_at")
-    def set_datetime(cls, value: datetime | None):
-        return value or datetime.now()
-
-    @field_validator("processed_file_path")
-    def check_jsonl_format(cls, value: str):
-        if isinstance(value, str):
-            if not value.endswith(".jsonl"):
-                raise ValueError("processed_file_path must be a .jsonl file")
-        return value
 
     def start(self) -> None:
         """Start the experiment:
