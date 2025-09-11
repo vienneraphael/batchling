@@ -8,6 +8,7 @@ import typer
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from batchling.experiment import Experiment
@@ -18,7 +19,7 @@ from batchling.utils.files import read_jsonl_file
 app = typer.Typer(no_args_is_help=True)
 
 
-def print_experiment(experiment: Experiment):
+def print_experiment(experiment: Experiment, status: str):
     experiment_dict = {
         "ID": experiment.id,
         "Name": experiment.name,
@@ -26,7 +27,7 @@ def print_experiment(experiment: Experiment):
         "Provider": experiment.provider,
         "Endpoint": experiment.endpoint,
         "Model": experiment.model,
-        "Status": f"[green]{experiment.status}[/green]",
+        "Status": f"[green]{status}[/green]",
         "Processed File Path": experiment.processed_file_path,
         "Results File Path": experiment.results_file_path,
         "Provider File ID": experiment.provider_file_id,
@@ -34,10 +35,10 @@ def print_experiment(experiment: Experiment):
         "Created At": datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
         "Updated At": datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
     }
-    if experiment.status == "created":
+    if status == "created":
         del experiment_dict["Provider File ID"]
         del experiment_dict["Batch ID"]
-        if experiment.status == "created":
+        if status == "created":
             del experiment_dict["Updated At"]
     values = "\n".join([f"{key}: {value}" for key, value in experiment_dict.items()])
     console = Console()
@@ -116,7 +117,14 @@ def get_experiment(
     if experiment is None:
         typer.echo(f"Experiment with id: {experiment_id} not found")
         raise typer.Exit(1)
-    print_experiment(experiment)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+        progress.add_task(description="Retrieving experiment status from provider...", total=None)
+        status = experiment.status
+    print_experiment(experiment=experiment, status=status)
 
 
 @app.command(name="create")
@@ -191,7 +199,7 @@ def create_experiment(
         processed_file_path=processed_file_path.as_posix(),
         results_file_path=results_file_path.as_posix(),
     )
-    print_experiment(experiment)
+    print_experiment(experiment=experiment, status="created")
 
 
 @app.command(name="start")
