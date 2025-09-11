@@ -2,6 +2,7 @@ import typing as t
 from datetime import datetime
 
 from batchling.db.models import Experiment
+from batchling.request import processed_request_list_adapter, raw_request_list_adapter
 
 if t.TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -71,11 +72,9 @@ def create_experiment(
     Experiment
         The created experiment
     """
-    raw_requests = (
-        [raw_request.model_dump() for raw_request in raw_requests] if raw_requests else None
-    )
+    raw_requests = raw_request_list_adapter.dump_python(raw_requests) if raw_requests else None
     processed_requests = (
-        [processed_request.model_dump() for processed_request in processed_requests]
+        processed_request_list_adapter.dump_python(processed_requests)
         if processed_requests
         else None
     )
