@@ -26,7 +26,7 @@ def print_experiment(experiment: Experiment):
         "Provider": experiment.provider,
         "Endpoint": experiment.endpoint,
         "Model": experiment.model,
-        "Status": experiment.status,
+        "Status": f"[green]{experiment.status}[/green]",
         "Processed File Path": experiment.processed_file_path,
         "Results File Path": experiment.results_file_path,
         "Provider File ID": experiment.provider_file_id,
@@ -83,7 +83,6 @@ def list_experiments(
         "Description",
         "Provider",
         "Endpoint",
-        "Status",
         "Created At",
         "Updated At",
         title="Experiments",
@@ -96,7 +95,6 @@ def list_experiments(
             experiment.description,
             experiment.provider,
             experiment.endpoint,
-            experiment.status,
             datetime.strftime(experiment.created_at, "%Y-%m-%d %H:%M:%S"),
             datetime.strftime(experiment.updated_at, "%Y-%m-%d %H:%M:%S"),
         )
@@ -211,9 +209,7 @@ def start_experiment(
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
     experiment.start()
-    print(
-        f"Experiment with id: [green]{id}[/green] is started. Current status is [yellow]{experiment.status}[/yellow]"
-    )
+    print(f"Experiment with id: [green]{id}[/green] is started.")
 
 
 @app.command(name="results")

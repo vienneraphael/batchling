@@ -70,7 +70,6 @@ class TogetherExperiment(Experiment):
             return None
         return self.retrieve_provider_batch()
 
-    @computed_field
     @property
     def status(
         self,
