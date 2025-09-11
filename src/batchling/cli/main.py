@@ -14,7 +14,6 @@ from rich.table import Table
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
 from batchling.request import RawRequest
-from batchling.utils.files import read_jsonl_file
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -180,11 +179,12 @@ def create_experiment(
     ] = None,
 ):
     """Create an experiment"""
-    raw_requests = (
-        [RawRequest.model_validate(request) for request in read_jsonl_file(raw_file_path)]
-        if raw_file_path
-        else None
-    )
+    with open(raw_file_path, "r") as f:
+        raw_requests = (
+            [RawRequest.model_validate_json(line) for line in f.readlines()]
+            if raw_file_path
+            else None
+        )
     response_format = json.load(response_format_path.open()) if response_format_path else None
     experiment = ExperimentManager().create_experiment(
         experiment_id=id,
@@ -286,7 +286,12 @@ def update_experiment(
         raise typer.Exit(1)
     old_fields = {key: getattr(experiment, key) for key in fields_to_update}
     if "raw_file_path" in fields_to_update:
-        fields_to_update["raw_requests"] = read_jsonl_file(fields_to_update["raw_file_path"])
+        with open(fields_to_update["raw_file_path"], "r") as f:
+            fields_to_update["raw_requests"] = (
+                [RawRequest.model_validate_json(line) for line in f.readlines()]
+                if fields_to_update["raw_file_path"]
+                else None
+            )
         del fields_to_update["raw_file_path"]
     if "response_format_path" in fields_to_update:
         fields_to_update["response_format"] = json.load(
