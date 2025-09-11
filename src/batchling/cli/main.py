@@ -204,11 +204,12 @@ def start_experiment(
     ],
 ):
     """Start an experiment by submitting the batch to the provider"""
-    experiment = ExperimentManager().retrieve(experiment_id=id)
+    em = ExperimentManager()
+    experiment = em.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
-    experiment.start()
+    em.start_experiment(experiment_id=id)
     print(f"Experiment with id: [green]{id}[/green] is started.")
 
 
@@ -222,12 +223,13 @@ def get_results(
     ],
 ):
     """Download the results of an experiment locally"""
-    experiment = ExperimentManager().retrieve(experiment_id=id)
+    em = ExperimentManager()
+    experiment = em.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
     print("Downloading results..")
-    experiment.get_results()
+    em.get_results(experiment_id=id)
     print(f"Results downloaded to [green]{experiment.results_file_path}[/green]")
 
 
@@ -269,7 +271,8 @@ def update_experiment(
     fields_to_update = {
         key: value for key, value in ctx.params.items() if value is not None and key != "id"
     }
-    experiment = ExperimentManager().retrieve(experiment_id=id)
+    em = ExperimentManager()
+    experiment = em.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
@@ -282,7 +285,7 @@ def update_experiment(
             fields_to_update["response_format_path"].open()
         )
         del fields_to_update["response_format_path"]
-    experiment.update(**fields_to_update)
+    em.update_experiment(experiment_id=id, **fields_to_update)
     print_diff(old_fields, fields_to_update)
 
 
@@ -296,11 +299,12 @@ def delete_experiment(
     ],
 ):
     """Delete an experiment"""
-    experiment = ExperimentManager().retrieve(experiment_id=id)
+    em = ExperimentManager()
+    experiment = em.retrieve(experiment_id=id)
     if experiment is None:
         typer.echo(f"Experiment with id: {id} not found")
         raise typer.Exit(1)
-    experiment.delete()
+    em.delete_experiment(experiment_id=id)
     print(f"Experiment with id: [green]{id}[/green] deleted")
 
 
