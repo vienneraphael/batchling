@@ -169,10 +169,9 @@ def experiment(
 
 
 @pytest.fixture
-def started_experiment(experiment: Experiment, mock_client):
+def started_experiment(experiment_manager: ExperimentManager, experiment: Experiment, mock_client):
     experiment.client = mock_client
-    experiment.start()
-    return experiment
+    return experiment_manager.start_experiment(experiment_id=experiment.id)
 
 
 def test_start(started_experiment: Experiment):
@@ -214,5 +213,5 @@ def test_update_experiment(experiment_manager: ExperimentManager, experiment: Ex
 
 
 def test_delete_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
-    assert experiment_manager.delete_experiment(experiment_id=experiment.id)
+    experiment_manager.delete_experiment(experiment_id=experiment.id)
     assert experiment_manager.retrieve(experiment_id=experiment.id) is None

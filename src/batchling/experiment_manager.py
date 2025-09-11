@@ -1,8 +1,10 @@
 import os
+from datetime import datetime
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel
 
+from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
 from batchling.request import RawRequest
@@ -14,11 +16,6 @@ class ExperimentManager(BaseModel):
     def model_post_init(self, context):
         load_dotenv(override=True)
         init_db()
-
-    @computed_field
-    @property
-    def experiments(self) -> list[Experiment]:
-        return self.list_experiments()
 
     @staticmethod
     def list_experiments(
@@ -72,6 +69,28 @@ class ExperimentManager(BaseModel):
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
     @staticmethod
+    def save_experiment(experiment: Experiment) -> None:
+        if experiment.batch_id is not None:
+            raise ValueError("Can only save an experiment in created status.")
+        with get_db() as db:
+            create_experiment(
+                db=db,
+                id=experiment.id,
+                model=experiment.model,
+                api_key=experiment.api_key,
+                name=experiment.name,
+                description=experiment.description,
+                provider=experiment.provider,
+                endpoint=experiment.endpoint,
+                raw_requests=experiment.raw_requests,
+                response_format=experiment.response_format,
+                processed_file_path=experiment.processed_file_path,
+                results_file_path=experiment.results_file_path,
+                created_at=experiment.created_at,
+                updated_at=experiment.updated_at,
+            )
+
+    @staticmethod
     def create_experiment(
         experiment_id: str,
         model: str,
@@ -97,10 +116,7 @@ class ExperimentManager(BaseModel):
                 },
             }
         api_key = api_key or get_default_api_key_from_provider(provider)
-        if not api_key:
-            raise ValueError(
-                f"No API key found in environment variables for provider: {provider}. Either set the API key in the environment variables or provide it through the api_key parameter."
-            )
+        now = datetime.now()
         experiment = get_experiment_cls_from_provider(provider).model_validate(
             {
                 "id": experiment_id,
@@ -114,31 +130,73 @@ class ExperimentManager(BaseModel):
                 "response_format": response_format,
                 "processed_file_path": processed_file_path,
                 "results_file_path": results_file_path,
+                "created_at": now,
+                "updated_at": now,
             }
         )
         if not os.path.exists(processed_file_path):
             experiment.write_processed_batch_file()
-        experiment.save()
+        ExperimentManager.save_experiment(experiment)
         return experiment
+
+    @staticmethod
+    def start_experiment(experiment_id: str) -> Experiment:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
+        if experiment.batch_id is not None:
+            raise ValueError(f"Experiment with id: {experiment_id} was already started")
+        experiment.start()
+        with get_db() as db:
+            update_experiment(
+                db=db,
+                id=experiment.id,
+                **{
+                    "updated_at": datetime.now(),
+                    "batch_id": experiment.batch_id,
+                    "provider_file_id": experiment.provider_file_id,
+                },
+            )
+        return experiment
+
+    @staticmethod
+    def get_results(experiment_id: str) -> list[dict]:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
+        return experiment.get_results()
 
     @staticmethod
     def update_experiment(experiment_id: str, **kwargs) -> Experiment:
         experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
         if experiment is None:
             raise ValueError(f"Experiment with id: {experiment_id} not found")
-        updated_experiment = experiment.update(**kwargs)
-        if set(
-            ["raw_requests", "response_format", "endpoint", "model", "processed_file_path"]
-        ) & set(kwargs):
-            updated_experiment.write_processed_batch_file()
-        if "processed_file_path" in kwargs and os.path.exists(experiment.processed_file_path):
-            os.remove(experiment.processed_file_path)
-        return updated_experiment
+        if experiment.batch_id is not None:
+            raise ValueError("Cannot update an experiment that has already been started.")
+        if "id" in kwargs:
+            raise ValueError(
+                "id cannot be updated, please delete the experiment and create a new one"
+            )
+        kwargs["updated_at"] = datetime.now()
+        experiment = experiment.update(**kwargs)
+        with get_db() as db:
+            update_experiment(db=db, id=experiment.id, **kwargs)
+        return experiment
 
     @staticmethod
-    def delete_experiment(experiment_id: str) -> bool:
+    def delete_experiment(experiment_id: str) -> None:
         experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
         if experiment is None:
             raise ValueError(f"Experiment with id: {experiment_id} not found")
+        with get_db() as db:
+            delete_experiment(db=db, id=experiment.id)
         experiment.delete()
-        return True
+
+    @staticmethod
+    def cancel_experiment(experiment_id: str) -> None:
+        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment with id: {experiment_id} not found")
+        experiment.cancel()
+        with get_db() as db:
+            update_experiment(db=db, id=experiment.id, updated_at=datetime.now())

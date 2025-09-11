@@ -201,7 +201,7 @@ experiment = em.create_experiment(
 )
 
 # submit the local input file and batch to provider
-experiment.start()
+em.start_experiment(experiment_id=experiment.id)
 
 # monitor experiment status and wait for it to complete
 print(experiment.status)
@@ -217,7 +217,7 @@ em = ExperimentManager()
 
 experiment = em.retrieve(experiment_id="my-experiment-1")
 
-results = experiment.get_results()
+results = em.get_results(experiment_id=experiment.id)
 print(results)
 # [
 #     {"id": "batch_req_6872c8dsa872c8190b1b5bdcq0d9q9z", "custom_id": "my-experiment-1-sample-0", "result": "My name is Bob."},

@@ -1,8 +1,11 @@
+from datetime import datetime
+
 import pytest
 
 from batchling.experiment import Experiment
 from batchling.providers.openai import OpenAIExperiment
 from batchling.request import RawMessage, RawRequest
+from batchling.utils.api import get_default_api_key_from_provider
 
 
 @pytest.fixture
@@ -15,6 +18,8 @@ def experiment(tmp_path):
             max_tokens=100,
         ),
     ]
+    now = datetime.now()
+    api_key = get_default_api_key_from_provider(provider="openai")
     experiment = OpenAIExperiment(
         id="experiment-test-1",
         model="gpt-4o-mini",
@@ -22,6 +27,9 @@ def experiment(tmp_path):
         description="test experiment number 1",
         processed_file_path=(tmp_path / "test.jsonl").as_posix(),
         raw_requests=raw_requests,
+        api_key=api_key,
+        created_at=now,
+        updated_at=now,
     )
     return experiment
 
