@@ -139,7 +139,7 @@ class Experiment(BaseModel, ABC):
     def batch(self) -> t.Any:
         pass
 
-    @property
+    @cached_property
     @abstractmethod
     def status(
         self,
