@@ -8,6 +8,7 @@ from batchling.db.crud import create_experiment, delete_experiment, update_exper
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
 from batchling.request import RawRequest
+from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.classes import get_experiment_cls_from_provider
 
 
@@ -71,7 +72,6 @@ class ExperimentManager(BaseModel):
     def save_experiment(experiment: Experiment) -> None:
         if experiment.batch_id is not None:
             raise ValueError("Can only save an experiment in created status.")
-        now = datetime.now()
         with get_db() as db:
             create_experiment(
                 db=db,
@@ -86,8 +86,8 @@ class ExperimentManager(BaseModel):
                 response_format=experiment.response_format,
                 processed_file_path=experiment.processed_file_path,
                 results_file_path=experiment.results_file_path,
-                created_at=now,
-                updated_at=now,
+                created_at=experiment.created_at,
+                updated_at=experiment.updated_at,
             )
 
     @staticmethod
@@ -115,6 +115,8 @@ class ExperimentManager(BaseModel):
                     "strict": True,
                 },
             }
+        api_key = api_key or get_default_api_key_from_provider(provider)
+        now = datetime.now()
         experiment = get_experiment_cls_from_provider(provider).model_validate(
             {
                 "id": experiment_id,
@@ -128,6 +130,8 @@ class ExperimentManager(BaseModel):
                 "response_format": response_format,
                 "processed_file_path": processed_file_path,
                 "results_file_path": results_file_path,
+                "created_at": now,
+                "updated_at": now,
             }
         )
         if not os.path.exists(processed_file_path):
@@ -147,7 +151,7 @@ class ExperimentManager(BaseModel):
             update_experiment(
                 db=db,
                 id=experiment.id,
-                kwargs={
+                **{
                     "updated_at": datetime.now(),
                     "batch_id": experiment.batch_id,
                     "provider_file_id": experiment.provider_file_id,

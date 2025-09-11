@@ -55,26 +55,26 @@ class Experiment(BaseModel, ABC):
     )
     provider_file_id: str | None = Field(default=None, description="provider batch file id")
     batch_id: str | None = Field(default=None, description="provider batch id")
-    created_at: datetime | None = Field(default=None, description="created at")
-    updated_at: datetime | None = Field(default=None, description="updated at")
+    created_at: datetime = Field(description="created at")
+    updated_at: datetime = Field(description="updated at")
 
     def __repr__(self):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
     @model_validator(mode="after")
+    def set_api_key(self):
+        if self.api_key is None:
+            self.api_key: str = get_default_api_key_from_provider(self.provider)
+        return self
+
+    @model_validator(mode="after")
     def set_created_at_and_updated_at(self):
         now = datetime.now()
         if self.created_at is None:
-            self.created_at = now
+            self.created_at: datetime = now
         if self.updated_at is None:
-            self.updated_at = now
+            self.updated_at: datetime = now
         return self
-
-    @model_validator(mode="before")
-    def set_api_key(cls, values: dict) -> dict:
-        if values.get("api_key") is None:
-            values["api_key"] = get_default_api_key_from_provider(cls.provider)
-        return values
 
     @abstractmethod
     @cached_property
