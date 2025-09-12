@@ -156,7 +156,7 @@ def experiment(
     experiment = experiment_manager.create_experiment(
         experiment_id=f"em-test-{provider}-{name}",
         model="gpt-4o-mini",
-        name="em test",
+        title="em test",
         provider=provider,
         description="test experiment with em",
         processed_file_path=processed_file_path.as_posix(),
@@ -204,7 +204,7 @@ def test_list_experiments(experiment_manager: ExperimentManager, experiment: Exp
 
 def test_update_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
     updated_experiment = experiment_manager.update_experiment(
-        experiment_id=experiment.id, name="em test updated"
+        experiment_id=experiment.id, title="em test updated"
     )
     assert updated_experiment is not None
     assert updated_experiment.id == experiment.id

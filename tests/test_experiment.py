@@ -23,7 +23,7 @@ def experiment(tmp_path):
     experiment = OpenAIExperiment(
         id="experiment-test-1",
         model="gpt-4o-mini",
-        name="test 1",
+        title="test 1",
         description="test experiment number 1",
         processed_file_path=(tmp_path / "test.jsonl").as_posix(),
         raw_requests=raw_requests,
@@ -39,7 +39,7 @@ def test_invalid_processed_file_path():
         OpenAIExperiment(
             id="experiment-test-2",
             model="gpt-4o-mini",
-            name="test 1",
+            title="test 1",
             description="test experiment number 1",
             processed_file_path="test.txt",
         )

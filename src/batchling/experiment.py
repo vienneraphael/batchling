@@ -23,7 +23,9 @@ from batchling.utils.files import write_jsonl_file
 class Experiment(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True, from_attributes=True)
     id: str = Field(description="experiment ID")
-    name: str = Field(description="name of the experiment")
+    title: str | None = Field(
+        default=None, description="optional title briefly summarizing the experiment"
+    )
     description: str | None = Field(default=None, description="description of the experiment")
     model: str = Field(description="model to use")
     provider: t.Literal["openai", "mistral", "together", "groq", "gemini", "anthropic"] = Field(

@@ -17,7 +17,7 @@ def create_experiment(
     api_key: str,
     created_at: datetime,
     updated_at: datetime,
-    name: str | None = None,
+    title: str | None = None,
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
@@ -45,8 +45,8 @@ def create_experiment(
         Creation time of the experiment
     updated_at : datetime
         Last update time of the experiment
-    name : str | None
-        The name of the experiment
+    title : str | None
+        The title of the experiment
     description : str | None
         The description of the experiment
     provider : str
@@ -80,7 +80,7 @@ def create_experiment(
     )
     experiment = Experiment(
         id=id,
-        name=name,
+        title=title,
         description=description,
         created_at=created_at,
         updated_at=updated_at,

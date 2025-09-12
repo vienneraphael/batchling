@@ -72,7 +72,7 @@ class ExperimentManager(BaseModel):
                 id=experiment.id,
                 model=experiment.model,
                 api_key=experiment.api_key,
-                name=experiment.name,
+                title=experiment.title,
                 description=experiment.description,
                 provider=experiment.provider,
                 endpoint=experiment.endpoint,
@@ -88,8 +88,8 @@ class ExperimentManager(BaseModel):
     def create_experiment(
         experiment_id: str,
         model: str,
-        name: str,
         processed_file_path: str,
+        title: str | None = None,
         api_key: str | None = None,
         description: str | None = None,
         provider: str = "openai",
@@ -115,7 +115,7 @@ class ExperimentManager(BaseModel):
             {
                 "id": experiment_id,
                 "model": model,
-                "name": name,
+                "title": title,
                 "description": description,
                 "provider": provider,
                 "endpoint": endpoint,

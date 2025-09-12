@@ -22,7 +22,7 @@ app = typer.Typer(no_args_is_help=True)
 def print_experiment(experiment: Experiment, status: str):
     experiment_dict = {
         "ID": experiment.id,
-        "Name": experiment.name,
+        "Title": experiment.title,
         "Description": experiment.description,
         "Provider": experiment.provider,
         "Endpoint": experiment.endpoint,
@@ -80,7 +80,7 @@ def list_experiments(
     """List experiments"""
     table = Table(
         "ID",
-        "Name",
+        "Title",
         "Description",
         "Provider",
         "Endpoint",
@@ -92,7 +92,7 @@ def list_experiments(
     for experiment in experiments:
         table.add_row(
             experiment.id,
-            experiment.name,
+            experiment.title,
             experiment.description,
             experiment.provider,
             experiment.endpoint,
@@ -131,7 +131,6 @@ def get_experiment(
 def create_experiment(
     id: Annotated[str, typer.Option(default=..., help="The id of the experiment")],
     model: Annotated[str, typer.Option(default=..., help="The model to use")],
-    name: Annotated[str, typer.Option(default=..., help="The name of the experiment")],
     description: Annotated[
         str, typer.Option(default=..., help="The description of the experiment")
     ],
@@ -162,6 +161,9 @@ def create_experiment(
             default=..., help="the path to the results file where batch results will be saved"
         ),
     ],
+    title: Annotated[
+        str | None, typer.Option(help="Optional title briefly summarizing the experiment")
+    ] = None,
     raw_file_path: Annotated[
         Path | None,
         typer.Option(
@@ -189,7 +191,7 @@ def create_experiment(
     experiment = ExperimentManager().create_experiment(
         experiment_id=id,
         model=model,
-        name=name,
+        title=title,
         description=description,
         provider=provider,
         endpoint=endpoint,
@@ -251,7 +253,7 @@ def update_experiment(
         ),
     ],
     model: Annotated[str | None, typer.Option(help="Updated model name, if applicable")] = None,
-    name: Annotated[str | None, typer.Option(help="Updated name, if applicable")] = None,
+    title: Annotated[str | None, typer.Option(help="Updated title, if applicable")] = None,
     description: Annotated[
         str | None, typer.Option(help="Updated description, if applicable")
     ] = None,
