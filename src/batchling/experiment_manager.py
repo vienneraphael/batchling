@@ -72,6 +72,7 @@ class ExperimentManager(BaseModel):
                 id=experiment.id,
                 model=experiment.model,
                 api_key=experiment.api_key,
+                uid=experiment.uid,
                 title=experiment.title,
                 description=experiment.description,
                 provider=experiment.provider,

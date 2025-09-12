@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 import pytest
@@ -27,6 +28,7 @@ def test_create_experiment(db):
         db=db,
         id="experiment-test-1",
         model="gpt-4o-mini",
+        uid=str(uuid.uuid4()),
         title="test 1",
         description="test experiment number 1",
         api_key=get_default_api_key_from_provider(provider="openai"),
@@ -36,6 +38,8 @@ def test_create_experiment(db):
     assert experiment is not None
     assert experiment.model == "gpt-4o-mini"
     assert experiment.id == "experiment-test-1"
+    assert experiment.uid is not None
+    assert len(experiment.uid) == 36  # UUID4 string length
     assert experiment.title == "test 1"
     assert experiment.description == "test experiment number 1"
     assert experiment.created_at is not None
@@ -49,6 +53,7 @@ def test_get_experiment(db):
         db=db,
         id="experiment-test-2",
         model="gpt-4o-mini",
+        uid=str(uuid.uuid4()),
         title="test 2",
         description="test experiment number 2",
         api_key=get_default_api_key_from_provider(provider="openai"),
@@ -70,6 +75,7 @@ def test_update_experiment(db):
         db=db,
         id="experiment-test-3",
         model="gpt-4o-mini",
+        uid=str(uuid.uuid4()),
         title="test 3",
         description="test experiment number 3",
         api_key=get_default_api_key_from_provider(provider="openai"),
@@ -93,6 +99,7 @@ def test_delete_experiment(db):
         db=db,
         id="experiment-test-4",
         model="gpt-4o-mini",
+        uid=str(uuid.uuid4()),
         title="test 4",
         description="test experiment number 4",
         api_key=get_default_api_key_from_provider(provider="openai"),
@@ -109,6 +116,7 @@ def test_get_experiments(db):
         db=db,
         id="experiment-test-5",
         model="gpt-4o-mini",
+        uid=str(uuid.uuid4()),
         title="test 5",
         description="test experiment number 5",
         api_key=get_default_api_key_from_provider(provider="openai"),
@@ -120,6 +128,7 @@ def test_get_experiments(db):
         db=db,
         id="experiment-test-6",
         model="gpt-4o-mini",
+        uid=str(uuid.uuid4()),
         title="test 6",
         description="test experiment number 6",
         api_key=get_default_api_key_from_provider(provider="openai"),
@@ -130,3 +139,7 @@ def test_get_experiments(db):
     assert len(experiments) == 2
     assert experiments[0].id == "experiment-test-6"
     assert experiments[1].id == "experiment-test-5"
+    # Verify that each experiment has a unique uid
+    assert experiments[0].uid != experiments[1].uid
+    assert len(experiments[0].uid) == 36
+    assert len(experiments[1].uid) == 36

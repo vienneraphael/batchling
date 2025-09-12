@@ -17,6 +17,7 @@ def create_experiment(
     api_key: str,
     created_at: datetime,
     updated_at: datetime,
+    uid: str,
     title: str | None = None,
     description: str | None = None,
     provider: str = "openai",
@@ -45,6 +46,8 @@ def create_experiment(
         Creation time of the experiment
     updated_at : datetime
         Last update time of the experiment
+    uid : str
+        The unique identifier of the experiment
     title : str | None
         The title of the experiment
     description : str | None
@@ -80,6 +83,7 @@ def create_experiment(
     )
     experiment = Experiment(
         id=id,
+        uid=uid,
         title=title,
         description=description,
         created_at=created_at,
