@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 
@@ -13,6 +14,8 @@ from batchling.utils.classes import get_experiment_cls_from_provider
 
 
 class ExperimentManager(BaseModel):
+    logger = logging.getLogger(__name__)
+
     def model_post_init(self, context):
         load_dotenv(override=True)
         init_db()
@@ -99,8 +102,15 @@ class ExperimentManager(BaseModel):
         response_format: BaseModel | dict | None = None,
         results_file_path: str = "results.jsonl",
     ) -> Experiment:
+        now = datetime.now()
         if ExperimentManager.retrieve(experiment_name=experiment_name) is not None:
-            raise ValueError(f"Experiment with name: {experiment_name} already exists")
+            new_experiment_name = f"{provider}_{model}_{now.strftime('%Y%m%d_%H%M%S')}"
+            ExperimentManager.logger.info(
+                f"Experiment name '{experiment_name}' already exists.",
+                f"Using custom name: {new_experiment_name}",
+                "Feel free to rename the experiment later.",
+            )
+            experiment_name = new_experiment_name
         if isinstance(response_format, BaseModel):
             response_format = {
                 "type": "json_schema",
@@ -111,7 +121,6 @@ class ExperimentManager(BaseModel):
                 },
             }
         api_key = api_key or get_default_api_key_from_provider(provider)
-        now = datetime.now()
         experiment = get_experiment_cls_from_provider(provider).model_validate(
             {
                 "name": experiment_name,
