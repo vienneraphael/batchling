@@ -178,9 +178,10 @@ class ExperimentManager(BaseModel):
         if experiment.batch_id is not None:
             raise ValueError("Cannot update an experiment that has already been started.")
         if "name" in kwargs:
-            raise ValueError(
-                "name cannot be updated, please delete the experiment and create a new one"
-            )
+            if ExperimentManager.retrieve(experiment_name=kwargs["name"]) is not None:
+                raise ValueError(
+                    "name cannot be updated, because an experiment with this name already exists"
+                )
         kwargs["updated_at"] = datetime.now()
         experiment = experiment.update(**kwargs)
         with get_db() as db:
