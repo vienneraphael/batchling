@@ -2,7 +2,18 @@ from pathlib import Path
 
 import typer
 
-from batchling.cli.enums import OrderByFields
+from batchling.cli.enums import OrderByFields, Provider
+
+
+def provider_callback(ctx: typer.Context, value: str):
+    if ctx.resilient_parsing:
+        return
+    if value not in Provider.__members__.values():
+        raise typer.BadParameter(
+            message=f"'{value}' is not a valid provider, supported providers are: {', '.join(Provider.__members__.values())}",
+            param_hint="--provider, -p",
+        )
+    return value
 
 
 def order_by_callback(ctx: typer.Context, value: str):
@@ -16,7 +27,7 @@ def order_by_callback(ctx: typer.Context, value: str):
     return value
 
 
-def load_file_callback(ctx: typer.Context, value: Path):
+def file_exists_callback(ctx: typer.Context, value: Path):
     if ctx.resilient_parsing:
         return
     if not value.exists():

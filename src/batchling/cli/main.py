@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from batchling.cli.callbacks import order_by_callback, provider_callback
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
 from batchling.request import raw_request_list_adapter
@@ -65,6 +66,7 @@ def list_experiments(
             "--order-by",
             help="The field to order by",
             rich_help_panel="Ordering",
+            callback=order_by_callback,
         ),
     ] = "updated_at",
     ascending: Annotated[
@@ -136,6 +138,7 @@ def create_experiment(
         str,
         typer.Option(
             help="The provider to use, e.g. openai, anthropic, gemini, groq, mistral, together..",
+            callback=provider_callback,
         ),
     ],
     endpoint: Annotated[
