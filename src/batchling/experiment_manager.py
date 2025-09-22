@@ -12,10 +12,10 @@ from batchling.request import RawRequest, raw_request_list_adapter
 from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.classes import get_experiment_cls_from_provider
 
+logger = logging.getLogger(__name__)
+
 
 class ExperimentManager(BaseModel):
-    logger = logging.getLogger(__name__)
-
     def model_post_init(self, context):
         load_dotenv(override=True)
         init_db()
@@ -105,7 +105,7 @@ class ExperimentManager(BaseModel):
         now = datetime.now()
         if ExperimentManager.retrieve(experiment_name=experiment_name) is not None:
             new_experiment_name = f"{provider}_{model}_{now.strftime('%Y%m%d_%H%M%S')}"
-            ExperimentManager.logger.info(
+            logger.info(
                 f"Experiment name '{experiment_name}' already exists.",
                 f"Using custom name: {new_experiment_name}",
                 "Feel free to rename the experiment later.",
