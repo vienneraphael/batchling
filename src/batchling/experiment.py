@@ -28,9 +28,11 @@ class Experiment(BaseModel, ABC):
         default_factory=lambda: str(uuid.uuid4()), description="machine-friendly unique identifier"
     )
     title: str | None = Field(
-        default=None, description="optional title briefly summarizing the experiment"
+        default=None, description="optional, title briefly summarizing the experiment"
     )
-    description: str | None = Field(default=None, description="description of the experiment")
+    description: str | None = Field(
+        default=None, description="optional, description of the experiment"
+    )
     model: str = Field(description="model to use")
     provider: t.Literal["openai", "mistral", "together", "groq", "gemini", "anthropic"] = Field(
         default="openai",
