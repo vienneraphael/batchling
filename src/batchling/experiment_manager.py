@@ -1,4 +1,3 @@
-import logging
 import os
 from datetime import datetime
 
@@ -11,8 +10,6 @@ from batchling.experiment import Experiment
 from batchling.request import RawRequest, raw_request_list_adapter
 from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.classes import get_experiment_cls_from_provider
-
-logger = logging.getLogger(__name__)
 
 
 class ExperimentManager(BaseModel):
@@ -105,11 +102,12 @@ class ExperimentManager(BaseModel):
         now = datetime.now()
         if ExperimentManager.retrieve(experiment_name=experiment_name) is not None:
             new_experiment_name = f"{provider}_{model}_{now.strftime('%Y%m%d_%H%M%S')}"
-            logger.info(
-                f"Experiment name '{experiment_name}' already exists.",
-                f"Using custom name: {new_experiment_name}",
-                "Feel free to rename the experiment later.",
+            message = (
+                f"Experiment name '{experiment_name}' already exists.\n"
+                f"Using custom name: {new_experiment_name}\n"
+                "Feel free to rename the experiment later.\n"
             )
+            print(message)
             experiment_name = new_experiment_name
         if isinstance(response_format, BaseModel):
             response_format = {
