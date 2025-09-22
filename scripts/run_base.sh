@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ./scripts/anthropic/base.sh
 ./scripts/mistral/base.sh
 ./scripts/openai/base.sh

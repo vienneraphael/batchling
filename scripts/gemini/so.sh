@@ -1,9 +1,9 @@
 #!/bin/bash
 
 batchling create\
- --id gemini\
+ --name gemini\
  --model "gemini-2.0-flash"\
- --name "exp name"\
+ --title "exp name"\
  --description "exp description"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --processed-file-path input_capitals_gemini.jsonl\

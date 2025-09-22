@@ -1,9 +1,9 @@
 #!/bin/bash
 
 batchling create\
- --id groq\
+ --name groq\
  --model "openai/gpt-oss-20b"\
- --name "testing openai/gpt-oss-20b"\
+ --title "testing openai/gpt-oss-20b"\
  --description "experiment testing openai/gpt-oss-20b"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --processed-file-path input_capitals_groq.jsonl\
