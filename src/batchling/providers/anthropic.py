@@ -116,8 +116,15 @@ class AnthropicExperiment(Experiment):
                 params_dict["tools"] = request["params"]["tools"]
             if "tool_choice" in request["params"]:
                 params_dict["tool_choice"] = request["params"]["tool_choice"]
-            params = MessageCreateParamsNonStreaming(**params_dict)
-            requests.append(Request(custom_id=request.get("custom_id"), params=params))
+            params = MessageCreateParamsNonStreaming(
+                model=params_dict["model"],
+                max_tokens=params_dict["max_tokens"],
+                messages=params_dict["messages"],
+                system=params_dict["system"],
+                tools=params_dict["tools"],
+                tool_choice=params_dict["tool_choice"],
+            )
+            requests.append(Request(custom_id=request["custom_id"], params=params))
         return self.client.messages.batches.create(requests=requests).id
 
     def raise_not_in_running_status(self):
