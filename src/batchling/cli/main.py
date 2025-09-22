@@ -11,6 +11,12 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from batchling.cli.callbacks import order_by_callback, provider_callback
+from batchling.cli.completions import (
+    complete_experiment_name,
+    complete_order_by,
+    complete_provider,
+)
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
 from batchling.request import raw_request_list_adapter
@@ -65,6 +71,8 @@ def list_experiments(
             "--order-by",
             help="The field to order by",
             rich_help_panel="Ordering",
+            callback=order_by_callback,
+            autocompletion=complete_order_by,
         ),
     ] = "updated_at",
     ascending: Annotated[
@@ -109,6 +117,7 @@ def get_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
 ):
@@ -129,37 +138,32 @@ def get_experiment(
 
 @app.command(name="create")
 def create_experiment(
-    name: Annotated[str, typer.Option(default=..., help="The name of the experiment")],
-    model: Annotated[str, typer.Option(default=..., help="The model to use")],
-    description: Annotated[
-        str, typer.Option(default=..., help="The description of the experiment")
-    ],
+    name: Annotated[str, typer.Option(help="The name of the experiment")],
+    model: Annotated[str, typer.Option(help="The model to use")],
+    description: Annotated[str, typer.Option(help="The description of the experiment")],
     provider: Annotated[
         str,
         typer.Option(
-            default=...,
             help="The provider to use, e.g. openai, anthropic, gemini, groq, mistral, together..",
+            callback=provider_callback,
+            autocompletion=complete_provider,
         ),
     ],
     endpoint: Annotated[
         str,
         typer.Option(
-            default=...,
             help="The generation endpoint to use, e.g. /v1/chat/completions, /v1/embeddings..",
         ),
     ],
     processed_file_path: Annotated[
         Path,
         typer.Option(
-            default=...,
             help="the batch input file path, sent to the provider. Will be used if path exists, else it will be created.",
         ),
     ],
     results_file_path: Annotated[
         Path,
-        typer.Option(
-            default=..., help="the path to the results file where batch results will be saved"
-        ),
+        typer.Option(help="the path to the results file where batch results will be saved"),
     ],
     title: Annotated[
         str | None, typer.Option(help="Optional title briefly summarizing the experiment")
@@ -167,7 +171,6 @@ def create_experiment(
     raw_file_path: Annotated[
         Path | None,
         typer.Option(
-            default=...,
             help="optional, the path to the raw messages file used to build the batch. Required if processed file path does not exist",
         ),
     ] = None,
@@ -210,6 +213,7 @@ def start_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
 ):
@@ -250,6 +254,7 @@ def update_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
     model: Annotated[str | None, typer.Option(help="Updated model name, if applicable")] = None,
@@ -311,6 +316,7 @@ def delete_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
 ):

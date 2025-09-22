@@ -15,7 +15,7 @@ dependencies = [
     "platformdirs>=4.3.8",
     "sqlalchemy>=2.0.41",
     "together>=1.5.25",
-    "typer>=0.15.3",
+    "typer>=0.15.4",
     "click<8.2.0",
     "python-dotenv>=1.1.1",
 ]
