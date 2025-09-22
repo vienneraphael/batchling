@@ -12,7 +12,7 @@ if t.TYPE_CHECKING:
 
 def create_experiment(
     db: "Session",
-    id: str,
+    name: str,
     model: str,
     api_key: str,
     created_at: datetime,
@@ -36,8 +36,8 @@ def create_experiment(
     ----------
     db : Session
         The database session
-    id : str
-        The id of the experiment
+    name : str
+        The name of the experiment
     model : str
         The model to use for the experiment
     api_key : str
@@ -82,7 +82,7 @@ def create_experiment(
         else None
     )
     experiment = Experiment(
-        id=id,
+        name=name,
         uid=uid,
         title=title,
         description=description,
@@ -106,15 +106,15 @@ def create_experiment(
     return experiment
 
 
-def get_experiment(db: "Session", id: str) -> Experiment | None:
+def get_experiment(db: "Session", name: str) -> Experiment | None:
     """Get an experiment
 
     Parameters
     ----------
     db : Session
         The database session
-    id : str
-        The id of the experiment
+    name : str
+        The name of the experiment
 
     Returns
     -------
@@ -123,7 +123,7 @@ def get_experiment(db: "Session", id: str) -> Experiment | None:
     """
     from sqlalchemy import select
 
-    stmt = select(Experiment).where(Experiment.id == id)
+    stmt = select(Experiment).where(Experiment.name == name)
     return db.execute(stmt).scalar_one_or_none()
 
 
@@ -183,7 +183,7 @@ def get_experiments(
 
 def update_experiment(
     db: "Session",
-    id: str,
+    name: str,
     **kwargs: dict,
 ) -> Experiment | None:
     """Update an experiment
@@ -192,8 +192,8 @@ def update_experiment(
     ----------
     db : Session
         The database session
-    id : str
-        The id of the experiment
+    name : str
+        The name of the experiment
     **kwargs : dict
         The fields to update
 
@@ -205,25 +205,25 @@ def update_experiment(
     from sqlalchemy import update
 
     kwargs["updated_at"] = datetime.now()
-    stmt = update(Experiment).where(Experiment.id == id).values(**kwargs)
+    stmt = update(Experiment).where(Experiment.name == name).values(**kwargs)
     db.execute(stmt)
     db.commit()
-    return get_experiment(db=db, id=id)
+    return get_experiment(db=db, name=name)
 
 
-def delete_experiment(db: "Session", id: str) -> bool:
+def delete_experiment(db: "Session", name: str) -> bool:
     """Delete an experiment
 
     Parameters
     ----------
     db : Session
         The database session
-    id : str
-        The id of the experiment
+    name : str
+        The name of the experiment
     """
     from sqlalchemy import delete
 
-    stmt = delete(Experiment).where(Experiment.id == id)
+    stmt = delete(Experiment).where(Experiment.name == name)
     db.execute(stmt)
     db.commit()
     return True

@@ -23,7 +23,7 @@ from batchling.utils.files import write_jsonl_file
 
 class Experiment(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True, from_attributes=True)
-    id: str = Field(description="experiment ID")
+    name: str = Field(description="experiment name")
     uid: str = Field(
         default_factory=lambda: str(uuid.uuid4()), description="machine-friendly unique identifier"
     )

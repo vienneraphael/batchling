@@ -50,9 +50,9 @@ We recommend using a provider from which you already have an API key from to get
 
 ```bash
 batchling create\
- --id my-experiment-1\
+ --name my-experiment-1\
  --model gpt-4o\
- --name "exp name"\
+ --title "exp name"\
  --description "exp description"\
  --raw-file-path raw_requests.jsonl\
  --provider your-provider\

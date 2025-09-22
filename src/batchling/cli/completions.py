@@ -8,12 +8,12 @@ def complete_order_by(value: str):
             yield field
 
 
-def complete_experiment_id(value: str):
+def complete_experiment_name(value: str):
     for experiment in ExperimentManager.list_experiments(
-        order_by="id",
+        order_by="name",
         ascending=True,
         limit=10,
-        starts_with_field="id",
+        starts_with_field="name",
         starts_with=value,
     ):
-        yield experiment.id
+        yield experiment.name

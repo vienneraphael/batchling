@@ -21,7 +21,7 @@ app = typer.Typer(no_args_is_help=True)
 
 def print_experiment(experiment: Experiment, status: str):
     experiment_dict = {
-        "ID": experiment.id,
+        "Name": experiment.name,
         "Title": experiment.title,
         "Description": experiment.description,
         "Provider": experiment.provider,
@@ -42,7 +42,7 @@ def print_experiment(experiment: Experiment, status: str):
             del experiment_dict["Updated At"]
     values = "\n".join([f"{key}: {value}" for key, value in experiment_dict.items()])
     console = Console()
-    console.print(Panel(values, title=experiment.id, expand=False, highlight=True))
+    console.print(Panel(values, title=experiment.name, expand=False, highlight=True))
 
 
 def print_diff(old_fields: dict, new_fields: dict):
@@ -79,7 +79,7 @@ def list_experiments(
 ):
     """List experiments"""
     table = Table(
-        "ID",
+        "Name",
         "Title",
         "Description",
         "Provider",
@@ -91,7 +91,7 @@ def list_experiments(
     experiments = ExperimentManager().list_experiments(order_by=order_by, ascending=ascending)
     for experiment in experiments:
         table.add_row(
-            experiment.id,
+            experiment.name,
             experiment.title,
             experiment.description,
             experiment.provider,
@@ -105,17 +105,17 @@ def list_experiments(
 
 @app.command(name="get")
 def get_experiment(
-    experiment_id: Annotated[
+    experiment_name: Annotated[
         str,
         typer.Argument(
-            help="The id of the experiment",
+            help="The name of the experiment",
         ),
     ],
 ):
-    """Get an experiment by id"""
-    experiment = ExperimentManager().retrieve(experiment_id=experiment_id)
+    """Get an experiment by name"""
+    experiment = ExperimentManager().retrieve(experiment_name=experiment_name)
     if experiment is None:
-        typer.echo(f"Experiment with id: {experiment_id} not found")
+        typer.echo(f"Experiment with name: {experiment_name} not found")
         raise typer.Exit(1)
     with Progress(
         SpinnerColumn(),
@@ -129,7 +129,7 @@ def get_experiment(
 
 @app.command(name="create")
 def create_experiment(
-    id: Annotated[str, typer.Option(default=..., help="The id of the experiment")],
+    name: Annotated[str, typer.Option(default=..., help="The name of the experiment")],
     model: Annotated[str, typer.Option(default=..., help="The model to use")],
     description: Annotated[
         str, typer.Option(default=..., help="The description of the experiment")
@@ -189,7 +189,7 @@ def create_experiment(
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
     experiment = ExperimentManager().create_experiment(
-        experiment_id=id,
+        experiment_name=name,
         model=model,
         title=title,
         description=description,
@@ -206,50 +206,50 @@ def create_experiment(
 
 @app.command(name="start")
 def start_experiment(
-    id: Annotated[
+    name: Annotated[
         str,
         typer.Argument(
-            help="The id of the experiment",
+            help="The name of the experiment",
         ),
     ],
 ):
     """Start an experiment by submitting the batch to the provider"""
     em = ExperimentManager()
-    experiment = em.retrieve(experiment_id=id)
+    experiment = em.retrieve(experiment_name=name)
     if experiment is None:
-        typer.echo(f"Experiment with id: {id} not found")
+        typer.echo(f"Experiment with name: {name} not found")
         raise typer.Exit(1)
-    em.start_experiment(experiment_id=id)
-    print(f"Experiment with id: [green]{id}[/green] is started.")
+    em.start_experiment(experiment_name=name)
+    print(f"Experiment with name: [green]{name}[/green] is started.")
 
 
 @app.command(name="results")
 def get_results(
-    id: Annotated[
+    name: Annotated[
         str,
         typer.Argument(
-            help="The id of the experiment",
+            help="The name of the experiment",
         ),
     ],
 ):
     """Download the results of an experiment locally"""
     em = ExperimentManager()
-    experiment = em.retrieve(experiment_id=id)
+    experiment = em.retrieve(experiment_name=name)
     if experiment is None:
-        typer.echo(f"Experiment with id: {id} not found")
+        typer.echo(f"Experiment with name: {name} not found")
         raise typer.Exit(1)
     print("Downloading results..")
-    em.get_results(experiment_id=id)
+    em.get_results(experiment_name=name)
     print(f"Results downloaded to [green]{experiment.results_file_path}[/green]")
 
 
 @app.command(name="update")
 def update_experiment(
     ctx: typer.Context,
-    id: Annotated[
+    name: Annotated[
         str,
         typer.Argument(
-            help="The id of the experiment",
+            help="The name of the experiment",
         ),
     ],
     model: Annotated[str | None, typer.Option(help="Updated model name, if applicable")] = None,
@@ -279,12 +279,12 @@ def update_experiment(
 ):
     """Update an experiment"""
     fields_to_update = {
-        key: value for key, value in ctx.params.items() if value is not None and key != "id"
+        key: value for key, value in ctx.params.items() if value is not None and key != "name"
     }
     em = ExperimentManager()
-    experiment = em.retrieve(experiment_id=id)
+    experiment = em.retrieve(experiment_name=name)
     if experiment is None:
-        typer.echo(f"Experiment with id: {id} not found")
+        typer.echo(f"Experiment with name: {name} not found")
         raise typer.Exit(1)
     old_fields = {key: getattr(experiment, key) for key in fields_to_update}
     if "raw_file_path" in fields_to_update:
@@ -301,27 +301,27 @@ def update_experiment(
             fields_to_update["response_format_path"].open()
         )
         del fields_to_update["response_format_path"]
-    em.update_experiment(experiment_id=id, **fields_to_update)
+    em.update_experiment(experiment_name=name, **fields_to_update)
     print_diff(old_fields, fields_to_update)
 
 
 @app.command(name="delete")
 def delete_experiment(
-    id: Annotated[
+    name: Annotated[
         str,
         typer.Argument(
-            help="The id of the experiment",
+            help="The name of the experiment",
         ),
     ],
 ):
     """Delete an experiment"""
     em = ExperimentManager()
-    experiment = em.retrieve(experiment_id=id)
+    experiment = em.retrieve(experiment_name=name)
     if experiment is None:
-        typer.echo(f"Experiment with id: {id} not found")
+        typer.echo(f"Experiment with name: {name} not found")
         raise typer.Exit(1)
-    em.delete_experiment(experiment_id=id)
-    print(f"Experiment with id: [green]{id}[/green] deleted")
+    em.delete_experiment(experiment_name=name)
+    print(f"Experiment with name: [green]{name}[/green] deleted")
 
 
 @app.command()
