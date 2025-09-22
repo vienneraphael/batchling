@@ -52,11 +52,11 @@ class ExperimentManager(BaseModel):
         ]
 
     @staticmethod
-    def retrieve(experiment_id: str) -> Experiment | None:
+    def retrieve(experiment_name: str) -> Experiment | None:
         from batchling.db.crud import get_experiment
 
         with get_db() as db:
-            experiment = get_experiment(db=db, id=experiment_id)
+            experiment = get_experiment(db=db, name=experiment_name)
         if experiment is None:
             return None
         experiment.raw_requests = raw_request_list_adapter.validate_python(experiment.raw_requests)
@@ -69,10 +69,11 @@ class ExperimentManager(BaseModel):
         with get_db() as db:
             create_experiment(
                 db=db,
-                id=experiment.id,
+                name=experiment.name,
                 model=experiment.model,
                 api_key=experiment.api_key,
-                name=experiment.name,
+                uid=experiment.uid,
+                title=experiment.title,
                 description=experiment.description,
                 provider=experiment.provider,
                 endpoint=experiment.endpoint,
@@ -86,10 +87,10 @@ class ExperimentManager(BaseModel):
 
     @staticmethod
     def create_experiment(
-        experiment_id: str,
+        experiment_name: str,
         model: str,
-        name: str,
         processed_file_path: str,
+        title: str | None = None,
         api_key: str | None = None,
         description: str | None = None,
         provider: str = "openai",
@@ -98,8 +99,16 @@ class ExperimentManager(BaseModel):
         response_format: BaseModel | dict | None = None,
         results_file_path: str = "results.jsonl",
     ) -> Experiment:
-        if ExperimentManager.retrieve(experiment_id=experiment_id) is not None:
-            raise ValueError(f"Experiment with id: {experiment_id} already exists")
+        now = datetime.now()
+        if ExperimentManager.retrieve(experiment_name=experiment_name) is not None:
+            new_experiment_name = f"{provider}_{model}_{now.strftime('%Y%m%d_%H%M%S')}"
+            message = (
+                f"Experiment name '{experiment_name}' already exists.\n"
+                f"Using custom name: {new_experiment_name}\n"
+                "Feel free to rename the experiment later.\n"
+            )
+            print(message)
+            experiment_name = new_experiment_name
         if isinstance(response_format, BaseModel):
             response_format = {
                 "type": "json_schema",
@@ -110,12 +119,11 @@ class ExperimentManager(BaseModel):
                 },
             }
         api_key = api_key or get_default_api_key_from_provider(provider)
-        now = datetime.now()
         experiment = get_experiment_cls_from_provider(provider).model_validate(
             {
-                "id": experiment_id,
+                "name": experiment_name,
                 "model": model,
-                "name": name,
+                "title": title,
                 "description": description,
                 "provider": provider,
                 "endpoint": endpoint,
@@ -134,17 +142,17 @@ class ExperimentManager(BaseModel):
         return experiment
 
     @staticmethod
-    def start_experiment(experiment_id: str) -> Experiment:
-        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    def start_experiment(experiment_name: str) -> Experiment:
+        experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
-            raise ValueError(f"Experiment with id: {experiment_id} not found")
+            raise ValueError(f"Experiment with name: {experiment_name} not found")
         if experiment.batch_id is not None:
-            raise ValueError(f"Experiment with id: {experiment_id} was already started")
+            raise ValueError(f"Experiment with name: {experiment_name} was already started")
         experiment.start()
         with get_db() as db:
             update_experiment(
                 db=db,
-                id=experiment.id,
+                name=experiment.name,
                 **{
                     "updated_at": datetime.now(),
                     "batch_id": experiment.batch_id,
@@ -154,43 +162,44 @@ class ExperimentManager(BaseModel):
         return experiment
 
     @staticmethod
-    def get_results(experiment_id: str) -> list[dict]:
-        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    def get_results(experiment_name: str) -> list[dict]:
+        experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
-            raise ValueError(f"Experiment with id: {experiment_id} not found")
+            raise ValueError(f"Experiment with name: {experiment_name} not found")
         return experiment.get_results()
 
     @staticmethod
-    def update_experiment(experiment_id: str, **kwargs) -> Experiment:
-        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    def update_experiment(experiment_name: str, **kwargs) -> Experiment:
+        experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
-            raise ValueError(f"Experiment with id: {experiment_id} not found")
+            raise ValueError(f"Experiment with name: {experiment_name} not found")
         if experiment.batch_id is not None:
             raise ValueError("Cannot update an experiment that has already been started.")
-        if "id" in kwargs:
-            raise ValueError(
-                "id cannot be updated, please delete the experiment and create a new one"
-            )
+        if "name" in kwargs:
+            if ExperimentManager.retrieve(experiment_name=kwargs["name"]) is not None:
+                raise ValueError(
+                    "name cannot be updated, because an experiment with this name already exists"
+                )
         kwargs["updated_at"] = datetime.now()
         experiment = experiment.update(**kwargs)
         with get_db() as db:
-            update_experiment(db=db, id=experiment.id, **kwargs)
+            update_experiment(db=db, name=experiment.name, **kwargs)
         return experiment
 
     @staticmethod
-    def delete_experiment(experiment_id: str) -> None:
-        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    def delete_experiment(experiment_name: str) -> None:
+        experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
-            raise ValueError(f"Experiment with id: {experiment_id} not found")
+            raise ValueError(f"Experiment with name: {experiment_name} not found")
         with get_db() as db:
-            delete_experiment(db=db, id=experiment.id)
+            delete_experiment(db=db, name=experiment.name)
         experiment.delete()
 
     @staticmethod
-    def cancel_experiment(experiment_id: str) -> None:
-        experiment = ExperimentManager.retrieve(experiment_id=experiment_id)
+    def cancel_experiment(experiment_name: str) -> None:
+        experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
-            raise ValueError(f"Experiment with id: {experiment_id} not found")
+            raise ValueError(f"Experiment with name: {experiment_name} not found")
         experiment.cancel()
         with get_db() as db:
-            update_experiment(db=db, id=experiment.id, updated_at=datetime.now())
+            update_experiment(db=db, name=experiment.name, updated_at=datetime.now())

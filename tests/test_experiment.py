@@ -21,9 +21,9 @@ def experiment(tmp_path):
     now = datetime.now()
     api_key = get_default_api_key_from_provider(provider="openai")
     experiment = OpenAIExperiment(
-        id="experiment-test-1",
+        name="experiment-test-1",
         model="gpt-4o-mini",
-        name="test 1",
+        title="test 1",
         description="test experiment number 1",
         processed_file_path=(tmp_path / "test.jsonl").as_posix(),
         raw_requests=raw_requests,
@@ -37,9 +37,9 @@ def experiment(tmp_path):
 def test_invalid_processed_file_path():
     with pytest.raises(ValueError, match="processed_file_path must be a .jsonl file"):
         OpenAIExperiment(
-            id="experiment-test-2",
+            name="experiment-test-2",
             model="gpt-4o-mini",
-            name="test 1",
+            title="test 1",
             description="test experiment number 1",
             processed_file_path="test.txt",
         )

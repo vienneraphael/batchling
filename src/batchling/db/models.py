@@ -12,8 +12,9 @@ class Base(DeclarativeBase):
 class Experiment(Base):
     __tablename__ = "experiments"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    name: Mapped[str] = mapped_column(String, primary_key=True)
+    uid: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

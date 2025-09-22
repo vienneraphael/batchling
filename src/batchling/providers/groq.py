@@ -41,7 +41,7 @@ class GroqExperiment(Experiment):
             )
             processed_requests.append(
                 GroqRequest(
-                    custom_id=f"{self.id}-sample-{i}",
+                    custom_id=f"{self.name}-sample-{i}",
                     body=GroqBody(
                         messages=messages,
                         max_tokens=raw_request.max_tokens,

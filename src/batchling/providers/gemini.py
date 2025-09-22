@@ -43,7 +43,7 @@ class GeminiExperiment(Experiment):
             ]
             processed_requests.append(
                 GeminiRequest(
-                    key=f"{self.id}-sample-{i}",
+                    key=f"{self.name}-sample-{i}",
                     request=GeminiBody(
                         system_instruction=GeminiSystemInstruction(
                             parts=[GeminiPart(text=raw_request.system_prompt)]

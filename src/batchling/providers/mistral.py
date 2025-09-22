@@ -40,7 +40,7 @@ class MistralExperiment(Experiment):
             )
             processed_requests.append(
                 MistralRequest(
-                    custom_id=f"{self.id}-sample-{i}",
+                    custom_id=f"{self.name}-sample-{i}",
                     body=MistralBody(
                         messages=messages,
                         max_tokens=raw_request.max_tokens,

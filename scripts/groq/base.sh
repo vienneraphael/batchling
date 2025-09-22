@@ -1,9 +1,9 @@
 #!/bin/bash
 
 batchling create\
- --id groq\
+ --name groq\
  --model "llama-3.1-8b-instant"\
- --name "testing llama-3.1-8b-instant"\
+ --title "testing llama-3.1-8b-instant"\
  --description "experiment testing llama-3.1-8b-instant"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --processed-file-path input_capitals_groq.jsonl\

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 batchling results anthropic
 batchling results mistral
 batchling results openai

@@ -154,9 +154,9 @@ def experiment(
         ),
     ]
     experiment = experiment_manager.create_experiment(
-        experiment_id=f"em-test-{provider}-{name}",
+        experiment_name=f"em-test-{provider}-{name}",
         model="gpt-4o-mini",
-        name="em test",
+        title="em test",
         provider=provider,
         description="test experiment with em",
         processed_file_path=processed_file_path.as_posix(),
@@ -171,7 +171,7 @@ def experiment(
 @pytest.fixture
 def started_experiment(experiment_manager: ExperimentManager, experiment: Experiment, mock_client):
     experiment.client = mock_client
-    return experiment_manager.start_experiment(experiment_id=experiment.id)
+    return experiment_manager.start_experiment(experiment_name=experiment.name)
 
 
 def test_start(started_experiment: Experiment):
@@ -191,7 +191,7 @@ def test_create_experiment(experiment: Experiment):
 
 
 def test_retrieve_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
-    retrieved_experiment = experiment_manager.retrieve(experiment_id=experiment.id)
+    retrieved_experiment = experiment_manager.retrieve(experiment_name=experiment.name)
     assert retrieved_experiment is not None
     assert retrieved_experiment.model_dump() == experiment.model_dump()
 
@@ -204,14 +204,14 @@ def test_list_experiments(experiment_manager: ExperimentManager, experiment: Exp
 
 def test_update_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
     updated_experiment = experiment_manager.update_experiment(
-        experiment_id=experiment.id, name="em test updated"
+        experiment_name=experiment.name, title="em test updated"
     )
     assert updated_experiment is not None
-    assert updated_experiment.id == experiment.id
+    assert updated_experiment.name == experiment.name
     assert updated_experiment.model_dump() != experiment.model_dump()
     assert updated_experiment.updated_at != experiment.updated_at
 
 
 def test_delete_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
-    experiment_manager.delete_experiment(experiment_id=experiment.id)
-    assert experiment_manager.retrieve(experiment_id=experiment.id) is None
+    experiment_manager.delete_experiment(experiment_name=experiment.name)
+    assert experiment_manager.retrieve(experiment_name=experiment.name) is None

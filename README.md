@@ -117,9 +117,9 @@ We can create an experiment with the following command:
 
 ```bash
 batchling create\
- --id my-experiment-1\
+ --name my-experiment-1\
  --model gpt-4o\
- --name "exp name"\
+ --title "exp name"\
  --description "exp description"\
  --provider openai\
  --endpoint /v1/chat/completions\
@@ -128,8 +128,8 @@ batchling create\
  --results-file-path output/result_capitals_openai.jsonl\
 
 # ╭──────────────── my-experiment-1 ─────────────────╮
-# │ ID: my-experiment-1                              │
-# │ Name: exp name                                   │
+# │ Name: my-experiment-1                            │
+# │ Title: exp name                                  │
 # │ Description: exp description                     │
 # │ Provider: openai                                 │
 # │ Endpoint: /v1/chat/completions                   │
@@ -147,7 +147,7 @@ batchling create\
 
 batchling start my-experiment-1
 
-# > Experiment with id: my-experiment-1 is started. Current status: validating
+# > Experiment with name: my-experiment-1 is started. Current status: validating
 ```
 
 ### Retrieve results
@@ -189,11 +189,11 @@ raw_requests = [
 
 
 experiment = em.create_experiment(
-    experiment_id="my-experiment-1",
+    experiment_name="my-experiment-1",
     model="gpt-4o-mini",
     provider="openai",
     endpoint="/v1/chat/completions",
-    name="My first experiment",
+    title="My first experiment",
     description="Experimenting with gpt-4o-mini",
     raw_requests=raw_requests,
     processed_file_path="path/to/write/input.jsonl",
@@ -201,7 +201,7 @@ experiment = em.create_experiment(
 )
 
 # submit the local input file and batch to provider
-em.start_experiment(experiment_id=experiment.id)
+em.start_experiment(experiment_name=experiment.name)
 
 # monitor experiment status and wait for it to complete
 print(experiment.status)
@@ -215,9 +215,9 @@ from batchling import ExperimentManager
 
 em = ExperimentManager()
 
-experiment = em.retrieve(experiment_id="my-experiment-1")
+experiment = em.retrieve(experiment_name="my-experiment-1")
 
-results = em.get_results(experiment_id=experiment.id)
+results = em.get_results(experiment_name=experiment.name)
 print(results)
 # [
 #     {"id": "batch_req_6872c8dsa872c8190b1b5bdcq0d9q9z", "custom_id": "my-experiment-1-sample-0", "result": "My name is Bob."},

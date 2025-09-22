@@ -1,9 +1,9 @@
 #!/bin/bash
 
 batchling create\
- --id together\
+ --name together\
  --model "deepseek-ai/DeepSeek-V3"\
- --name "testing DeepSeek-V3"\
+ --title "testing DeepSeek-V3"\
  --description "experiment testing DeepSeek-V3"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --processed-file-path input_capitals_together.jsonl\

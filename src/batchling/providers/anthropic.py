@@ -42,7 +42,7 @@ class AnthropicExperiment(Experiment):
         for i, raw_request in enumerate(self.raw_requests):
             processed_requests.append(
                 AnthropicRequest(
-                    custom_id=f"{self.id}-sample-{i}",
+                    custom_id=f"{self.name}-sample-{i}",
                     params=AnthropicBody(
                         model=self.model,
                         max_tokens=raw_request.max_tokens,
@@ -106,18 +106,19 @@ class AnthropicExperiment(Experiment):
         data = read_jsonl_file(self.processed_file_path)
         requests = []
         for request in data:
-            params_dict = {
-                "model": self.model,
-                "messages": request["params"]["messages"],
-                "system": request["params"]["system"],
-                "max_tokens": request["params"]["max_tokens"],
-            }
-            if "tools" in request["params"]:
-                params_dict["tools"] = request["params"]["tools"]
-            if "tool_choice" in request["params"]:
-                params_dict["tool_choice"] = request["params"]["tool_choice"]
-            params = MessageCreateParamsNonStreaming(**params_dict)
-            requests.append(Request(custom_id=request.get("custom_id"), params=params))
+            tools = request["params"]["tools"] if "tools" in request["params"] else []
+            tool_choice = (
+                request["params"]["tool_choice"] if "tool_choice" in request["params"] else "none"
+            )
+            params = MessageCreateParamsNonStreaming(
+                model=self.model,
+                max_tokens=request["params"]["max_tokens"],
+                messages=request["params"]["messages"],
+                system=request["params"]["system"],
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+            requests.append(Request(custom_id=request["custom_id"], params=params))
         return self.client.messages.batches.create(requests=requests).id
 
     def raise_not_in_running_status(self):

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 batchling create\
- --id anthropic\
+ --name anthropic\
  --model "claude-3-haiku-20240307"\
- --name "experiment haiku"\
+ --title "experiment haiku"\
  --description "experiment testing claude-3-haiku-20240307"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
  --processed-file-path input_capitals_anthropic.jsonl\

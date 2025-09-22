@@ -10,11 +10,11 @@ def test_create_experiment():
         app,
         [
             "create",
-            "--id",
+            "--name",
             "test-cli-1",
             "--model",
             "gpt-4o-mini",
-            "--name",
+            "--title",
             "test cli 1",
             "--description",
             "test cli experiment number 1",
