@@ -129,37 +129,30 @@ def get_experiment(
 
 @app.command(name="create")
 def create_experiment(
-    name: Annotated[str, typer.Option(default=..., help="The name of the experiment")],
-    model: Annotated[str, typer.Option(default=..., help="The model to use")],
-    description: Annotated[
-        str, typer.Option(default=..., help="The description of the experiment")
-    ],
+    name: Annotated[str, typer.Option(help="The name of the experiment")],
+    model: Annotated[str, typer.Option(help="The model to use")],
+    description: Annotated[str, typer.Option(help="The description of the experiment")],
     provider: Annotated[
         str,
         typer.Option(
-            default=...,
             help="The provider to use, e.g. openai, anthropic, gemini, groq, mistral, together..",
         ),
     ],
     endpoint: Annotated[
         str,
         typer.Option(
-            default=...,
             help="The generation endpoint to use, e.g. /v1/chat/completions, /v1/embeddings..",
         ),
     ],
     processed_file_path: Annotated[
         Path,
         typer.Option(
-            default=...,
             help="the batch input file path, sent to the provider. Will be used if path exists, else it will be created.",
         ),
     ],
     results_file_path: Annotated[
         Path,
-        typer.Option(
-            default=..., help="the path to the results file where batch results will be saved"
-        ),
+        typer.Option(help="the path to the results file where batch results will be saved"),
     ],
     title: Annotated[
         str | None, typer.Option(help="Optional title briefly summarizing the experiment")
@@ -167,7 +160,6 @@ def create_experiment(
     raw_file_path: Annotated[
         Path | None,
         typer.Option(
-            default=...,
             help="optional, the path to the raw messages file used to build the batch. Required if processed file path does not exist",
         ),
     ] = None,
