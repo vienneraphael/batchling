@@ -12,6 +12,11 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from batchling.cli.callbacks import order_by_callback, provider_callback
+from batchling.cli.completions import (
+    complete_experiment_name,
+    complete_order_by,
+    complete_provider,
+)
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
 from batchling.request import raw_request_list_adapter
@@ -67,6 +72,7 @@ def list_experiments(
             help="The field to order by",
             rich_help_panel="Ordering",
             callback=order_by_callback,
+            autocompletion=complete_order_by,
         ),
     ] = "updated_at",
     ascending: Annotated[
@@ -111,6 +117,7 @@ def get_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
 ):
@@ -139,6 +146,7 @@ def create_experiment(
         typer.Option(
             help="The provider to use, e.g. openai, anthropic, gemini, groq, mistral, together..",
             callback=provider_callback,
+            autocompletion=complete_provider,
         ),
     ],
     endpoint: Annotated[
@@ -205,6 +213,7 @@ def start_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
 ):
@@ -245,6 +254,7 @@ def update_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
     model: Annotated[str | None, typer.Option(help="Updated model name, if applicable")] = None,
@@ -306,6 +316,7 @@ def delete_experiment(
         str,
         typer.Argument(
             help="The name of the experiment",
+            autocompletion=complete_experiment_name,
         ),
     ],
 ):
