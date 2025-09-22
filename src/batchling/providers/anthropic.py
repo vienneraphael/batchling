@@ -106,23 +106,17 @@ class AnthropicExperiment(Experiment):
         data = read_jsonl_file(self.processed_file_path)
         requests = []
         for request in data:
-            params_dict = {
-                "model": self.model,
-                "messages": request["params"]["messages"],
-                "system": request["params"]["system"],
-                "max_tokens": request["params"]["max_tokens"],
-            }
-            if "tools" in request["params"]:
-                params_dict["tools"] = request["params"]["tools"]
-            if "tool_choice" in request["params"]:
-                params_dict["tool_choice"] = request["params"]["tool_choice"]
+            tools = request["params"]["tools"] if "tools" in request["params"] else []
+            tool_choice = (
+                request["params"]["tool_choice"] if "tool_choice" in request["params"] else "none"
+            )
             params = MessageCreateParamsNonStreaming(
-                model=params_dict["model"],
-                max_tokens=params_dict["max_tokens"],
-                messages=params_dict["messages"],
-                system=params_dict["system"],
-                tools=params_dict["tools"],
-                tool_choice=params_dict["tool_choice"],
+                model=self.model,
+                max_tokens=request["params"]["max_tokens"],
+                messages=request["params"]["messages"],
+                system=request["params"]["system"],
+                tools=tools,
+                tool_choice=tool_choice,
             )
             requests.append(Request(custom_id=request["custom_id"], params=params))
         return self.client.messages.batches.create(requests=requests).id
