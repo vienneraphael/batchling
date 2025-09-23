@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12, <4.0"
 
 [[package]]
@@ -146,7 +146,7 @@ wheels = [
 
 [[package]]
 name = "batchling"
-version = "0.0.7"
+version = "0.0.8"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
