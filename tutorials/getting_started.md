@@ -37,7 +37,8 @@ NOTE: if you use the `anthropic` provider, you will need to provide the `max_tok
 
 ## 3. Create an experiment
 
-Run this command to create an experiment, you can switch the provider for any of the supported providers, make sure to call your API key in your `.env` file with the right name:
+Run this command to create an experiment, you can switch the provider for any of the supported providers and the model for the model of your choice that is supported by the provider you entered.
+Make sure to call your API key in your `.env` file with the right name:
 
 - openai <> `OPENAI_API_KEY`
 - mistral <> `MISTRAL_API_KEY`
@@ -51,7 +52,7 @@ We recommend using a provider from which you already have an API key from to get
 ```bash
 batchling create\
  --name my-experiment-1\
- --model gpt-4o\
+ --model your-favorite-model\
  --title "exp name"\
  --description "exp description"\
  --raw-file-path raw_requests.jsonl\
