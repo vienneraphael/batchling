@@ -33,8 +33,6 @@ certifi==2025.8.3
     #   requests
 cffi==2.0.0 ; implementation_name == 'pypy'
     # via pyzmq
-cfgv==3.4.0
-    # via pre-commit
 charset-normalizer==3.4.3
     # via requests
 click==8.1.8
@@ -55,8 +53,6 @@ debugpy==1.8.17
     # via ipykernel
 decorator==5.2.1
     # via ipython
-distlib==0.4.0
-    # via virtualenv
 distro==1.9.0
     # via
     #   anthropic
@@ -71,9 +67,7 @@ eval-type-backport==0.2.2
 executing==2.2.1
     # via stack-data
 filelock==3.19.1
-    # via
-    #   together
-    #   virtualenv
+    # via together
 frozenlist==1.7.0
     # via
     #   aiohttp
@@ -98,8 +92,6 @@ httpx==0.28.1
     #   groq
     #   mistralai
     #   openai
-identify==2.6.15
-    # via pre-commit
 idna==3.10
     # via
     #   anyio
@@ -143,8 +135,6 @@ multidict==6.6.4
     #   yarl
 nest-asyncio==1.6.0
     # via ipykernel
-nodeenv==1.9.1
-    # via pre-commit
 numpy==2.3.3
     # via together
 openai==1.108.1
@@ -163,10 +153,8 @@ platformdirs==4.4.0
     # via
     #   batchling
     #   jupyter-core
-    #   virtualenv
 pluggy==1.6.0
     # via pytest
-pre-commit==4.3.0
 prek==0.2.3
 prompt-toolkit==3.0.52
     # via ipython
@@ -215,9 +203,7 @@ python-dotenv==1.1.1
 pywin32==311 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
     # via jupyter-core
 pyyaml==6.0.2
-    # via
-    #   mistralai
-    #   pre-commit
+    # via mistralai
 pyzmq==27.1.0
     # via
     #   ipykernel
@@ -291,8 +277,6 @@ typing-inspection==0.4.1
     #   pydantic
 urllib3==2.5.0
     # via requests
-virtualenv==20.34.0
-    # via pre-commit
 wcwidth==0.2.13
     # via prompt-toolkit
 websockets==15.0.1

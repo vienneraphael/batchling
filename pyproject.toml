@@ -35,7 +35,6 @@ dev = [
     "python-dotenv>=1.1.1",
     "pyinstrument>=5.1.1",
     "prek>=0.2.3",
-    "pre-commit>=4.3.0",
 ]
 
 [build-system]
