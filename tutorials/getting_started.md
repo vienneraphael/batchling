@@ -58,7 +58,7 @@ batchling create\
  --raw-file-path raw_requests.jsonl\
  --provider your-provider\
  --endpoint /v1/chat/completions\
- --processed-file-path input_capitals_openai.jsonl\
+ --processed-file-path ./input_capitals_openai.jsonl\
  --results-file-path result_capitals.jsonl\
 ```
 
