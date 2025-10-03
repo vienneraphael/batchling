@@ -180,7 +180,9 @@ class Experiment(BaseModel, ABC):
 
     def get_results(self):
         self.raise_not_in_completed_status()
-        os.makedirs(os.path.dirname(self.results_file_path), exist_ok=True)
+        dirname = os.path.dirname(self.results_file_path)
+        if dirname:
+            os.makedirs(name=dirname, exist_ok=True)
         return self.get_provider_results()
 
     def delete(self):
