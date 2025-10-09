@@ -82,7 +82,10 @@ def test_update_experiment(db):
         created_at=now,
         updated_at=now,
     )
-    update_dict = {"title": "test 3 updated", "description": "test experiment number 3 updated"}
+    update_dict = {
+        "title": "test 3 updated",
+        "description": "test experiment number 3 updated",
+    }
     updated_experiment = update_experiment(db=db, name="experiment-test-3", **update_dict)
     assert updated_experiment is not None
     assert updated_experiment.model == "gpt-4o-mini"

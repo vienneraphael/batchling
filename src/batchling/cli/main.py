@@ -166,7 +166,8 @@ def create_experiment(
         typer.Option(help="the path to the results file where batch results will be saved"),
     ],
     title: Annotated[
-        str | None, typer.Option(help="Optional title briefly summarizing the experiment")
+        str | None,
+        typer.Option(help="Optional title briefly summarizing the experiment"),
     ] = None,
     raw_file_path: Annotated[
         Path | None,
@@ -277,7 +278,8 @@ def update_experiment(
         str | None, typer.Option(help="Updated description, if applicable")
     ] = None,
     raw_file_path: Annotated[
-        Path | None, typer.Option(help="Updated template messages file path, if applicable")
+        Path | None,
+        typer.Option(help="Updated template messages file path, if applicable"),
     ] = None,
     processed_file_path: Annotated[
         Path | None, typer.Option(help="Updated processed file path, if applicable")
@@ -293,7 +295,8 @@ def update_experiment(
         ),
     ] = None,
     response_format_path: Annotated[
-        Path | None, typer.Option(help="Updated response format file path, if applicable")
+        Path | None,
+        typer.Option(help="Updated response format file path, if applicable"),
     ] = None,
 ):
     """Update an experiment"""

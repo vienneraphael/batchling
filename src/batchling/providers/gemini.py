@@ -52,7 +52,8 @@ class GeminiExperiment(Experiment):
                         else None,
                         contents=[
                             GeminiMessage(
-                                role=message.role, parts=[GeminiPart(text=message.content)]
+                                role=message.role,
+                                parts=[GeminiPart(text=message.content)],
                             )
                             for message in messages
                         ],

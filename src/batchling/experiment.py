@@ -25,7 +25,8 @@ class Experiment(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True, from_attributes=True)
     name: str = Field(description="experiment name")
     uid: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), description="machine-friendly unique identifier"
+        default_factory=lambda: str(uuid.uuid4()),
+        description="machine-friendly unique identifier",
     )
     title: str | None = Field(
         default=None, description="optional, title briefly summarizing the experiment"
@@ -215,7 +216,13 @@ class Experiment(BaseModel, ABC):
         )
         updated_experiment = self.__class__.model_validate(updated_dict_experiment)
         if set(
-            ["raw_requests", "response_format", "endpoint", "model", "processed_file_path"]
+            [
+                "raw_requests",
+                "response_format",
+                "endpoint",
+                "model",
+                "processed_file_path",
+            ]
         ) & set(kwargs):
             self.write_processed_batch_file()
         if "processed_file_path" in kwargs and os.path.exists(self.processed_file_path):
