@@ -9,4 +9,5 @@ batchling create\
  --processed-file-path input_capitals_groq.jsonl\
  --provider groq\
  --endpoint /v1/chat/completions\
- --results-file-path output/result_capitals_groq.jsonl
+ --results-file-path output/result_capitals_groq.jsonl\
+ --start

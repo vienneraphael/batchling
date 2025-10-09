@@ -10,3 +10,4 @@ batchling create\
  --provider anthropic\
  --endpoint /v1/chat/completions\
  --results-file-path output/result_capitals_anthropic.jsonl\
+ --start\

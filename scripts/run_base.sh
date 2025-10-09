@@ -6,10 +6,3 @@
 ./scripts/together/base.sh
 ./scripts/groq/base.sh
 ./scripts/gemini/base.sh
-
-batchling start anthropic
-batchling start mistral
-batchling start openai
-batchling start together
-batchling start groq
-batchling start gemini

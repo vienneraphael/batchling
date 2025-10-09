@@ -166,7 +166,8 @@ def create_experiment(
         typer.Option(help="the path to the results file where batch results will be saved"),
     ],
     title: Annotated[
-        str | None, typer.Option(help="Optional title briefly summarizing the experiment")
+        str | None,
+        typer.Option(help="Optional title briefly summarizing the experiment"),
     ] = None,
     raw_file_path: Annotated[
         Path | None,
@@ -183,6 +184,15 @@ def create_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
+    start: Annotated[
+        bool,
+        typer.Option(
+            "-s",
+            "--start",
+            help="Whether to start the experiment immediately after creation",
+            rich_help_panel="Starting",
+        ),
+    ] = False,
 ):
     """Create an experiment"""
     raw_requests = (
@@ -204,7 +214,12 @@ def create_experiment(
         processed_file_path=processed_file_path.as_posix(),
         results_file_path=results_file_path.as_posix(),
     )
-    print_experiment(experiment=experiment, status="created")
+    if start:
+        ExperimentManager().start_experiment(experiment_name=name)
+        status = "started"
+    else:
+        status = "created"
+    print_experiment(experiment=experiment, status=status)
 
 
 @app.command(name="start")
@@ -263,7 +278,8 @@ def update_experiment(
         str | None, typer.Option(help="Updated description, if applicable")
     ] = None,
     raw_file_path: Annotated[
-        Path | None, typer.Option(help="Updated template messages file path, if applicable")
+        Path | None,
+        typer.Option(help="Updated template messages file path, if applicable"),
     ] = None,
     processed_file_path: Annotated[
         Path | None, typer.Option(help="Updated processed file path, if applicable")
@@ -279,7 +295,8 @@ def update_experiment(
         ),
     ] = None,
     response_format_path: Annotated[
-        Path | None, typer.Option(help="Updated response format file path, if applicable")
+        Path | None,
+        typer.Option(help="Updated response format file path, if applicable"),
     ] = None,
 ):
     """Update an experiment"""

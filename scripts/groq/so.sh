@@ -10,4 +10,5 @@ batchling create\
  --provider groq\
  --endpoint /v1/chat/completions\
  --results-file-path output/result_capitals_groq.jsonl\
- --response-format-path tests/test_data/city_schema.json
+ --response-format-path tests/test_data/city_schema.json\
+ --start
