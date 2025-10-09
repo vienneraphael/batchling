@@ -10,4 +10,5 @@ batchling create\
  --provider together\
  --endpoint /v1/chat/completions\
  --results-file-path output/result_capitals_together.jsonl\
- --response-format-path tests/test_data/city_schema.json
+ --response-format-path tests/test_data/city_schema.json\
+ --start

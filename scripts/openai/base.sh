@@ -9,4 +9,5 @@ batchling create\
  --processed-file-path input_capitals_oai.jsonl\
  --provider openai\
  --endpoint /v1/chat/completions\
- --results-file-path output/result_capitals_openai.jsonl
+ --results-file-path output/result_capitals_openai.jsonl\
+ --start

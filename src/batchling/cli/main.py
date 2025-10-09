@@ -183,6 +183,15 @@ def create_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
+    start: Annotated[
+        bool,
+        typer.Option(
+            "-s",
+            "--start",
+            help="Whether to start the experiment immediately after creation",
+            rich_help_panel="Starting",
+        ),
+    ] = False,
 ):
     """Create an experiment"""
     raw_requests = (
@@ -204,7 +213,12 @@ def create_experiment(
         processed_file_path=processed_file_path.as_posix(),
         results_file_path=results_file_path.as_posix(),
     )
-    print_experiment(experiment=experiment, status="created")
+    if start:
+        ExperimentManager().start_experiment(experiment_name=name)
+        status = "started"
+    else:
+        status = "created"
+    print_experiment(experiment=experiment, status=status)
 
 
 @app.command(name="start")
