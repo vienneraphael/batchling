@@ -17,3 +17,6 @@ TODO.md
 profile_reports/
 .pytest_cache/
 .ruff_cache/
+
+output/
+*.jsonl
