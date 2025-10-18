@@ -200,11 +200,18 @@ class Experiment(BaseModel, ABC):
         if self.batch_id is not None:
             self.delete_provider_batch()
 
-    def update(self, **kwargs) -> "Experiment":
+    def update(self, kwargs: dict) -> "Experiment":
         """Update the experiment
 
-        Returns:
-            Experiment: The updated experiment
+        Parameters
+        ----------
+        kwargs : dict
+            The fields to update
+
+        Returns
+        -------
+        Experiment
+            The updated experiment
         """
         updated_dict_experiment = self.model_dump()
         updated_dict_experiment.update(kwargs)

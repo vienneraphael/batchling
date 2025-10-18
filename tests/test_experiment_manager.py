@@ -203,8 +203,9 @@ def test_list_experiments(experiment_manager: ExperimentManager, experiment: Exp
 
 
 def test_update_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
+    update_dict = {"title": "em test updated"}
     updated_experiment = experiment_manager.update_experiment(
-        experiment_name=experiment.name, title="em test updated"
+        experiment_name=experiment.name, kwargs=update_dict
     )
     assert updated_experiment is not None
     assert updated_experiment.name == experiment.name

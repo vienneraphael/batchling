@@ -169,7 +169,7 @@ class ExperimentManager(BaseModel):
         return experiment.get_results()
 
     @staticmethod
-    def update_experiment(experiment_name: str, **kwargs) -> Experiment:
+    def update_experiment(experiment_name: str, kwargs: dict) -> Experiment:
         experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
             raise ValueError(f"Experiment with name: {experiment_name} not found")
@@ -181,9 +181,9 @@ class ExperimentManager(BaseModel):
                     "name cannot be updated, because an experiment with this name already exists"
                 )
         kwargs["updated_at"] = datetime.now()
-        experiment = experiment.update(**kwargs)
+        experiment = experiment.update(kwargs=kwargs)
         with get_db() as db:
-            update_experiment(db=db, name=experiment.name, **kwargs)
+            update_experiment(db=db, name=experiment.name, kwargs=kwargs)
         return experiment
 
     @staticmethod
@@ -202,4 +202,4 @@ class ExperimentManager(BaseModel):
             raise ValueError(f"Experiment with name: {experiment_name} not found")
         experiment.cancel()
         with get_db() as db:
-            update_experiment(db=db, name=experiment.name, updated_at=datetime.now())
+            update_experiment(db=db, name=experiment.name, kwargs={"updated_at": datetime.now()})

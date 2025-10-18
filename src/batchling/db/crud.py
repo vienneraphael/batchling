@@ -184,7 +184,7 @@ def get_experiments(
 def update_experiment(
     db: "Session",
     name: str,
-    **kwargs: dict,
+    kwargs: dict,
 ) -> Experiment | None:
     """Update an experiment
 
@@ -194,7 +194,7 @@ def update_experiment(
         The database session
     name : str
         The name of the experiment
-    **kwargs : dict
+    kwargs : dict
         The fields to update
 
     Returns
