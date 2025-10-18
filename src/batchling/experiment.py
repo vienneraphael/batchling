@@ -69,7 +69,8 @@ class Experiment(BaseModel, ABC):
     def __repr__(self):
         return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
-    @field_validator("processed_file_path")
+    @field_validator("processed_file_path", mode="before")
+    @classmethod
     def check_jsonl_format(cls, value: str):
         if isinstance(value, str):
             if not value.endswith(".jsonl"):
