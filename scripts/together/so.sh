@@ -9,6 +9,6 @@ batchling create\
  --processed-file-path input_capitals_together.jsonl\
  --provider together\
  --endpoint /v1/chat/completions\
- --results-file-path output/result_capitals_together.jsonl\
+ --results-file-path output/result_capitals_together_so.jsonl\
  --response-format-path tests/test_data/city_schema.json\
  --start
