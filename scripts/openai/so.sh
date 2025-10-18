@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batchling create\
- --name openai\
+ --name openai_so\
  --model "gpt-4o"\
  --title "exp name"\
  --description "exp description"\

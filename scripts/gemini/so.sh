@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batchling create\
- --name gemini\
+ --name gemini_so\
  --model "gemini-2.0-flash"\
  --title "exp name"\
  --description "exp description"\

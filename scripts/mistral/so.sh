@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batchling create\
- --name mistral\
+ --name mistral_so\
  --model "mistral-small-latest"\
  --title "testing mistral-small-latest"\
  --description "experiment testing mistral-small-latest"\

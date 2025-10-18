@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batchling create\
- --name anthropic\
+ --name anthropic_so\
  --model "claude-3-haiku-20240307"\
  --title "experiment haiku"\
  --description "experiment testing claude-3-haiku-20240307"\

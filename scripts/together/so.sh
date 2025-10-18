@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batchling create\
- --name together\
+ --name together_so\
  --model "deepseek-ai/DeepSeek-V3"\
  --title "testing DeepSeek-V3"\
  --description "experiment testing DeepSeek-V3"\

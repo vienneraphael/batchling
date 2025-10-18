@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batchling create\
- --name groq\
+ --name groq_so\
  --model "openai/gpt-oss-20b"\
  --title "testing openai/gpt-oss-20b"\
  --description "experiment testing openai/gpt-oss-20b"\
