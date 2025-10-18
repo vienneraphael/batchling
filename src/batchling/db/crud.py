@@ -137,7 +137,7 @@ def get_experiments(
     filter_value: str | None = None,
     starts_with_field: str | None = None,
     starts_with: str | None = None,
-) -> list[Experiment]:
+) -> t.Sequence[Experiment]:
     """Get all experiments
 
     Parameters
@@ -162,8 +162,8 @@ def get_experiments(
         The value to filter by starts with
     Returns
     -------
-    list[Experiment]
-        The list of experiments
+    t.Sequence[Experiment]
+        The sequence of experiments
     """
     from sqlalchemy import asc, desc, select
 

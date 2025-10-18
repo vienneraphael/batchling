@@ -45,10 +45,9 @@ repos:
       - id: ty-check
         name: ty-check
         language: python
-        entry: ty check
+        entry: uvx ty check
         pass_filenames: false
         args: [--python=.venv/]
-        additional_dependencies: [ty]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.6

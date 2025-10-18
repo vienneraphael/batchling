@@ -153,7 +153,7 @@ class ExperimentManager(BaseModel):
             update_experiment(
                 db=db,
                 name=experiment.name,
-                **{
+                kwargs={
                     "updated_at": datetime.now(),
                     "batch_id": experiment.batch_id,
                     "provider_file_id": experiment.provider_file_id,
