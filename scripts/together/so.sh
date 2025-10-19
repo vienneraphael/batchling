@@ -1,14 +1,14 @@
 #!/bin/bash
 
 batchling create\
- --name together\
+ --name together_so\
  --model "deepseek-ai/DeepSeek-V3"\
  --title "testing DeepSeek-V3"\
  --description "experiment testing DeepSeek-V3"\
  --raw-file-path tests/test_data/raw_file_countries.jsonl\
- --processed-file-path input_capitals_together.jsonl\
+ --processed-file-path input_capitals_together_so.jsonl\
  --provider together\
  --endpoint /v1/chat/completions\
- --results-file-path output/result_capitals_together.jsonl\
+ --results-file-path output/result_capitals_together_so.jsonl\
  --response-format-path tests/test_data/city_schema.json\
  --start
