@@ -1,4 +1,6 @@
+import json
 import typing as t
+import requests
 from functools import cached_property
 
 from pydantic import computed_field
@@ -14,16 +16,6 @@ if t.TYPE_CHECKING:
 
 
 class OpenAIExperiment(Experiment):
-    @cached_property
-    def client(self) -> "OpenAI":
-        """Get the client
-
-        Returns:
-            OpenAI: The client
-        """
-        from openai import OpenAI
-
-        return OpenAI(api_key=self.api_key)
 
     @computed_field
     @cached_property
@@ -54,10 +46,20 @@ class OpenAIExperiment(Experiment):
         return processed_requests
 
     def retrieve_provider_file(self):
-        return self.client.files.retrieve(self.provider_file_id)
+        response = requests.get(
+            f"https://api.openai.com/v1/files/{self.provider_file_id}",
+            headers={"Authorization": f"Bearer {self.api_key}"}
+        )
+        response.raise_for_status()
+        return response.json()
 
     def retrieve_provider_batch(self):
-        return self.client.batches.retrieve(self.batch_id)
+        response = requests.get(
+            f"https://api.openai.com/v1/batches/{self.batch_id}",
+            headers={"Authorization": f"Bearer {self.api_key}"}
+        )
+        response.raise_for_status()
+        return response.json()
 
     @property
     def provider_file(self) -> t.Union["FileObject", None]:
@@ -87,23 +89,39 @@ class OpenAIExperiment(Experiment):
     ]:
         if self.batch_id is None:
             return "created"
-        return self.batch.status
+        return self.batch.get("status")
 
     def create_provider_file(self) -> str:
-        return self.client.files.create(
-            file=open(self.processed_file_path, "rb"), purpose="batch"
-        ).id
+        with open(self.processed_file_path, "rb") as f:
+            response = requests.post(
+                f"https://api.openai.com/v1/files",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                files={"file": (self.processed_file_path.split("/")[-1], f, "application/jsonl")},
+                data={"purpose": "batch"},
+            )
+            response.raise_for_status()
+            return response.json().get("id")
 
     def delete_provider_file(self):
-        self.client.files.delete(file_id=self.provider_file_id)
+        response = requests.delete(
+            f"https://api.openai.com/v1/files/{self.provider_file_id}",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+        )
+        response.raise_for_status()
 
     def create_provider_batch(self) -> str:
-        return self.client.batches.create(
-            input_file_id=self.provider_file_id,
-            endpoint=self.endpoint,
-            completion_window="24h",
-            metadata={"description": self.description},
-        ).id
+        response = requests.post(
+            f"https://api.openai.com/v1/batches",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "input_file_id": self.provider_file_id,
+                "endpoint": self.endpoint,
+                "completion_window": "24h",
+                "metadata": {"description": self.description},
+            }
+        )
+        response.raise_for_status()
+        return response.json().get("id")
 
     def raise_not_in_running_status(self):
         if self.status != "running":
@@ -114,15 +132,24 @@ class OpenAIExperiment(Experiment):
             raise ValueError(f"Experiment in status {self.status} is not in completed status")
 
     def cancel_provider_batch(self):
-        self.client.batches.cancel(self.batch_id)
+        response = requests.post(
+            f"https://api.openai.com/v1/batches/{self.batch_id}/cancel",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+        )
+        response.raise_for_status()
 
     def delete_provider_batch(self):
-        if self.batch.status == "in_progress":
+        if self.batch.get("status") == "in_progress":
             self.cancel_provider_batch()
-        elif self.batch.status == "completed" and self.batch.output_file_id:
+        elif self.batch.get("status") == "completed" and self.batch.get("output_file_id"):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
+        response = requests.get(
+            f"https://api.openai.com/v1/files/{self.batch.get("output_file_id")}/content",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+        )
+        response.raise_for_status()
         with open(self.results_file_path, "w") as f:
-            f.write(self.client.files.content(file_id=self.batch.output_file_id).text)
+            f.write(response.text)
         return read_jsonl_file(self.results_file_path)
