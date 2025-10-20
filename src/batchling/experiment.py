@@ -78,13 +78,6 @@ class Experiment(BaseModel, ABC):
         return value
 
     @abstractmethod
-    @cached_property
-    def client(
-        self,
-    ) -> t.Any:
-        pass
-
-    @abstractmethod
     @computed_field(repr=False)
     @cached_property
     def processed_requests(self) -> list[ProcessedRequest]:
