@@ -16,7 +16,7 @@ if t.TYPE_CHECKING:
 
 
 class OpenAIExperiment(Experiment):
-    BASE_URL = "https://api.openai.com/v1"
+    BASE_URL: str = "https://api.openai.com/v1"
 
     @computed_field
     @cached_property
