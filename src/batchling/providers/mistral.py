@@ -1,28 +1,19 @@
 import typing as t
 from functools import cached_property
-
+import requests
 from pydantic import computed_field
-
+import base64
 from batchling.experiment import Experiment
 from batchling.request import MistralBody, MistralRequest, ProcessedMessage
 from batchling.utils.files import read_jsonl_file
 
-if t.TYPE_CHECKING:
-    from mistralai import Mistral
-    from mistralai.models import BatchJobOut, RetrieveFileOut
-
-
 class MistralExperiment(Experiment):
-    @cached_property
-    def client(self) -> "Mistral":
-        """Get the client
+    BASE_URL: str = "https://api.mistral.ai/v1"
 
-        Returns:
-            Mistral: The client
-        """
-        from mistralai import Mistral
-
-        return Mistral(api_key=self.api_key)
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
     @computed_field
     @cached_property
@@ -50,20 +41,30 @@ class MistralExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
-        return self.client.files.retrieve(file_id=self.provider_file_id)
+    def retrieve_provider_file(self) -> dict | None:
+        response = requests.get(
+            f"{self.BASE_URL}/files/{self.provider_file_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
+        return response.json()
 
-    def retrieve_provider_batch(self):
-        return self.client.batch.jobs.get(job_id=self.batch_id)
+    def retrieve_provider_batch(self) -> dict | None:
+        response = requests.get(
+            f"{self.BASE_URL}/batch/jobs/{self.batch_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
+        return response.json()
 
     @property
-    def provider_file(self) -> t.Union["RetrieveFileOut", None]:
+    def provider_file(self) -> dict | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> t.Union["BatchJobOut", None]:
+    def batch(self) -> dict | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -83,27 +84,38 @@ class MistralExperiment(Experiment):
     ]:
         if self.batch_id is None:
             return "created"
-        return self.batch.status
+        return self.batch.get("status")
 
     def create_provider_file(self) -> str:
-        return self.client.files.upload(
-            file={
-                "file_name": self.processed_file_path.split("/")[-1],
-                "content": open(self.processed_file_path, "rb"),
-            },
-            purpose="batch",
-        ).id
+        with open(self.processed_file_path, "rb") as f:
+            response = requests.post(
+                f"{self.BASE_URL}/files",
+                headers=self._headers(),
+                data={"purpose": "batch"},
+                files={"file": f},
+            )
+            response.raise_for_status()
+            return response.json().get("id")
 
     def delete_provider_file(self):
-        self.client.files.delete(file_id=self.provider_file_id)
+        response = requests.delete(
+            f"{self.BASE_URL}/files/{self.provider_file_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
 
     def create_provider_batch(self) -> str:
-        return self.client.batch.jobs.create(
-            input_files=[self.provider_file_id],
-            endpoint=self.endpoint,
-            model=self.model,
-            metadata={"description": self.description},
-        ).id
+        response = requests.post(
+            f"{self.BASE_URL}/batch/jobs",
+            headers=self._headers(),
+            json={
+                "input_files": [self.provider_file_id],
+                "endpoint": self.endpoint,
+                "model": self.model,
+            }
+        )
+        response.raise_for_status()
+        return response.json().get("id")
 
     def raise_not_in_running_status(self):
         if self.status not in ["QUEUED", "RUNNING"]:
@@ -115,8 +127,12 @@ class MistralExperiment(Experiment):
         if self.status != "SUCCESS":
             raise ValueError(f"Experiment in status {self.status} is not in SUCCESS status")
 
-    def cancel_provider_batch(self):
-        self.client.batch.jobs.cancel(job_id=self.batch_id)
+    def cancel_provider_batch(self) -> None:
+        response = requests.post(
+            f"{self.BASE_URL}/batch/jobs/{self.batch_id}/cancel",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
 
     def delete_provider_batch(self):
         if self.batch.status in ["QUEUED", "RUNNING"]:
@@ -125,8 +141,11 @@ class MistralExperiment(Experiment):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        output = self.client.files.download(file_id=self.batch.output_file)
+        response = requests.get(
+            f"{self.BASE_URL}/files/{self.batch.get('output_file')}/content",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
         with open(self.results_file_path, "w") as f:
-            for chunk in output.stream:
-                f.write(chunk.decode("utf-8"))
+            f.write(response.text)
         return read_jsonl_file(self.results_file_path)

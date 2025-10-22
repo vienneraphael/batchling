@@ -9,7 +9,6 @@ dependencies = [
     "anthropic>=0.71.0",
     "click>=8.3.0",
     "httpx>=0.28.1",
-    "mistralai>=1.9.11",
     "platformdirs>=4.5.0",
     "pydantic>=2.12.3",
     "python-dotenv>=1.1.1",
