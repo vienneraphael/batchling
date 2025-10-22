@@ -1,29 +1,22 @@
 import typing as t
 from functools import cached_property
-
+import os
+import requests
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
 from batchling.request import GroqBody, GroqRequest, ProcessedMessage
 from batchling.utils.files import read_jsonl_file
 
-if t.TYPE_CHECKING:
-    from groq import Groq
-    from groq.resources.batches import BatchRetrieveResponse
-    from groq.resources.files import FileInfoResponse
-
 
 class GroqExperiment(Experiment):
-    @cached_property
-    def client(self) -> "Groq":
-        """Get the client
 
-        Returns:
-            Groq: The client
-        """
-        from groq import Groq
+    BASE_URL: str = "https://api.groq.com/openai/v1"
 
-        return Groq(api_key=self.api_key)
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
     @computed_field
     @cached_property
@@ -53,20 +46,30 @@ class GroqExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
-        return self.client.files.info(file_id=self.provider_file_id)
+    def retrieve_provider_file(self) -> dict | None:
+        response = requests.get(
+            f"{self.BASE_URL}/files/{self.provider_file_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
+        return response.json()
 
-    def retrieve_provider_batch(self):
-        return self.client.batches.retrieve(batch_id=self.batch_id)
+    def retrieve_provider_batch(self) -> dict | None:
+        response = requests.get(
+            f"{self.BASE_URL}/batches/{self.batch_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
+        return response.json()
 
     @property
-    def provider_file(self) -> t.Union["FileInfoResponse", None]:
+    def provider_file(self) -> dict | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> t.Union["BatchRetrieveResponse", None]:
+    def batch(self) -> dict | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -87,23 +90,39 @@ class GroqExperiment(Experiment):
     ]:
         if self.batch_id is None:
             return "created"
-        return self.batch.status
+        return self.batch.get("status")
 
     def create_provider_file(self) -> str:
-        return self.client.files.create(
-            file=open(self.processed_file_path, "rb"), purpose="batch"
-        ).id
+        with open(self.processed_file_path, "rb") as f:
+            response = requests.post(
+                f"{self.BASE_URL}/files",
+                headers=self._headers(),
+                files={"file": (self.processed_file_path.split("/")[-1], f)},
+                data={"purpose": "batch"},
+            )
+            response.raise_for_status()
+            return response.json().get("id")
 
-    def delete_provider_file(self):
-        self.client.files.delete(file_id=self.provider_file_id)
+    def delete_provider_file(self) -> None:
+        response = requests.delete(
+            f"{self.BASE_URL}/files/{self.provider_file_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
 
     def create_provider_batch(self) -> str:
-        return self.client.batches.create(
-            completion_window="24h",
-            endpoint=self.endpoint,
-            input_file_id=self.provider_file_id,
-            metadata={"description": self.description},
-        ).id
+        response = requests.post(
+            f"{self.BASE_URL}/batches",
+            headers=self._headers(),
+            json={
+                "input_file_id": self.provider_file_id,
+                "endpoint": self.endpoint,
+                "completion_window": "24h",
+                "metadata": {"description": self.description},
+            }
+        )
+        response.raise_for_status()
+        return response.json().get("id")
 
     def raise_not_in_running_status(self):
         if self.status not in ["in_progress", "finalizing"]:
@@ -115,16 +134,25 @@ class GroqExperiment(Experiment):
         if self.status != "completed":
             raise ValueError(f"Experiment in status {self.status} is not in completed status")
 
-    def cancel_provider_batch(self):
-        self.client.batches.cancel(batch_id=self.batch_id)
+    def cancel_provider_batch(self) -> None:
+        response = requests.post(
+            f"{self.BASE_URL}/batches/{self.batch_id}/cancel",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
 
-    def delete_provider_batch(self):
-        if self.batch.status in ["in_progress", "finalizing"]:
+    def delete_provider_batch(self) -> None:
+        if self.batch.get("status") in ["in_progress", "finalizing"]:
             self.cancel_provider_batch()
-        elif self.batch.status == "completed" and self.batch.output_file_id:
+        elif self.batch.get("status") == "completed" and self.batch.get("output_file_id"):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        output = self.client.files.content(file_id=self.batch.output_file_id)
-        output.write_to_file(self.results_file_path)
+        response = requests.get(
+            f"{self.BASE_URL}/files/{self.batch.get('output_file_id')}/content",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
+        with open(self.results_file_path, "w") as f:
+            f.write(response.text)
         return read_jsonl_file(self.results_file_path)

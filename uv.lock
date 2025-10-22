@@ -185,7 +185,6 @@ source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "click" },
-    { name = "groq" },
     { name = "httpx" },
     { name = "mistralai" },
     { name = "platformdirs" },
@@ -211,7 +210,6 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.71.0" },
     { name = "click", specifier = ">=8.3.0" },
-    { name = "groq", specifier = ">=0.32.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mistralai", specifier = ">=1.9.11" },
     { name = "platformdirs", specifier = ">=4.5.0" },
@@ -655,23 +653,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/92/2e/ea25914b1ebfde93b6fc4ff46d6864564fba59024e928bdc7de475affc25/greenlet-3.2.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:061dc4cf2c34852b052a8620d40f36324554bc192be474b9e9770e8c042fd735", size = 695355, upload-time = "2025-08-07T13:18:34.517Z" },
     { url = "https://files.pythonhosted.org/packages/72/60/fc56c62046ec17f6b0d3060564562c64c862948c9d4bc8aa807cf5bd74f4/greenlet-3.2.4-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:44358b9bf66c8576a9f57a590d5f5d6e72fa4228b763d0e43fee6d3b06d3a337", size = 657512, upload-time = "2025-08-07T13:18:33.969Z" },
     { url = "https://files.pythonhosted.org/packages/e3/a5/6ddab2b4c112be95601c13428db1d8b6608a8b6039816f2ba09c346c08fc/greenlet-3.2.4-cp314-cp314-win_amd64.whl", hash = "sha256:e37ab26028f12dbb0ff65f29a8d3d44a765c61e729647bf2ddfbbed621726f01", size = 303425, upload-time = "2025-08-07T13:32:27.59Z" },
-]
-
-[[package]]
-name = "groq"
-version = "0.32.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/8c/ed52c15fac63f577dd996367dd5d5133cba3e67e844df21800342461b916/groq-0.32.0.tar.gz", hash = "sha256:fb1ade61f47a06d1a1c1dc0fab690d269b799ebd57ad1dd867efaeaa7adeb2af", size = 141541, upload-time = "2025-09-27T23:01:34.617Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/08/24d62fccb01c4e86c59ba79073af7e5c8ab643846823c2fa3e957bde4b58/groq-0.32.0-py3-none-any.whl", hash = "sha256:0ed0be290042f8826f851f3a1defaac4f979dcfce86ec4a0681a23af00ec800b", size = 135387, upload-time = "2025-09-27T23:01:33.223Z" },
 ]
 
 [[package]]
