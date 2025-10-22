@@ -1,5 +1,6 @@
 import typing as t
 from functools import cached_property
+import requests
 
 from pydantic import computed_field, field_validator
 
@@ -7,12 +8,16 @@ from batchling.experiment import Experiment
 from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
 from batchling.utils.files import read_jsonl_file, write_jsonl_file
 
-if t.TYPE_CHECKING:
-    from anthropic import Anthropic
-    from anthropic.types.messages import MessageBatch
-
-
 class AnthropicExperiment(Experiment):
+
+    BASE_URL: str = "https://api.anthropic.com/v1/messages/batches"
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01"
+        }
+
     @field_validator("raw_requests", mode="before")
     @classmethod
     def check_raw_requests_not_none(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
@@ -23,17 +28,6 @@ class AnthropicExperiment(Experiment):
                 "max_tokens is required to be set for each request for Anthropic experiments and cannot be None"
             )
         return value
-
-    @cached_property
-    def client(self) -> "Anthropic":
-        """Get the client
-
-        Returns:
-            Anthropic: The client
-        """
-        from anthropic import Anthropic
-
-        return Anthropic(api_key=self.api_key)
 
     @computed_field
     @cached_property
@@ -65,11 +59,16 @@ class AnthropicExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
+    def retrieve_provider_file(self) -> str:
         return self.processed_file_path
 
-    def retrieve_provider_batch(self):
-        return self.client.messages.batches.retrieve(message_batch_id=self.batch_id)
+    def retrieve_provider_batch(self) -> dict | None:
+        response = requests.get(
+            f"{self.BASE_URL}/{self.batch_id}",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
+        return response.json()
 
     @property
     def provider_file(self) -> str | None:
@@ -78,7 +77,7 @@ class AnthropicExperiment(Experiment):
         return self.processed_file_path
 
     @property
-    def batch(self) -> t.Union["MessageBatch", None]:
+    def batch(self) -> dict | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -89,7 +88,7 @@ class AnthropicExperiment(Experiment):
     ) -> t.Literal["created", "in_progress", "canceling", "ended"]:
         if self.batch_id is None:
             return "created"
-        return self.batch.processing_status
+        return self.batch.get("processing_status")
 
     def create_provider_file(self) -> str:
         return self.processed_file_path
@@ -98,32 +97,20 @@ class AnthropicExperiment(Experiment):
         pass
 
     def create_provider_batch(self) -> str:
-        from anthropic.types.message_create_params import (
-            MessageCreateParamsNonStreaming,
-        )
-        from anthropic.types.messages.batch_create_params import Request
-
         data = read_jsonl_file(self.processed_file_path)
-        requests = []
+        request_list = []
         for request in data:
-            if "tools" in request["params"]:
-                params = MessageCreateParamsNonStreaming(
-                    model=self.model,
-                    max_tokens=request["params"]["max_tokens"],
-                    messages=request["params"]["messages"],
-                    system=request["params"]["system"],
-                    tools=request["params"]["tools"],
-                    tool_choice=request["params"]["tool_choice"],
-                )
-            else:
-                params = MessageCreateParamsNonStreaming(
-                    model=self.model,
-                    max_tokens=request["params"]["max_tokens"],
-                    messages=request["params"]["messages"],
-                    system=request["params"]["system"],
-                )
-            requests.append(Request(custom_id=request["custom_id"], params=params))
-        return self.client.messages.batches.create(requests=requests).id
+            request["params"]["model"] = self.model
+            request_list.append(request)
+        response = requests.post(
+            f"{self.BASE_URL}",
+            headers=self._headers(),
+            json={
+                "requests": request_list,
+            },
+        )
+        response.raise_for_status()
+        return response.json().get("id")
 
     def raise_not_in_running_status(self):
         if self.status not in ["in_progress"]:
@@ -133,21 +120,29 @@ class AnthropicExperiment(Experiment):
         if self.status != "ended":
             raise ValueError(f"Experiment in status {self.status} is not in ended status")
 
-    def cancel_provider_batch(self):
-        self.client.messages.batches.cancel(message_batch_id=self.batch_id)
+    def cancel_provider_batch(self) -> None:
+        response = requests.post(
+            f"{self.BASE_URL}/{self.batch_id}/cancel",
+            headers=self._headers(),
+        )
+        response.raise_for_status()
 
-    def delete_provider_batch(self):
-        if self.batch.processing_status in ["in_progress"]:
+    def delete_provider_batch(self) -> None:
+        if self.batch.get("processing_status") in ["in_progress"]:
             self.cancel_provider_batch()
-        elif self.batch.processing_status == "ended" and self.batch.results_url:
-            self.client.messages.batches.delete(message_batch_id=self.batch_id)
+        elif self.batch.get("processing_status") == "ended" and self.batch.get("results_url"):
+            response = requests.delete(
+                f"{self.BASE_URL}/{self.batch_id}",
+                headers=self._headers(),
+            )
+            response.raise_for_status()
 
     def get_provider_results(self) -> list[dict]:
-        write_jsonl_file(
-            file_path=self.results_file_path,
-            data=[
-                result.model_dump_json()
-                for result in self.client.messages.batches.results(message_batch_id=self.batch_id)
-            ],
-        )
-        return read_jsonl_file(self.results_file_path)
+        url = self.batch.get("results_url")
+        if url:
+            response = requests.get(url, headers=self._headers())
+            response.raise_for_status()
+            with open(self.results_file_path, "w") as f:
+                f.write(response.text)
+            return read_jsonl_file(self.results_file_path)
+        return []
