@@ -221,7 +221,7 @@ def create_experiment(
             transient=True,
         ) as progress:
             progress.add_task(description="Starting experiment...", total=None)
-            ExperimentManager().start_experiment(experiment_name=name)
+            experiment = ExperimentManager().start_experiment(experiment_name=name)
         status = "started"
     else:
         status = "created"
