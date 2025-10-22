@@ -12,6 +12,11 @@ from batchling.utils.files import read_jsonl_file
 class OpenAIExperiment(Experiment):
     BASE_URL: str = "https://api.openai.com/v1"
 
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+        }
+
     @computed_field
     @cached_property
     def processed_requests(self) -> list[OpenAIRequest]:
@@ -36,6 +41,7 @@ class OpenAIExperiment(Experiment):
                         response_format=self.response_format,
                     ),
                     url=self.endpoint,
+                    headers=self._headers(),
                 )
             )
         return processed_requests
@@ -43,7 +49,7 @@ class OpenAIExperiment(Experiment):
     def retrieve_provider_file(self) -> dict | None:
         response = requests.get(
             f"{self.BASE_URL}/files/{self.provider_file_id}",
-            headers={"Authorization": f"Bearer {self.api_key}"}
+            headers=self._headers(),
         )
         response.raise_for_status()
         return response.json()
@@ -51,7 +57,7 @@ class OpenAIExperiment(Experiment):
     def retrieve_provider_batch(self) -> dict | None:
         response = requests.get(
             f"{self.BASE_URL}/batches/{self.batch_id}",
-            headers={"Authorization": f"Bearer {self.api_key}"}
+            headers=self._headers(),
         )
         response.raise_for_status()
         return response.json()
@@ -90,7 +96,7 @@ class OpenAIExperiment(Experiment):
         with open(self.processed_file_path, "rb") as f:
             response = requests.post(
                 f"{self.BASE_URL}/files",
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                headers=self._headers(),
                 files={"file": (self.processed_file_path.split("/")[-1], f, "application/jsonl")},
                 data={"purpose": "batch"},
             )
@@ -100,14 +106,14 @@ class OpenAIExperiment(Experiment):
     def delete_provider_file(self) -> None:
         response = requests.delete(
             f"{self.BASE_URL}/files/{self.provider_file_id}",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            headers=self._headers(),
         )
         response.raise_for_status()
 
     def create_provider_batch(self) -> str:
         response = requests.post(
             f"{self.BASE_URL}/batches",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            headers=self._headers(),
             json={
                 "input_file_id": self.provider_file_id,
                 "endpoint": self.endpoint,
@@ -129,7 +135,7 @@ class OpenAIExperiment(Experiment):
     def cancel_provider_batch(self) -> None:
         response = requests.post(
             f"{self.BASE_URL}/batches/{self.batch_id}/cancel",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            headers=self._headers(),
         )
         response.raise_for_status()
 
@@ -142,7 +148,7 @@ class OpenAIExperiment(Experiment):
     def get_provider_results(self) -> list[dict]:
         response = requests.get(
             f"{self.BASE_URL}/files/{self.batch.get("output_file_id")}/content",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            headers=self._headers(),
         )
         response.raise_for_status()
         with open(self.results_file_path, "w") as f:
