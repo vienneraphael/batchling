@@ -135,9 +135,9 @@ class MistralExperiment(Experiment):
         response.raise_for_status()
 
     def delete_provider_batch(self):
-        if self.batch.status in ["QUEUED", "RUNNING"]:
+        if self.batch.get("status") in ["QUEUED", "RUNNING"]:
             self.cancel_provider_batch()
-        elif self.batch.status == "SUCCESS" and self.batch.output_file:
+        elif self.batch.get("status") == "SUCCESS" and self.batch.get("output_file"):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
