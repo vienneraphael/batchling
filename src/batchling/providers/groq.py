@@ -1,6 +1,5 @@
 import typing as t
 from functools import cached_property
-import os
 import requests
 from pydantic import computed_field
 
