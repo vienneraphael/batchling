@@ -9,12 +9,6 @@ from batchling.experiment import Experiment
 from batchling.request import OpenAIBody, OpenAIRequest, ProcessedMessage
 from batchling.utils.files import read_jsonl_file
 
-if t.TYPE_CHECKING:
-    from openai import OpenAI
-    from openai.types.batch import Batch
-    from openai.types.file_object import FileObject
-
-
 class OpenAIExperiment(Experiment):
     BASE_URL: str = "https://api.openai.com/v1"
 
@@ -46,7 +40,7 @@ class OpenAIExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
+    def retrieve_provider_file(self) -> dict | None:
         response = requests.get(
             f"{self.BASE_URL}/files/{self.provider_file_id}",
             headers={"Authorization": f"Bearer {self.api_key}"}
@@ -54,7 +48,7 @@ class OpenAIExperiment(Experiment):
         response.raise_for_status()
         return response.json()
 
-    def retrieve_provider_batch(self):
+    def retrieve_provider_batch(self) -> dict | None:
         response = requests.get(
             f"{self.BASE_URL}/batches/{self.batch_id}",
             headers={"Authorization": f"Bearer {self.api_key}"}
@@ -63,13 +57,13 @@ class OpenAIExperiment(Experiment):
         return response.json()
 
     @property
-    def provider_file(self) -> t.Union["FileObject", None]:
+    def provider_file(self) -> dict | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> t.Union["Batch", None]:
+    def batch(self) -> dict | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -103,7 +97,7 @@ class OpenAIExperiment(Experiment):
             response.raise_for_status()
             return response.json().get("id")
 
-    def delete_provider_file(self):
+    def delete_provider_file(self) -> None:
         response = requests.delete(
             f"{self.BASE_URL}/files/{self.provider_file_id}",
             headers={"Authorization": f"Bearer {self.api_key}"},
@@ -132,14 +126,14 @@ class OpenAIExperiment(Experiment):
         if self.status != "completed":
             raise ValueError(f"Experiment in status {self.status} is not in completed status")
 
-    def cancel_provider_batch(self):
+    def cancel_provider_batch(self) -> None:
         response = requests.post(
             f"{self.BASE_URL}/batches/{self.batch_id}/cancel",
             headers={"Authorization": f"Bearer {self.api_key}"},
         )
         response.raise_for_status()
 
-    def delete_provider_batch(self):
+    def delete_provider_batch(self) -> None:
         if self.batch.get("status") == "in_progress":
             self.cancel_provider_batch()
         elif self.batch.get("status") == "completed" and self.batch.get("output_file_id"):
