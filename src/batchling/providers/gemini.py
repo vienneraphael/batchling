@@ -1,7 +1,7 @@
 import typing as t
 from functools import cached_property
 
-import requests
+import httpx
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
@@ -63,7 +63,7 @@ class GeminiExperiment(Experiment):
         return processed_requests
 
     def retrieve_provider_file(self):
-        response = requests.get(
+        response = httpx.get(
             f"{self.BASE_URL}/{self.provider_file_id}",
             headers=self._headers(),
         )
@@ -71,7 +71,7 @@ class GeminiExperiment(Experiment):
         return response.json()
 
     def retrieve_provider_batch(self):
-        response = requests.get(
+        response = httpx.get(
             f"{self.BASE_URL}/{self.batch_id}",
             headers=self._headers(),
         )
@@ -129,7 +129,7 @@ class GeminiExperiment(Experiment):
                 "display_name": self.processed_file_path.split("/")[-1],
             }
         }
-        response = requests.post(
+        response = httpx.post(
             f"{self.UPLOAD_BASE_URL}/files",
             headers=headers,
             json=data
@@ -151,7 +151,7 @@ class GeminiExperiment(Experiment):
             "X-Goog-Upload-Command": "upload, finalize"
         }
         with open(self.processed_file_path, "rb") as f:
-            upload_response = requests.post(
+            upload_response = httpx.post(
                 upload_url,
                 headers=upload_headers,
                 data=f
@@ -165,7 +165,7 @@ class GeminiExperiment(Experiment):
         return self.upload_provider_file(upload_url=upload_url)
 
     def delete_provider_file(self):
-        response = requests.delete(
+        response = httpx.delete(
             f"{self.BASE_URL}/{self.provider_file_id}",
             headers=self._headers(),
         )
@@ -180,7 +180,7 @@ class GeminiExperiment(Experiment):
                 }
             }
         }
-        response = requests.post(
+        response = httpx.post(
             f"{self.BASE_URL}/models/{self.model}:batchGenerateContent",
             headers=self._headers(),
             json=data,
@@ -201,7 +201,7 @@ class GeminiExperiment(Experiment):
             )
 
     def cancel_provider_batch(self):
-        response = requests.post(
+        response = httpx.post(
             f"{self.BASE_URL}/{self.batch_id}:cancel",
             headers=self._headers(),
         )
@@ -221,7 +221,7 @@ class GeminiExperiment(Experiment):
     def get_provider_results(self) -> list[dict]:
         batch = self.batch
         responses_file = batch.get("response").get("responsesFile")
-        response = requests.get(
+        response = httpx.get(
             f"{self.DOWNLOAD_BASE_URL}/{responses_file}:download?alt=media",
             headers=self._headers(),
         )

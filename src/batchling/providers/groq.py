@@ -1,6 +1,6 @@
 import typing as t
 from functools import cached_property
-import requests
+import httpx
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
@@ -46,7 +46,7 @@ class GroqExperiment(Experiment):
         return processed_requests
 
     def retrieve_provider_file(self) -> dict | None:
-        response = requests.get(
+        response = httpx.get(
             f"{self.BASE_URL}/files/{self.provider_file_id}",
             headers=self._headers(),
         )
@@ -54,7 +54,7 @@ class GroqExperiment(Experiment):
         return response.json()
 
     def retrieve_provider_batch(self) -> dict | None:
-        response = requests.get(
+        response = httpx.get(
             f"{self.BASE_URL}/batches/{self.batch_id}",
             headers=self._headers(),
         )
@@ -93,7 +93,7 @@ class GroqExperiment(Experiment):
 
     def create_provider_file(self) -> str:
         with open(self.processed_file_path, "rb") as f:
-            response = requests.post(
+            response = httpx.post(
                 f"{self.BASE_URL}/files",
                 headers=self._headers(),
                 files={"file": (self.processed_file_path.split("/")[-1], f)},
@@ -103,14 +103,14 @@ class GroqExperiment(Experiment):
             return response.json().get("id")
 
     def delete_provider_file(self) -> None:
-        response = requests.delete(
+        response = httpx.delete(
             f"{self.BASE_URL}/files/{self.provider_file_id}",
             headers=self._headers(),
         )
         response.raise_for_status()
 
     def create_provider_batch(self) -> str:
-        response = requests.post(
+        response = httpx.post(
             f"{self.BASE_URL}/batches",
             headers=self._headers(),
             json={
@@ -134,7 +134,7 @@ class GroqExperiment(Experiment):
             raise ValueError(f"Experiment in status {self.status} is not in completed status")
 
     def cancel_provider_batch(self) -> None:
-        response = requests.post(
+        response = httpx.post(
             f"{self.BASE_URL}/batches/{self.batch_id}/cancel",
             headers=self._headers(),
         )
@@ -147,7 +147,7 @@ class GroqExperiment(Experiment):
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        response = requests.get(
+        response = httpx.get(
             f"{self.BASE_URL}/files/{self.batch.get('output_file_id')}/content",
             headers=self._headers(),
         )

@@ -1,6 +1,6 @@
 import typing as t
 from functools import cached_property
-import requests
+import httpx
 
 from pydantic import computed_field, field_validator
 
@@ -63,7 +63,7 @@ class AnthropicExperiment(Experiment):
         return self.processed_file_path
 
     def retrieve_provider_batch(self) -> dict | None:
-        response = requests.get(
+        response = httpx.get(
             f"{self.BASE_URL}/{self.batch_id}",
             headers=self._headers(),
         )
@@ -102,7 +102,7 @@ class AnthropicExperiment(Experiment):
         for request in data:
             request["params"]["model"] = self.model
             request_list.append(request)
-        response = requests.post(
+        response = httpx.post(
             f"{self.BASE_URL}",
             headers=self._headers(),
             json={
@@ -121,7 +121,7 @@ class AnthropicExperiment(Experiment):
             raise ValueError(f"Experiment in status {self.status} is not in ended status")
 
     def cancel_provider_batch(self) -> None:
-        response = requests.post(
+        response = httpx.post(
             f"{self.BASE_URL}/{self.batch_id}/cancel",
             headers=self._headers(),
         )
@@ -131,7 +131,7 @@ class AnthropicExperiment(Experiment):
         if self.batch.get("processing_status") in ["in_progress"]:
             self.cancel_provider_batch()
         elif self.batch.get("processing_status") == "ended" and self.batch.get("results_url"):
-            response = requests.delete(
+            response = httpx.delete(
                 f"{self.BASE_URL}/{self.batch_id}",
                 headers=self._headers(),
             )
@@ -140,7 +140,7 @@ class AnthropicExperiment(Experiment):
     def get_provider_results(self) -> list[dict]:
         url = self.batch.get("results_url")
         if url:
-            response = requests.get(url, headers=self._headers())
+            response = httpx.get(url, headers=self._headers())
             response.raise_for_status()
             with open(self.results_file_path, "w") as f:
                 f.write(response.text)
