@@ -89,10 +89,17 @@ class Experiment(BaseModel, ABC):
         response.raise_for_status()
         return response.json()
     
-    def _http_post_json(self, url: str, json: dict | None = None, **kwargs) -> dict:
-        """POST request used to create files or batches"""
-        response = httpx.post(url, headers=self._headers(), json=json, **kwargs)
+    def _http_post(self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs) -> httpx.Response:
+        headers = self._headers()
+        if additional_headers:
+            headers.update(additional_headers)
+        response = httpx.post(url, headers=headers, json=json, **kwargs)
         response.raise_for_status()
+        return response
+
+    def _http_post_json(self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs) -> dict:
+        """POST request used to create files or batches"""
+        response = self._http_post(url, json=json, additional_headers=additional_headers, **kwargs)
         return response.json()
     
     def _http_delete(self, url: str) -> None:

@@ -106,24 +106,20 @@ class GeminiExperiment(Experiment):
         Returns:
             str: The upload URL of the provider file.
         """
-        headers = {
-            "x-goog-api-key": self.api_key,
+        additional_headers = {
             "X-Goog-Upload-Protocol": "resumable",
             "X-Goog-Upload-Command": "start",
-            "X-Goog-Upload-Header-Content-Type": "application/jsonl",
-            "Content-Type": "application/jsonl",
         }
         data = {
             "file": {
                 "display_name": self.processed_file_path.split("/")[-1],
             }
         }
-        response = httpx.post(
-            f"{self.UPLOAD_BASE_URL}/files",
-            headers=headers,
+        response = self._http_post(
+            url=f"{self.UPLOAD_BASE_URL}/files",
+            additional_headers=additional_headers,
             json=data
         )
-        response.raise_for_status()
         return response.headers.get("X-Goog-Upload-URL")
 
     def upload_provider_file(self, upload_url: str) -> str:
@@ -135,18 +131,17 @@ class GeminiExperiment(Experiment):
         Returns:
             str: The file name of the provider file.
         """
-        upload_headers = {
+        additional_headers = {
             "X-Goog-Upload-Offset": "0",
             "X-Goog-Upload-Command": "upload, finalize"
         }
         with open(self.processed_file_path, "rb") as f:
-            upload_response = httpx.post(
-                upload_url,
-                headers=upload_headers,
+            upload_response = self._http_post_json(
+                url=upload_url,
+                additional_headers=additional_headers,
                 data=f
             )
-        upload_response.raise_for_status()
-        return upload_response.json().get("file").get("name")
+        return upload_response.get("file").get("name")
 
 
     def create_provider_file(self) -> str:
