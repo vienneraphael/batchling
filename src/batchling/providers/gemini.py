@@ -14,7 +14,6 @@ from batchling.request import (
     GeminiSystemInstruction,
     RawMessage,
 )
-from batchling.utils.files import read_jsonl_file
 
 class GeminiExperiment(Experiment):
     BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
@@ -63,20 +62,10 @@ class GeminiExperiment(Experiment):
         return processed_requests
 
     def retrieve_provider_file(self):
-        response = httpx.get(
-            f"{self.BASE_URL}/{self.provider_file_id}",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
-        return response.json()
+        return self._http_get_json(f"{self.BASE_URL}/{self.provider_file_id}")
 
     def retrieve_provider_batch(self):
-        response = httpx.get(
-            f"{self.BASE_URL}/{self.batch_id}",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
-        return response.json()
+        return self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
 
     @property
     def provider_file(self) -> dict | None:
@@ -165,11 +154,7 @@ class GeminiExperiment(Experiment):
         return self.upload_provider_file(upload_url=upload_url)
 
     def delete_provider_file(self):
-        response = httpx.delete(
-            f"{self.BASE_URL}/{self.provider_file_id}",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
+        self._http_delete(f"{self.BASE_URL}/{self.provider_file_id}")
 
     def create_provider_batch(self) -> str:
         data = {
@@ -180,13 +165,11 @@ class GeminiExperiment(Experiment):
                 }
             }
         }
-        response = httpx.post(
+        response = self._http_post_json(
             f"{self.BASE_URL}/models/{self.model}:batchGenerateContent",
-            headers=self._headers(),
             json=data,
         )
-        response.raise_for_status()
-        return response.json().get("name")
+        return response.get("name")
 
     def raise_not_in_running_status(self):
         if self.status not in ["BATCH_STATE_RUNNING", "BATCH_STATE_PENDING"]:
@@ -201,11 +184,7 @@ class GeminiExperiment(Experiment):
             )
 
     def cancel_provider_batch(self):
-        response = httpx.post(
-            f"{self.BASE_URL}/{self.batch_id}:cancel",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
+        self._http_post_json(f"{self.BASE_URL}/{self.batch_id}:cancel")
 
     def delete_provider_batch(self):
         if self.status in ["BATCH_STATE_RUNNING", "BATCH_STATE_PENDING"]:
@@ -221,13 +200,4 @@ class GeminiExperiment(Experiment):
     def get_provider_results(self) -> list[dict]:
         batch = self.batch
         responses_file = batch.get("response").get("responsesFile")
-        response = httpx.get(
-            f"{self.DOWNLOAD_BASE_URL}/{responses_file}:download?alt=media",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
-        text_content = response.text
-
-        with open(self.results_file_path, "w") as f:
-            f.write(text_content)
-        return read_jsonl_file(file_path=self.results_file_path)
+        return self._download_results(f"{self.DOWNLOAD_BASE_URL}/{responses_file}:download?alt=media")

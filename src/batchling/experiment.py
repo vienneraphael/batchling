@@ -1,5 +1,7 @@
 import os
+import json
 import typing as t
+import httpx
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -76,6 +78,41 @@ class Experiment(BaseModel, ABC):
             if not value.endswith(".jsonl"):
                 raise ValueError("processed_file_path must be a .jsonl file")
         return value
+
+    @abstractmethod
+    def _headers(self) -> dict[str, str]:
+        pass
+
+    def _http_get_json(self, url: str) -> dict:
+        """GET request used to retrieve files or batches"""
+        response = httpx.get(url, headers=self._headers())
+        response.raise_for_status()
+        return response.json()
+    
+    def _http_post_json(self, url: str, json: dict | None = None, **kwargs) -> dict:
+        """POST request used to create files or batches"""
+        response = httpx.post(url, headers=self._headers(), json=json, **kwargs)
+        response.raise_for_status()
+        return response.json()
+    
+    def _http_delete(self, url: str) -> None:
+        """DELETE request used to delete files or batches"""
+        response = httpx.delete(url, headers=self._headers())
+        response.raise_for_status()
+    
+    def _http_get_text(self, url: str) -> str:
+        """GET request used to retrieve batch results or output files"""
+        response = httpx.get(url, headers=self._headers())
+        response.raise_for_status()
+        return response.text
+    
+    def _download_results(self, url: str) -> list[dict]:
+        """Utility method used to download results from URL and write to file"""
+        text_content = self._http_get_text(url)
+        results = [json.loads(line) for line in text_content.strip().split("\n")]
+        with open(self.results_file_path, "w") as f:
+            f.write(text_content)
+        return results
 
     @abstractmethod
     @computed_field(repr=False)

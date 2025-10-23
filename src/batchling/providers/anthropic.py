@@ -1,12 +1,11 @@
 import typing as t
 from functools import cached_property
-import httpx
 
 from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
 from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
-from batchling.utils.files import read_jsonl_file, write_jsonl_file
+from batchling.utils.files import read_jsonl_file
 
 class AnthropicExperiment(Experiment):
 
@@ -63,12 +62,7 @@ class AnthropicExperiment(Experiment):
         return self.processed_file_path
 
     def retrieve_provider_batch(self) -> dict | None:
-        response = httpx.get(
-            f"{self.BASE_URL}/{self.batch_id}",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
-        return response.json()
+        return self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
 
     @property
     def provider_file(self) -> str | None:
@@ -102,15 +96,13 @@ class AnthropicExperiment(Experiment):
         for request in data:
             request["params"]["model"] = self.model
             request_list.append(request)
-        response = httpx.post(
+        response = self._http_post_json(
             f"{self.BASE_URL}",
-            headers=self._headers(),
             json={
                 "requests": request_list,
             },
         )
-        response.raise_for_status()
-        return response.json().get("id")
+        return response.get("id")
 
     def raise_not_in_running_status(self):
         if self.status not in ["in_progress"]:
@@ -121,28 +113,16 @@ class AnthropicExperiment(Experiment):
             raise ValueError(f"Experiment in status {self.status} is not in ended status")
 
     def cancel_provider_batch(self) -> None:
-        response = httpx.post(
-            f"{self.BASE_URL}/{self.batch_id}/cancel",
-            headers=self._headers(),
-        )
-        response.raise_for_status()
+        self._http_post_json(f"{self.BASE_URL}/{self.batch_id}/cancel")
 
     def delete_provider_batch(self) -> None:
         if self.batch.get("processing_status") in ["in_progress"]:
             self.cancel_provider_batch()
         elif self.batch.get("processing_status") == "ended" and self.batch.get("results_url"):
-            response = httpx.delete(
-                f"{self.BASE_URL}/{self.batch_id}",
-                headers=self._headers(),
-            )
-            response.raise_for_status()
+            self._http_delete(f"{self.BASE_URL}/{self.batch_id}")
 
     def get_provider_results(self) -> list[dict]:
         url = self.batch.get("results_url")
         if url:
-            response = httpx.get(url, headers=self._headers())
-            response.raise_for_status()
-            with open(self.results_file_path, "w") as f:
-                f.write(response.text)
-            return read_jsonl_file(self.results_file_path)
+            return self._download_results(url)
         return []
