@@ -47,7 +47,7 @@ idna==3.11
     # via
     #   anyio
     #   httpx
-iniconfig==2.2.0
+iniconfig==2.3.0
     # via pytest
 ipykernel==7.0.1
 ipython==9.6.0
@@ -120,7 +120,7 @@ pyzmq==27.1.0
 respx==0.22.0
 rich==14.2.0
     # via typer
-ruff==0.14.1
+ruff==0.14.2
 shellingham==1.5.4
     # via typer
 six==1.17.0
@@ -142,7 +142,7 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-typer==0.15.3
+typer==0.20.0
     # via batchling
 typing-extensions==4.15.0
     # via
