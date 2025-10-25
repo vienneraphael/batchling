@@ -9,10 +9,10 @@ def setup_openai_mocks(respx_mock):
         return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.get(re.compile(r"https://api\.openai\.com/v1/files/.+")).mock(
-        return_value=httpx.Response(200, json={"id": "file-123", "object": "file"})
+        return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.post(f"{openai_base}/batches").mock(
-        return_value=httpx.Response(200, json={"id": "batch-123", "status": "validating"})
+        return_value=httpx.Response(200, json={"id": "batch-123"})
     )
     respx_mock.get(re.compile(r"https://api\.openai\.com/v1/batches/.+")).mock(
         return_value=httpx.Response(
@@ -32,10 +32,10 @@ def setup_groq_mocks(respx_mock):
         return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.get(re.compile(r"https://api\.groq\.com/openai/v1/files/.+")).mock(
-        return_value=httpx.Response(200, json={"id": "file-123", "object": "file"})
+        return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.post(f"{groq_base}/batches").mock(
-        return_value=httpx.Response(200, json={"id": "batch-123", "status": "validating"})
+        return_value=httpx.Response(200, json={"id": "batch-123"})
     )
     respx_mock.get(re.compile(r"https://api\.groq\.com/openai/v1/batches/.+")).mock(
         return_value=httpx.Response(
@@ -55,7 +55,7 @@ def setup_mistral_mocks(respx_mock):
         return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.get(re.compile(r"https://api\.mistral\.ai/v1/files/.+")).mock(
-        return_value=httpx.Response(200, json={"id": "file-123", "object": "file"})
+        return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.post(f"{mistral_base}/batch/jobs").mock(
         return_value=httpx.Response(200, json={"id": "job-123"})
@@ -74,7 +74,7 @@ def setup_together_mocks(respx_mock):
         return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.get(re.compile(r"https://api\.together\.xyz/v1/files/.+")).mock(
-        return_value=httpx.Response(200, json={"id": "file-123", "object": "file"})
+        return_value=httpx.Response(200, json={"id": "file-123"})
     )
     respx_mock.post(f"{together_base}/batches").mock(
         return_value=httpx.Response(200, json={"job": {"id": "job-123"}})
@@ -111,7 +111,6 @@ def setup_gemini_mocks(respx_mock):
     gemini_upload_base = "https://generativelanguage.googleapis.com/upload/v1beta"
     gemini_download_base = "https://generativelanguage.googleapis.com/download/v1beta"
 
-    # Start resumable upload: returns Upload URL in header
     respx_mock.post(
         f"{gemini_upload_base}/files",
         headers={"X-Goog-Upload-Command": "start"},
@@ -121,7 +120,6 @@ def setup_gemini_mocks(respx_mock):
             headers={"X-Goog-Upload-URL": f"{gemini_upload_base}/files?upload_id=abc123"},
         )
     )
-    # Finalize upload at returned URL (match full URL with query string)
     respx_mock.post(
         re.compile(
             r"https://generativelanguage\.googleapis\.com/upload/v1beta/files\?upload_id=abc123"
@@ -133,7 +131,6 @@ def setup_gemini_mocks(respx_mock):
             headers={"Content-Type": "application/json"},
         )
     )
-    # Finalize upload at base URL when command header indicates finalize
     respx_mock.post(
         f"{gemini_upload_base}/files",
         headers={"X-Goog-Upload-Command": "upload, finalize"},
@@ -144,21 +141,17 @@ def setup_gemini_mocks(respx_mock):
             headers={"Content-Type": "application/json"},
         )
     )
-    # Fallback: any finalize call with any upload_id
     respx_mock.post(
         re.compile(r"https://generativelanguage\.googleapis\.com/upload/v1beta/files\?.+")
     ).mock(return_value=httpx.Response(200, json={"file": {"name": "files/abc123"}}))
-    # Retrieve provider file
     respx_mock.get(re.compile(r"https://generativelanguage\.googleapis\.com/v1beta/files/.+")).mock(
         return_value=httpx.Response(200, json={"name": "files/abc123"})
     )
-    # Create batch
     respx_mock.post(
         re.compile(
             r"https://generativelanguage\.googleapis\.com/v1beta/models/.+:batchGenerateContent"
         )
     ).mock(return_value=httpx.Response(200, json={"name": "batches/123"}))
-    # Retrieve batch
     respx_mock.get(f"{gemini_base}/batches/123").mock(
         return_value=httpx.Response(
             200,
@@ -168,7 +161,6 @@ def setup_gemini_mocks(respx_mock):
             },
         )
     )
-    # Download results
     respx_mock.get(
         f"{gemini_download_base}/files/results-123:download", params={"alt": "media"}
     ).mock(return_value=httpx.Response(200, text='{"response": {"candidates": []}}\n'))
