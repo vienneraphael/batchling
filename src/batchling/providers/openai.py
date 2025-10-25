@@ -6,6 +6,7 @@ from pydantic import computed_field
 from batchling.experiment import Experiment
 from batchling.request import OpenAIBody, OpenAIRequest, ProcessedMessage
 
+
 class OpenAIExperiment(Experiment):
     BASE_URL: str = "https://api.openai.com/v1"
 
@@ -38,7 +39,6 @@ class OpenAIExperiment(Experiment):
                         response_format=self.response_format,
                     ),
                     url=self.endpoint,
-                    headers=self._headers(),
                 )
             )
         return processed_requests
@@ -99,7 +99,7 @@ class OpenAIExperiment(Experiment):
                 "endpoint": self.endpoint,
                 "completion_window": "24h",
                 "metadata": {"description": self.description},
-            }
+            },
         )
         return response.get("id")
 

@@ -1,7 +1,6 @@
 import typing as t
 from functools import cached_property
 
-import httpx
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
@@ -14,6 +13,7 @@ from batchling.request import (
     GeminiSystemInstruction,
     RawMessage,
 )
+
 
 class GeminiExperiment(Experiment):
     BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
@@ -99,7 +99,6 @@ class GeminiExperiment(Experiment):
             return "created"
         return batch.get("metadata").get("state")
 
-
     def prepare_provider_file(self) -> str:
         """Prepare the provider file by uploading it to the provider and returning the upload URL.
 
@@ -116,9 +115,7 @@ class GeminiExperiment(Experiment):
             }
         }
         response = self._http_post(
-            url=f"{self.UPLOAD_BASE_URL}/files",
-            additional_headers=additional_headers,
-            json=data
+            url=f"{self.UPLOAD_BASE_URL}/files", additional_headers=additional_headers, json=data
         )
         return response.headers.get("X-Goog-Upload-URL")
 
@@ -133,16 +130,15 @@ class GeminiExperiment(Experiment):
         """
         additional_headers = {
             "X-Goog-Upload-Offset": "0",
-            "X-Goog-Upload-Command": "upload, finalize"
+            "X-Goog-Upload-Command": "upload, finalize",
         }
         with open(self.processed_file_path, "rb") as f:
             upload_response = self._http_post_json(
                 url=upload_url,
                 additional_headers=additional_headers,
-                data=f
+                content=f.read(),
             )
         return upload_response.get("file").get("name")
-
 
     def create_provider_file(self) -> str:
         upload_url = self.prepare_provider_file()
@@ -157,7 +153,7 @@ class GeminiExperiment(Experiment):
                 "display_name": self.name,
                 "input_config": {
                     "file_name": self.provider_file_id,
-                }
+                },
             }
         }
         response = self._http_post_json(
@@ -186,13 +182,14 @@ class GeminiExperiment(Experiment):
             self.cancel_provider_batch()
         elif self.status == "BATCH_STATE_SUCCEEDED":
             batch = self.batch or {}
-            if (
-                batch.get("output_file_id")
-                or (isinstance(batch.get("dest"), dict) and batch["dest"].get("file_name"))
+            if batch.get("output_file_id") or (
+                isinstance(batch.get("dest"), dict) and batch["dest"].get("file_name")
             ):
                 self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
         batch = self.batch
         responses_file = batch.get("response").get("responsesFile")
-        return self._download_results(f"{self.DOWNLOAD_BASE_URL}/{responses_file}:download?alt=media")
+        return self._download_results(
+            f"{self.DOWNLOAD_BASE_URL}/{responses_file}:download?alt=media"
+        )
