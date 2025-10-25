@@ -6,8 +6,8 @@ from pydantic import computed_field
 from batchling.experiment import Experiment
 from batchling.request import ProcessedMessage, TogetherBody, TogetherRequest
 
-class TogetherExperiment(Experiment):
 
+class TogetherExperiment(Experiment):
     BASE_URL: str = "https://api.together.xyz/v1"
 
     def _headers(self) -> dict[str, str]:

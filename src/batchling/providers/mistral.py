@@ -6,6 +6,7 @@ from pydantic import computed_field
 from batchling.experiment import Experiment
 from batchling.request import MistralBody, MistralRequest, ProcessedMessage
 
+
 class MistralExperiment(Experiment):
     BASE_URL: str = "https://api.mistral.ai/v1"
 
@@ -94,7 +95,7 @@ class MistralExperiment(Experiment):
                 "input_files": [self.provider_file_id],
                 "endpoint": self.endpoint,
                 "model": self.model,
-            }
+            },
         )
         return response.get("id")
 

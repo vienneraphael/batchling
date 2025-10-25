@@ -8,7 +8,6 @@ from batchling.request import GroqBody, GroqRequest, ProcessedMessage
 
 
 class GroqExperiment(Experiment):
-
     BASE_URL: str = "https://api.groq.com/openai/v1"
 
     def _headers(self) -> dict[str, str]:
@@ -100,7 +99,7 @@ class GroqExperiment(Experiment):
                 "endpoint": self.endpoint,
                 "completion_window": "24h",
                 "metadata": {"description": self.description},
-            }
+            },
         )
         return response.get("id")
 

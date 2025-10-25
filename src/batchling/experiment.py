@@ -1,12 +1,12 @@
-import os
 import json
+import os
 import typing as t
-import httpx
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
+import httpx
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -89,7 +89,9 @@ class Experiment(BaseModel, ABC):
         response.raise_for_status()
         return response.json()
 
-    def _http_post(self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs) -> httpx.Response:
+    def _http_post(
+        self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs
+    ) -> httpx.Response:
         headers = self._headers()
         if additional_headers:
             headers.update(additional_headers)
@@ -97,7 +99,9 @@ class Experiment(BaseModel, ABC):
         response.raise_for_status()
         return response
 
-    def _http_post_json(self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs) -> dict:
+    def _http_post_json(
+        self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs
+    ) -> dict:
         """POST request used to create files or batches"""
         response = self._http_post(url, json=json, additional_headers=additional_headers, **kwargs)
         return response.json()

@@ -7,15 +7,12 @@ from batchling.experiment import Experiment
 from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
 from batchling.utils.files import read_jsonl_file
 
-class AnthropicExperiment(Experiment):
 
+class AnthropicExperiment(Experiment):
     BASE_URL: str = "https://api.anthropic.com/v1/messages/batches"
 
     def _headers(self) -> dict[str, str]:
-        return {
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01"
-        }
+        return {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
 
     @field_validator("raw_requests", mode="before")
     @classmethod
