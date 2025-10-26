@@ -4,7 +4,7 @@ from functools import cached_property
 from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
-from batchling.models import ProviderBatch, ProviderFile
+from batchling.models import BatchResult, ProviderBatch, ProviderFile
 from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
 from batchling.utils.files import read_jsonl_file
 
@@ -124,7 +124,7 @@ class AnthropicExperiment(Experiment):
         elif batch.status == "ended" and batch.output_file_id:
             self._http_delete(f"{self.BASE_URL}/{self.batch_id}")
 
-    def get_provider_results(self) -> list[dict]:
+    def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
         if batch and batch.output_file_id:
             return self._download_results(batch.output_file_id)

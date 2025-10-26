@@ -153,3 +153,16 @@ def test_update_experiment(experiment_manager: ExperimentManager, experiment: Ex
 def test_delete_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
     experiment_manager.delete_experiment(experiment_name=experiment.name)
     assert experiment_manager.retrieve(experiment_name=experiment.name) is None
+
+
+def test_get_results_parsing(experiment_manager: ExperimentManager, started_experiment: Experiment):
+    results = experiment_manager.get_results(experiment_name=started_experiment.name)
+    assert isinstance(results, list)
+    assert len(results) == 2
+    for item in results:
+        # Unified BatchResult fields should be populated
+        assert item.id is not None
+        assert item.custom_id is not None
+        assert item.answer is not None
+        assert item.model is not None
+        assert item.original is not None

@@ -4,7 +4,7 @@ from functools import cached_property
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
-from batchling.models import ProviderBatch, ProviderFile
+from batchling.models import BatchResult, ProviderBatch, ProviderFile
 from batchling.request import (
     GeminiBody,
     GeminiConfig,
@@ -187,7 +187,7 @@ class GeminiExperiment(Experiment):
             if batch and batch.output_file_id:
                 self.delete_provider_file()
 
-    def get_provider_results(self) -> list[dict]:
+    def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
         if not batch or not batch.output_file_id:
             return []
