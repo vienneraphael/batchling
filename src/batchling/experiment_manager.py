@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from batchling.db.crud import create_experiment, delete_experiment, update_experiment
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
+from batchling.models import BatchResult
 from batchling.request import RawRequest, raw_request_list_adapter
 from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.classes import get_experiment_cls_from_provider
@@ -162,7 +163,7 @@ class ExperimentManager(BaseModel):
         return experiment
 
     @staticmethod
-    def get_results(experiment_name: str) -> list[dict]:
+    def get_results(experiment_name: str) -> list[BatchResult]:
         experiment = ExperimentManager.retrieve(experiment_name=experiment_name)
         if experiment is None:
             raise ValueError(f"Experiment with name: {experiment_name} not found")

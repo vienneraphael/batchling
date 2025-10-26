@@ -15,7 +15,7 @@ from pydantic import (
     field_validator,
 )
 
-from batchling.models import ProviderBatch, ProviderFile
+from batchling.models import BatchResult, ProviderBatch, ProviderFile
 from batchling.request import (
     ProcessedRequest,
     RawRequest,
@@ -115,13 +115,18 @@ class Experiment(BaseModel, ABC):
         response.raise_for_status()
         return response.text
 
-    def _download_results(self, url: str) -> list[dict]:
-        """Utility method used to download results from URL and write to file"""
+    def _download_results(self, url: str) -> list[BatchResult]:
         text_content = self._http_get_text(url)
-        results = [json.loads(line) for line in text_content.strip().split("\n")]
+        raw_results = [
+            json.loads(line) for line in text_content.strip().split("\n") if line.strip()
+        ]
+        unified_results: list[BatchResult] = [
+            BatchResult.from_provider_response(self.provider, raw) for raw in raw_results
+        ]
         with open(self.results_file_path, "w") as f:
-            f.write(text_content)
-        return results
+            for result in unified_results:
+                f.write(result.model_dump_json() + "\n")
+        return unified_results
 
     @abstractmethod
     @computed_field(repr=False)
@@ -219,7 +224,7 @@ class Experiment(BaseModel, ABC):
         self.raise_not_in_running_status()
         self.cancel_provider_batch()
 
-    def get_results(self):
+    def get_results(self) -> list[BatchResult]:
         self.raise_not_in_completed_status()
         dirname = os.path.dirname(self.results_file_path)
         if dirname:
