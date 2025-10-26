@@ -4,6 +4,7 @@ from functools import cached_property
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
+from batchling.models import ProviderBatch, ProviderFile
 from batchling.request import (
     GeminiBody,
     GeminiConfig,
@@ -61,20 +62,22 @@ class GeminiExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
-        return self._http_get_json(f"{self.BASE_URL}/{self.provider_file_id}")
+    def retrieve_provider_file(self) -> ProviderFile | None:
+        data = self._http_get_json(f"{self.BASE_URL}/{self.provider_file_id}")
+        return ProviderFile.model_validate(data)
 
-    def retrieve_provider_batch(self):
-        return self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
+    def retrieve_provider_batch(self) -> ProviderBatch | None:
+        data = self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
+        return ProviderBatch.model_validate(data)
 
     @property
-    def provider_file(self) -> dict | None:
+    def provider_file(self) -> ProviderFile | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> dict | None:
+    def batch(self) -> ProviderBatch | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -94,10 +97,7 @@ class GeminiExperiment(Experiment):
     ]:
         if self.batch_id is None:
             return "created"
-        batch = self.batch
-        if batch is None:
-            return "created"
-        return batch.get("metadata").get("state")
+        return self.batch.status
 
     def prepare_provider_file(self) -> str:
         """Prepare the provider file by uploading it to the provider and returning the upload URL.
@@ -138,11 +138,12 @@ class GeminiExperiment(Experiment):
                 additional_headers=additional_headers,
                 content=f.read(),
             )
-        return upload_response.get("file").get("name")
+        return ProviderFile.model_validate(upload_response).id
 
     def create_provider_file(self) -> str:
         upload_url = self.prepare_provider_file()
-        return self.upload_provider_file(upload_url=upload_url)
+        file_name = self.upload_provider_file(upload_url=upload_url)
+        return ProviderFile.model_validate({"name": file_name}).id
 
     def delete_provider_file(self):
         self._http_delete(f"{self.BASE_URL}/{self.provider_file_id}")
@@ -160,7 +161,7 @@ class GeminiExperiment(Experiment):
             f"{self.BASE_URL}/models/{self.model}:batchGenerateContent",
             json=data,
         )
-        return response.get("name")
+        return ProviderBatch.model_validate(response).id
 
     def raise_not_in_running_status(self):
         if self.status not in ["BATCH_STATE_RUNNING", "BATCH_STATE_PENDING"]:
@@ -178,18 +179,18 @@ class GeminiExperiment(Experiment):
         self._http_post_json(f"{self.BASE_URL}/{self.batch_id}:cancel")
 
     def delete_provider_batch(self):
-        if self.status in ["BATCH_STATE_RUNNING", "BATCH_STATE_PENDING"]:
+        status = self.status
+        if status in ["BATCH_STATE_RUNNING", "BATCH_STATE_PENDING"]:
             self.cancel_provider_batch()
-        elif self.status == "BATCH_STATE_SUCCEEDED":
-            batch = self.batch or {}
-            if batch.get("output_file_id") or (
-                isinstance(batch.get("dest"), dict) and batch["dest"].get("file_name")
-            ):
+        elif status == "BATCH_STATE_SUCCEEDED":
+            batch = self.batch
+            if batch and batch.output_file_id:
                 self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
         batch = self.batch
-        responses_file = batch.get("response").get("responsesFile")
+        if not batch or not batch.output_file_id:
+            return []
         return self._download_results(
-            f"{self.DOWNLOAD_BASE_URL}/{responses_file}:download?alt=media"
+            f"{self.DOWNLOAD_BASE_URL}/{batch.output_file_id}:download?alt=media"
         )

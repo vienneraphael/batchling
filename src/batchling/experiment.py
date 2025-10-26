@@ -15,6 +15,7 @@ from pydantic import (
     field_validator,
 )
 
+from batchling.models import ProviderBatch, ProviderFile
 from batchling.request import (
     ProcessedRequest,
     RawRequest,
@@ -67,9 +68,6 @@ class Experiment(BaseModel, ABC):
     batch_id: str | None = Field(default=None, description="provider batch id")
     created_at: datetime = Field(description="created at")
     updated_at: datetime = Field(description="updated at")
-
-    def __repr__(self):
-        return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
 
     @field_validator("processed_file_path", mode="before")
     @classmethod
@@ -132,11 +130,11 @@ class Experiment(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def retrieve_provider_file(self):
+    def retrieve_provider_file(self) -> ProviderFile | str | None:
         pass
 
     @abstractmethod
-    def retrieve_provider_batch(self):
+    def retrieve_provider_batch(self) -> ProviderBatch | None:
         pass
 
     @abstractmethod
@@ -182,12 +180,12 @@ class Experiment(BaseModel, ABC):
 
     @property
     @abstractmethod
-    def provider_file(self) -> t.Any:
+    def provider_file(self) -> ProviderFile | str | None:
         pass
 
     @property
     @abstractmethod
-    def batch(self) -> t.Any:
+    def batch(self) -> ProviderBatch | None:
         pass
 
     @cached_property

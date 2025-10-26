@@ -4,6 +4,7 @@ from functools import cached_property
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
+from batchling.models import ProviderBatch, ProviderFile
 from batchling.request import ProcessedMessage, TogetherBody, TogetherRequest
 
 
@@ -42,20 +43,22 @@ class TogetherExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self) -> dict | None:
-        return self._http_get_json(f"{self.BASE_URL}/files/{self.provider_file_id}")
+    def retrieve_provider_file(self) -> ProviderFile | None:
+        data = self._http_get_json(f"{self.BASE_URL}/files/{self.provider_file_id}")
+        return ProviderFile.model_validate(data)
 
-    def retrieve_provider_batch(self) -> dict | None:
-        return self._http_get_json(f"{self.BASE_URL}/batches/{self.batch_id}")
+    def retrieve_provider_batch(self) -> ProviderBatch | None:
+        data = self._http_get_json(f"{self.BASE_URL}/batches/{self.batch_id}")
+        return ProviderBatch.model_validate(data)
 
     @property
-    def provider_file(self) -> dict | None:
+    def provider_file(self) -> ProviderFile | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> dict | None:
+    def batch(self) -> ProviderBatch | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -74,7 +77,7 @@ class TogetherExperiment(Experiment):
     ]:
         if self.batch_id is None:
             return "created"
-        return self.batch.get("status")
+        return self.batch.status
 
     def create_provider_file(self) -> str:
         with open(self.processed_file_path, "rb") as f:
@@ -83,7 +86,7 @@ class TogetherExperiment(Experiment):
                 data={"file_name": self.processed_file_path.split("/")[-1], "purpose": "batch-api"},
                 files={"file": f},
             )
-            return response.get("id")
+        return ProviderFile.model_validate(response).id
 
     def delete_provider_file(self):
         self._http_delete(f"{self.BASE_URL}/files/{self.provider_file_id}")
@@ -96,7 +99,7 @@ class TogetherExperiment(Experiment):
                 "endpoint": self.endpoint,
             },
         )
-        return response.get("job").get("id")
+        return ProviderBatch.model_validate(response).id
 
     def raise_not_in_running_status(self):
         if self.status not in ["IN_PROGRESS", "VALIDATING"]:
@@ -112,12 +115,16 @@ class TogetherExperiment(Experiment):
         self._http_post_json(f"{self.BASE_URL}/batches/{self.batch_id}/cancel")
 
     def delete_provider_batch(self):
-        if self.batch.get("status") in ["IN_PROGRESS", "VALIDATING"]:
+        batch = self.batch
+        if batch is None:
+            return
+        if batch.status in ["IN_PROGRESS", "VALIDATING"]:
             self.cancel_provider_batch()
-        elif self.batch.get("status") == "COMPLETED" and self.batch.get("output_file_id"):
+        elif batch.status == "COMPLETED" and batch.output_file_id:
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        return self._download_results(
-            f"{self.BASE_URL}/files/{self.batch.get('output_file_id')}/content"
-        )
+        batch = self.batch
+        if batch is None or not batch.output_file_id:
+            return []
+        return self._download_results(f"{self.BASE_URL}/files/{batch.output_file_id}/content")
