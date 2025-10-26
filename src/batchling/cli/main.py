@@ -215,7 +215,13 @@ def create_experiment(
         results_file_path=results_file_path.as_posix(),
     )
     if start:
-        ExperimentManager().start_experiment(experiment_name=name)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            progress.add_task(description="Starting experiment...", total=None)
+            experiment = ExperimentManager().start_experiment(experiment_name=name)
         status = "started"
     else:
         status = "created"
@@ -343,7 +349,13 @@ def delete_experiment(
     if experiment is None:
         typer.echo(f"Experiment with name: {name} not found")
         raise typer.Exit(1)
-    em.delete_experiment(experiment_name=name)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+        progress.add_task(description="Deleting experiment...", total=None)
+        em.delete_experiment(experiment_name=name)
     print(f"Experiment with name: [green]{name}[/green] deleted")
 
 

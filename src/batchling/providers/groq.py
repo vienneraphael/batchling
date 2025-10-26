@@ -4,26 +4,17 @@ from functools import cached_property
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
+from batchling.models import ProviderBatch, ProviderFile
 from batchling.request import GroqBody, GroqRequest, ProcessedMessage
-from batchling.utils.files import read_jsonl_file
-
-if t.TYPE_CHECKING:
-    from groq import Groq
-    from groq.resources.batches import BatchRetrieveResponse
-    from groq.resources.files import FileInfoResponse
 
 
 class GroqExperiment(Experiment):
-    @cached_property
-    def client(self) -> "Groq":
-        """Get the client
+    BASE_URL: str = "https://api.groq.com/openai/v1"
 
-        Returns:
-            Groq: The client
-        """
-        from groq import Groq
-
-        return Groq(api_key=self.api_key)
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
     @computed_field
     @cached_property
@@ -53,20 +44,22 @@ class GroqExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
-        return self.client.files.info(file_id=self.provider_file_id)
+    def retrieve_provider_file(self) -> ProviderFile | None:
+        data = self._http_get_json(f"{self.BASE_URL}/files/{self.provider_file_id}")
+        return ProviderFile.model_validate(data)
 
-    def retrieve_provider_batch(self):
-        return self.client.batches.retrieve(batch_id=self.batch_id)
+    def retrieve_provider_batch(self) -> ProviderBatch | None:
+        data = self._http_get_json(f"{self.BASE_URL}/batches/{self.batch_id}")
+        return ProviderBatch.model_validate(data)
 
     @property
-    def provider_file(self) -> t.Union["FileInfoResponse", None]:
+    def provider_file(self) -> ProviderFile | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> t.Union["BatchRetrieveResponse", None]:
+    def batch(self) -> ProviderBatch | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -90,20 +83,28 @@ class GroqExperiment(Experiment):
         return self.batch.status
 
     def create_provider_file(self) -> str:
-        return self.client.files.create(
-            file=open(self.processed_file_path, "rb"), purpose="batch"
-        ).id
+        with open(self.processed_file_path, "rb") as f:
+            response = self._http_post_json(
+                f"{self.BASE_URL}/files",
+                files={"file": (self.processed_file_path.split("/")[-1], f)},
+                data={"purpose": "batch"},
+            )
+        return ProviderFile.model_validate(response).id
 
-    def delete_provider_file(self):
-        self.client.files.delete(file_id=self.provider_file_id)
+    def delete_provider_file(self) -> None:
+        self._http_delete(f"{self.BASE_URL}/files/{self.provider_file_id}")
 
     def create_provider_batch(self) -> str:
-        return self.client.batches.create(
-            completion_window="24h",
-            endpoint=self.endpoint,
-            input_file_id=self.provider_file_id,
-            metadata={"description": self.description},
-        ).id
+        response = self._http_post_json(
+            f"{self.BASE_URL}/batches",
+            json={
+                "input_file_id": self.provider_file_id,
+                "endpoint": self.endpoint,
+                "completion_window": "24h",
+                "metadata": {"description": self.description},
+            },
+        )
+        return ProviderBatch.model_validate(response).id
 
     def raise_not_in_running_status(self):
         if self.status not in ["in_progress", "finalizing"]:
@@ -115,16 +116,20 @@ class GroqExperiment(Experiment):
         if self.status != "completed":
             raise ValueError(f"Experiment in status {self.status} is not in completed status")
 
-    def cancel_provider_batch(self):
-        self.client.batches.cancel(batch_id=self.batch_id)
+    def cancel_provider_batch(self) -> None:
+        self._http_post_json(f"{self.BASE_URL}/batches/{self.batch_id}/cancel")
 
-    def delete_provider_batch(self):
-        if self.batch.status in ["in_progress", "finalizing"]:
+    def delete_provider_batch(self) -> None:
+        batch = self.batch
+        if batch is None:
+            return
+        if batch.status in ["in_progress", "finalizing"]:
             self.cancel_provider_batch()
-        elif self.batch.status == "completed" and self.batch.output_file_id:
+        elif batch.status == "completed" and batch.output_file_id:
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        output = self.client.files.content(file_id=self.batch.output_file_id)
-        output.write_to_file(self.results_file_path)
-        return read_jsonl_file(self.results_file_path)
+        batch = self.batch
+        if batch is None or not batch.output_file_id:
+            return []
+        return self._download_results(f"{self.BASE_URL}/files/{batch.output_file_id}/content")

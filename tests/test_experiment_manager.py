@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -70,67 +69,6 @@ def structured_output(request):
 
 
 @pytest.fixture
-def mock_client(provider):
-    match provider:
-        case "openai":
-            with patch("openai.OpenAI") as OpenAI_cls:
-                client = MagicMock(name="openai_client")
-                file_obj = MagicMock(name="fake_file", id="test-file-id")
-                client.files.create.return_value = file_obj
-                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
-                client.batches.create.return_value = batch_obj
-                OpenAI_cls.return_value = client
-                yield client
-        case "mistral":
-            with patch("mistralai.Mistral") as Mistral_cls:
-                client = MagicMock(name="mistral_client")
-                file_obj = MagicMock(name="fake_file", id="test-file-id")
-                client.files.upload.return_value = file_obj
-                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
-                client.batch.jobs.create.return_value = batch_obj
-                Mistral_cls.return_value = client
-                yield client
-        case "together":
-            with patch("together.Together") as Together_cls:
-                client = MagicMock(name="together_client")
-                file_obj = MagicMock(name="fake_file", id="test-file-id")
-                client.files.upload.return_value = file_obj
-                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
-                client.batches.create_batch.return_value = batch_obj
-                Together_cls.return_value = client
-                yield client
-        case "groq":
-            with patch("groq.Groq") as Groq_cls:
-                client = MagicMock(name="groq_client")
-                file_obj = MagicMock(name="fake_file", id="test-file-id")
-                client.files.create.return_value = file_obj
-                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
-                client.batches.create.return_value = batch_obj
-                Groq_cls.return_value = client
-                yield client
-        case "gemini":
-            with patch("google.genai.Client") as Gemini_cls:
-                client = MagicMock(name="gemini_client")
-                file_obj = MagicMock(name="fake_file")
-                file_obj.name = "test-file-id"
-                client.files.upload.return_value = file_obj
-                batch_obj = MagicMock(name="fake_batch")
-                batch_obj.name = "test-batch-id"
-                client.batches.create.return_value = batch_obj
-                Gemini_cls.return_value = client
-                yield client
-        case "anthropic":
-            with patch("anthropic.Anthropic") as Anthropic_cls:
-                client = MagicMock(name="anthropic_client")
-                batch_obj = MagicMock(name="fake_batch", id="test-batch-id")
-                client.messages.batches.create.return_value = batch_obj
-                Anthropic_cls.return_value = client
-                yield client
-        case _:
-            raise ValueError(f"Invalid provider: {provider}")
-
-
-@pytest.fixture
 def experiment_manager():
     return ExperimentManager()
 
@@ -169,8 +107,7 @@ def experiment(
 
 
 @pytest.fixture
-def started_experiment(experiment_manager: ExperimentManager, experiment: Experiment, mock_client):
-    experiment.client = mock_client
+def started_experiment(experiment_manager: ExperimentManager, experiment: Experiment):
     return experiment_manager.start_experiment(experiment_name=experiment.name)
 
 

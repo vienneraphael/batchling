@@ -1,3 +1,4 @@
+import json
 import os
 import typing as t
 import uuid
@@ -5,6 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 
+import httpx
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -13,6 +15,7 @@ from pydantic import (
     field_validator,
 )
 
+from batchling.models import ProviderBatch, ProviderFile
 from batchling.request import (
     ProcessedRequest,
     RawRequest,
@@ -66,9 +69,6 @@ class Experiment(BaseModel, ABC):
     created_at: datetime = Field(description="created at")
     updated_at: datetime = Field(description="updated at")
 
-    def __repr__(self):
-        return f"{self.__repr_name__()}(\n    {self.__repr_str__(',\n    ')}\n)"
-
     @field_validator("processed_file_path", mode="before")
     @classmethod
     def check_jsonl_format(cls, value: str):
@@ -78,11 +78,50 @@ class Experiment(BaseModel, ABC):
         return value
 
     @abstractmethod
-    @cached_property
-    def client(
-        self,
-    ) -> t.Any:
+    def _headers(self) -> dict[str, str]:
         pass
+
+    def _http_get_json(self, url: str) -> dict:
+        """GET request used to retrieve files or batches"""
+        response = httpx.get(url, headers=self._headers())
+        response.raise_for_status()
+        return response.json()
+
+    def _http_post(
+        self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs
+    ) -> httpx.Response:
+        headers = self._headers()
+        if additional_headers:
+            headers.update(additional_headers)
+        response = httpx.post(url, headers=headers, json=json, **kwargs)
+        response.raise_for_status()
+        return response
+
+    def _http_post_json(
+        self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs
+    ) -> dict:
+        """POST request used to create files or batches"""
+        response = self._http_post(url, json=json, additional_headers=additional_headers, **kwargs)
+        return response.json()
+
+    def _http_delete(self, url: str) -> None:
+        """DELETE request used to delete files or batches"""
+        response = httpx.delete(url, headers=self._headers())
+        response.raise_for_status()
+
+    def _http_get_text(self, url: str) -> str:
+        """GET request used to retrieve batch results or output files"""
+        response = httpx.get(url, headers=self._headers())
+        response.raise_for_status()
+        return response.text
+
+    def _download_results(self, url: str) -> list[dict]:
+        """Utility method used to download results from URL and write to file"""
+        text_content = self._http_get_text(url)
+        results = [json.loads(line) for line in text_content.strip().split("\n")]
+        with open(self.results_file_path, "w") as f:
+            f.write(text_content)
+        return results
 
     @abstractmethod
     @computed_field(repr=False)
@@ -91,11 +130,11 @@ class Experiment(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def retrieve_provider_file(self):
+    def retrieve_provider_file(self) -> ProviderFile | str | None:
         pass
 
     @abstractmethod
-    def retrieve_provider_batch(self):
+    def retrieve_provider_batch(self) -> ProviderBatch | None:
         pass
 
     @abstractmethod
@@ -141,12 +180,12 @@ class Experiment(BaseModel, ABC):
 
     @property
     @abstractmethod
-    def provider_file(self) -> t.Any:
+    def provider_file(self) -> ProviderFile | str | None:
         pass
 
     @property
     @abstractmethod
-    def batch(self) -> t.Any:
+    def batch(self) -> ProviderBatch | None:
         pass
 
     @cached_property

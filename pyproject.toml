@@ -6,19 +6,13 @@ authors = [{ name = "Raphael Vienne", email = "raphaelvienne.work@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "anthropic>=0.71.0",
     "click>=8.3.0",
-    "google-genai>=1.45.0",
-    "groq>=0.32.0",
     "httpx>=0.28.1",
-    "mistralai>=1.9.11",
-    "openai>=2.5.0",
     "platformdirs>=4.5.0",
     "pydantic>=2.12.3",
     "python-dotenv>=1.1.1",
     "sqlalchemy>=2.0.44",
-    "together>=1.5.26",
-    "typer>=0.15.3",
+    "typer>=0.20.0",
 ]
 
 [project.scripts]
@@ -35,7 +29,8 @@ dev = [
     "pyinstrument>=5.1.1",
     "pytest>=8.4.2",
     "python-dotenv>=1.1.1",
-    "ruff>=0.14.1",
+    "respx>=0.22.0",
+    "ruff>=0.14.2",
 ]
 
 [build-system]

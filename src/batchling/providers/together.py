@@ -4,26 +4,17 @@ from functools import cached_property
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
+from batchling.models import ProviderBatch, ProviderFile
 from batchling.request import ProcessedMessage, TogetherBody, TogetherRequest
-from batchling.utils.files import read_jsonl_file
-
-if t.TYPE_CHECKING:
-    from together import Together
-    from together.resources.batch import BatchJob
-    from together.resources.files import FileResponse
 
 
 class TogetherExperiment(Experiment):
-    @cached_property
-    def client(self) -> "Together":
-        """Get the client
+    BASE_URL: str = "https://api.together.xyz/v1"
 
-        Returns:
-            Together: The client
-        """
-        from together import Together
-
-        return Together(api_key=self.api_key)
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
     @computed_field
     @cached_property
@@ -52,20 +43,22 @@ class TogetherExperiment(Experiment):
             )
         return processed_requests
 
-    def retrieve_provider_file(self):
-        return self.client.files.retrieve(id=self.provider_file_id)
+    def retrieve_provider_file(self) -> ProviderFile | None:
+        data = self._http_get_json(f"{self.BASE_URL}/files/{self.provider_file_id}")
+        return ProviderFile.model_validate(data)
 
-    def retrieve_provider_batch(self):
-        return self.client.batches.get_batch(batch_job_id=self.batch_id)
+    def retrieve_provider_batch(self) -> ProviderBatch | None:
+        data = self._http_get_json(f"{self.BASE_URL}/batches/{self.batch_id}")
+        return ProviderBatch.model_validate(data)
 
     @property
-    def provider_file(self) -> t.Union["FileResponse", None]:
+    def provider_file(self) -> ProviderFile | None:
         if self.provider_file_id is None:
             return None
         return self.retrieve_provider_file()
 
     @property
-    def batch(self) -> t.Union["BatchJob", None]:
+    def batch(self) -> ProviderBatch | None:
         if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
@@ -87,16 +80,26 @@ class TogetherExperiment(Experiment):
         return self.batch.status
 
     def create_provider_file(self) -> str:
-        return self.client.files.upload(file=self.processed_file_path, purpose="batch-api").id
+        with open(self.processed_file_path, "rb") as f:
+            response = self._http_post_json(
+                f"{self.BASE_URL}/files/upload",
+                data={"file_name": self.processed_file_path.split("/")[-1], "purpose": "batch-api"},
+                files={"file": f},
+            )
+        return ProviderFile.model_validate(response).id
 
     def delete_provider_file(self):
-        self.client.files.delete(id=self.provider_file_id)
+        self._http_delete(f"{self.BASE_URL}/files/{self.provider_file_id}")
 
     def create_provider_batch(self) -> str:
-        return self.client.batches.create_batch(
-            file_id=self.provider_file_id,
-            endpoint=self.endpoint,
-        ).id
+        response = self._http_post_json(
+            f"{self.BASE_URL}/batches",
+            json={
+                "input_file_id": self.provider_file_id,
+                "endpoint": self.endpoint,
+            },
+        )
+        return ProviderBatch.model_validate(response).id
 
     def raise_not_in_running_status(self):
         if self.status not in ["IN_PROGRESS", "VALIDATING"]:
@@ -109,16 +112,19 @@ class TogetherExperiment(Experiment):
             raise ValueError(f"Experiment in status {self.status} is not in COMPLETED status")
 
     def cancel_provider_batch(self):
-        self.client.batches.cancel_batch(batch_job_id=self.batch_id)
+        self._http_post_json(f"{self.BASE_URL}/batches/{self.batch_id}/cancel")
 
     def delete_provider_batch(self):
-        if self.batch.status in ["IN_PROGRESS", "VALIDATING"]:
+        batch = self.batch
+        if batch is None:
+            return
+        if batch.status in ["IN_PROGRESS", "VALIDATING"]:
             self.cancel_provider_batch()
-        elif self.batch.status == "COMPLETED" and self.batch.output_file_id:
+        elif batch.status == "COMPLETED" and batch.output_file_id:
             self.delete_provider_file()
 
     def get_provider_results(self) -> list[dict]:
-        self.client.files.retrieve_content(
-            id=self.batch.output_file_id, output=self.results_file_path
-        )
-        return read_jsonl_file(self.results_file_path)
+        batch = self.batch
+        if batch is None or not batch.output_file_id:
+            return []
+        return self._download_results(f"{self.BASE_URL}/files/{batch.output_file_id}/content")
