@@ -7,12 +7,20 @@ from pydantic import BaseModel
 from batchling.db.session import destroy_db
 from batchling.experiment import Experiment
 from batchling.experiment_manager import ExperimentManager
-from batchling.request import RawMessage, RawRequest
+from batchling.request import raw_request_list_adapter
+from batchling.utils.files import read_jsonl_file
 
 
 class City(BaseModel):
     name: str
     country: str
+
+
+@pytest.fixture(
+    params=["tests/test_data/raw_file_countries.jsonl", "tests/test_data/raw_file_multimodal.jsonl"]
+)
+def raw_requests_file_path(request):
+    return request.param
 
 
 @pytest.fixture(params=["openai", "mistral", "together", "groq", "gemini", "anthropic"])
@@ -79,18 +87,13 @@ def experiment(
     tmp_path: Path,
     provider: str,
     structured_output: tuple[str, dict],
+    raw_requests_file_path: str,
 ):
+    raw_requests = read_jsonl_file(raw_requests_file_path)
     name, response_format = structured_output
     processed_file_path = tmp_path / "processed.jsonl"
     results_file_path = tmp_path / "results.jsonl"
-    raw_requests = [
-        RawRequest(
-            messages=[
-                RawMessage(role="user", content="Hello, how are you Dan?"),
-            ],
-            max_tokens=100,
-        ),
-    ]
+    raw_requests = raw_request_list_adapter.validate_python(raw_requests)
     experiment = experiment_manager.create_experiment(
         experiment_name=f"em-test-{provider}-{name}",
         model="gpt-4o-mini",

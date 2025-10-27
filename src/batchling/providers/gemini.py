@@ -6,6 +6,7 @@ from pydantic import computed_field
 from batchling.experiment import Experiment
 from batchling.models import BatchResult, ProviderBatch, ProviderFile
 from batchling.request import (
+    GeminiBlob,
     GeminiBody,
     GeminiConfig,
     GeminiMessage,
@@ -48,6 +49,17 @@ class GeminiExperiment(Experiment):
                             GeminiMessage(
                                 role=message.role,
                                 parts=[GeminiPart(text=message.content)],
+                            )
+                            if isinstance(message.content, str)
+                            else GeminiMessage(
+                                role=message.role,
+                                parts=[
+                                    GeminiPart(
+                                        inline_data=GeminiBlob.from_bytes_str(
+                                            message.content.get("image_url").get("url")
+                                        )
+                                    )
+                                ],
                             )
                             for message in messages
                         ],
