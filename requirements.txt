@@ -131,6 +131,7 @@ sqlalchemy==2.0.44
     # via batchling
 stack-data==0.6.3
     # via ipython
+structlog==25.5.0
 tornado==6.5.2
     # via
     #   ipykernel
