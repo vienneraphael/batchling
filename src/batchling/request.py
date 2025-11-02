@@ -1,11 +1,11 @@
 import typing as t
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, model_validator
 
 
 class RawMessage(BaseModel):
     role: t.Literal["user", "assistant"]
-    content: str
+    content: str | list[dict]
 
 
 class RawRequest(BaseModel):
@@ -19,7 +19,7 @@ raw_request_list_adapter = TypeAdapter(list[RawRequest])
 
 class ProcessedMessage(RawMessage):
     role: t.Literal["system", "user", "assistant"]
-    content: str
+    content: str | list[dict]
 
 
 class ProcessedBody(BaseModel):
@@ -74,8 +74,34 @@ class TogetherRequest(ProcessedRequest):
     body: TogetherBody
 
 
+class GeminiBlob(BaseModel):
+    mime_type: str
+    data: bytes
+
+    @classmethod
+    def from_bytes_str(cls, bytes_str: str) -> "GeminiBlob":
+        mime_type, bytes_data = bytes_str.split(";base64,")
+        mime_type = mime_type.strip("data:")
+        return cls(mime_type=mime_type, data=bytes_data)
+
+
 class GeminiPart(BaseModel):
-    text: str
+    text: str | None = None
+    inline_data: GeminiBlob | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_one_of_fields(cls, data: t.Any) -> t.Any:
+        if data.get("text") is not None and data.get("inline_data") is not None:
+            raise ValueError("Only one of text or inline_data can be provided")
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_required_fields(cls, data: t.Any) -> t.Any:
+        if data.get("text") is None and data.get("inline_data") is None:
+            raise ValueError("One of text or inline_data must be provided")
+        return data
 
 
 class GeminiConfig(BaseModel):

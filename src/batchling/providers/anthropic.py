@@ -1,12 +1,21 @@
 import typing as t
 from functools import cached_property
 
+import structlog
 from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
 from batchling.models import BatchResult, ProviderBatch, ProviderFile
-from batchling.request import AnthropicBody, AnthropicPart, AnthropicRequest, RawRequest
+from batchling.request import (
+    AnthropicBody,
+    AnthropicPart,
+    AnthropicRequest,
+    RawMessage,
+    RawRequest,
+)
 from batchling.utils.files import read_jsonl_file
+
+log = structlog.get_logger(__name__)
 
 
 class AnthropicExperiment(Experiment):
@@ -31,13 +40,37 @@ class AnthropicExperiment(Experiment):
     def processed_requests(self) -> list[AnthropicRequest]:
         processed_requests: list[AnthropicRequest] = []
         for i, raw_request in enumerate(self.raw_requests):
+            cleaned_messages = []
+            for message in raw_request.messages:
+                if isinstance(message.content, str):
+                    cleaned_messages.append(RawMessage(role=message.role, content=message.content))
+                else:
+                    parts = []
+                    for c in message.content:
+                        if c.get("type") == "image_url":
+                            raw_media_type, b64_data = (
+                                c.get("image_url").get("url").split(";base64,")
+                            )
+                            media_type = raw_media_type.strip("data:")
+                            d = {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": b64_data,
+                                },
+                            }
+                            parts.append(d)
+                        else:
+                            parts.append({"type": "text", "text": c.get("text")})
+                    cleaned_messages.append(RawMessage(role=message.role, content=parts))
             processed_requests.append(
                 AnthropicRequest(
                     custom_id=f"{self.name}-sample-{i}",
                     params=AnthropicBody(
                         model=self.model,
                         max_tokens=raw_request.max_tokens,
-                        messages=raw_request.messages,
+                        messages=cleaned_messages,
                         tools=[
                             {
                                 "name": "structured_output",
@@ -126,6 +159,7 @@ class AnthropicExperiment(Experiment):
 
     def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
+        log.debug("Getting provider results", batch=batch)
         if batch and batch.output_file_id:
             return self._download_results(batch.output_file_id)
         return []

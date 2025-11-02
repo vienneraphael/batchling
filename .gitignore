@@ -20,3 +20,4 @@ profile_reports/
 
 output/
 *.jsonl
+!tests/test_data/*.jsonl

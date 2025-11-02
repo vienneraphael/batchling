@@ -1,11 +1,13 @@
 import typing as t
 from functools import cached_property
 
+import structlog
 from pydantic import computed_field
 
 from batchling.experiment import Experiment
 from batchling.models import BatchResult, ProviderBatch, ProviderFile
 from batchling.request import (
+    GeminiBlob,
     GeminiBody,
     GeminiConfig,
     GeminiMessage,
@@ -14,6 +16,8 @@ from batchling.request import (
     GeminiSystemInstruction,
     RawMessage,
 )
+
+log = structlog.get_logger(__name__)
 
 
 class GeminiExperiment(Experiment):
@@ -35,29 +39,42 @@ class GeminiExperiment(Experiment):
                 RawMessage(role=message.role, content=message.content)
                 for message in raw_request.messages
             ]
+            contents = []
+            for message in messages:
+                if isinstance(message.content, str):
+                    parts = [GeminiPart(text=message.content)]
+                else:
+                    parts = []
+                    for c in message.content:
+                        if c.get("type") == "image_url":
+                            parts.append(
+                                GeminiPart(
+                                    inline_data=GeminiBlob.from_bytes_str(
+                                        c.get("image_url").get("url")
+                                    )
+                                )
+                            )
+                        else:
+                            parts.append(GeminiPart(text=c.get("text")))
+                contents.append(GeminiMessage(role=message.role, parts=parts))
+            request = GeminiBody(
+                system_instruction=GeminiSystemInstruction(
+                    parts=[GeminiPart(text=raw_request.system_prompt)]
+                )
+                if raw_request.system_prompt
+                else None,
+                contents=contents,
+                generation_config=GeminiConfig(
+                    response_mime_type="application/json",
+                    response_json_schema=self.response_format["json_schema"]["schema"],
+                )
+                if self.response_format
+                else None,
+            )
             processed_requests.append(
                 GeminiRequest(
                     key=f"{self.name}-sample-{i}",
-                    request=GeminiBody(
-                        system_instruction=GeminiSystemInstruction(
-                            parts=[GeminiPart(text=raw_request.system_prompt)]
-                        )
-                        if raw_request.system_prompt
-                        else None,
-                        contents=[
-                            GeminiMessage(
-                                role=message.role,
-                                parts=[GeminiPart(text=message.content)],
-                            )
-                            for message in messages
-                        ],
-                        generation_config=GeminiConfig(
-                            response_mime_type="application/json",
-                            response_json_schema=self.response_format["json_schema"]["schema"],
-                        )
-                        if self.response_format
-                        else None,
-                    ),
+                    request=request,
                 )
             )
         return processed_requests
@@ -108,6 +125,8 @@ class GeminiExperiment(Experiment):
         additional_headers = {
             "X-Goog-Upload-Protocol": "resumable",
             "X-Goog-Upload-Command": "start",
+            "X-Goog-Upload-Header-Content-Type": "application/json",
+            "Content-Type": "application/json",
         }
         data = {
             "file": {
@@ -189,6 +208,7 @@ class GeminiExperiment(Experiment):
 
     def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
+        log.debug("Getting provider results", batch=batch)
         if not batch or not batch.output_file_id:
             return []
         return self._download_results(
