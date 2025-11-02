@@ -12,6 +12,7 @@ dependencies = [
     "pydantic>=2.12.3",
     "python-dotenv>=1.1.1",
     "sqlalchemy>=2.0.44",
+    "structlog>=25.5.0",
     "typer>=0.20.0",
 ]
 
@@ -31,7 +32,6 @@ dev = [
     "python-dotenv>=1.1.1",
     "respx>=0.22.0",
     "ruff>=0.14.2",
-    "structlog>=25.5.0",
 ]
 
 [build-system]
