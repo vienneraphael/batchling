@@ -7,6 +7,7 @@ from datetime import datetime
 from functools import cached_property
 
 import httpx
+import structlog
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -22,6 +23,8 @@ from batchling.request import (
     raw_request_list_adapter,
 )
 from batchling.utils.files import write_jsonl_file
+
+log = structlog.get_logger(__name__)
 
 
 class Experiment(BaseModel, ABC):
@@ -116,6 +119,7 @@ class Experiment(BaseModel, ABC):
         return response.text
 
     def _download_results(self, url: str) -> list[BatchResult]:
+        log.debug("Downloading results from URL", url=url)
         text_content = self._http_get_text(url)
         raw_results = [
             json.loads(line) for line in text_content.strip().split("\n") if line.strip()

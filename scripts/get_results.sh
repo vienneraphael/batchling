@@ -13,3 +13,10 @@ batchling results openai_so
 batchling results together_so
 batchling results groq_so
 batchling results gemini_so
+
+batchling results anthropic_multimodal
+batchling results mistral_multimodal
+batchling results openai_multimodal
+batchling results together_multimodal
+batchling results groq_multimodal
+batchling results gemini_multimodal

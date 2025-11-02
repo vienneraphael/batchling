@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, TypeAdapter, model_validator
 
 class RawMessage(BaseModel):
     role: t.Literal["user", "assistant"]
-    content: str | dict
+    content: str | list[dict]
 
 
 class RawRequest(BaseModel):
@@ -19,7 +19,7 @@ raw_request_list_adapter = TypeAdapter(list[RawRequest])
 
 class ProcessedMessage(RawMessage):
     role: t.Literal["system", "user", "assistant"]
-    content: str | dict
+    content: str | list[dict]
 
 
 class ProcessedBody(BaseModel):

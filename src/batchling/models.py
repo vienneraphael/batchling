@@ -1,6 +1,9 @@
 import typing as t
 
+import structlog
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+
+log = structlog.get_logger(__name__)
 
 
 class BatchResult(BaseModel):
@@ -14,6 +17,7 @@ class BatchResult(BaseModel):
 
     @classmethod
     def from_provider_response(cls, provider: str, data: dict) -> "BatchResult":
+        log.debug("Generating BatchResult from provider response", provider=provider, data=data)
         if provider == "gemini":
             return cls(
                 id=data.get("response").get("responseId"),
@@ -75,6 +79,7 @@ class ProviderBatch(BaseModel):
         default=None,
         validation_alias=AliasChoices("output_file_id", "output_file", "results_url"),
     )
+    error_file_id: str | None = Field(default=None, validation_alias=AliasChoices("error_file"))
 
     @model_validator(mode="before")
     @classmethod
