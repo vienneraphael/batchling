@@ -104,9 +104,7 @@ class Experiment(BaseModel, ABC):
         self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs
     ) -> dict:
         """POST request used to create files or batches"""
-        response = self._http_post(
-            url, json=json, timeout=30.0, additional_headers=additional_headers, **kwargs
-        )
+        response = self._http_post(url, json=json, additional_headers=additional_headers, **kwargs)
         return response.json()
 
     def _http_delete(self, url: str) -> None:
