@@ -86,7 +86,7 @@ class Experiment(BaseModel, ABC):
 
     def _http_get_json(self, url: str) -> dict:
         """GET request used to retrieve files or batches"""
-        response = httpx.get(url, headers=self._headers())
+        response = httpx.get(url, headers=self._headers(), timeout=30.0)
         response.raise_for_status()
         return response.json()
 
@@ -96,7 +96,7 @@ class Experiment(BaseModel, ABC):
         headers = self._headers()
         if additional_headers:
             headers.update(additional_headers)
-        response = httpx.post(url, headers=headers, json=json, **kwargs)
+        response = httpx.post(url, headers=headers, json=json, timeout=30.0, **kwargs)
         response.raise_for_status()
         return response
 
@@ -104,17 +104,19 @@ class Experiment(BaseModel, ABC):
         self, url: str, json: dict | None = None, additional_headers: dict | None = None, **kwargs
     ) -> dict:
         """POST request used to create files or batches"""
-        response = self._http_post(url, json=json, additional_headers=additional_headers, **kwargs)
+        response = self._http_post(
+            url, json=json, timeout=30.0, additional_headers=additional_headers, **kwargs
+        )
         return response.json()
 
     def _http_delete(self, url: str) -> None:
         """DELETE request used to delete files or batches"""
-        response = httpx.delete(url, headers=self._headers())
+        response = httpx.delete(url, headers=self._headers(), timeout=10.0)
         response.raise_for_status()
 
     def _http_get_text(self, url: str) -> str:
         """GET request used to retrieve batch results or output files"""
-        response = httpx.get(url, headers=self._headers())
+        response = httpx.get(url, headers=self._headers(), timeout=30.0)
         response.raise_for_status()
         return response.text
 
