@@ -68,6 +68,7 @@ class GroqRequest(ProcessedRequest):
 class TogetherBody(ProcessedBody):
     model: str
     response_format: dict | None = None
+    logprobs: int = 1
 
 
 class TogetherRequest(ProcessedRequest):
@@ -107,6 +108,8 @@ class GeminiPart(BaseModel):
 class GeminiConfig(BaseModel):
     response_mime_type: t.Literal["application/json", "text/plain"]
     response_json_schema: dict | None = None
+    response_logprobs: bool = True
+    logprobs: int = 1
 
 
 class GeminiMessage(BaseModel):
