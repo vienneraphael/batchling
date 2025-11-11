@@ -46,6 +46,8 @@ class MistralRequest(ProcessedRequest):
 class OpenAIBody(ProcessedBody):
     model: str
     response_format: dict | None = None
+    logprobs: bool = True
+    top_logprobs: int = 1
 
 
 class OpenAIRequest(ProcessedRequest):
