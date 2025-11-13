@@ -42,7 +42,7 @@ class OpenAIExperiment(Experiment):
                         model=self.model,
                         response_format=self.response_format,
                         logprobs=True,
-                        top_logprobs=1,
+                        top_logprobs=5,
                     ),
                     url=self.endpoint,
                 )
