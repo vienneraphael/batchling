@@ -27,12 +27,12 @@ class MistralExperiment(Experiment):
             messages: list[ProcessedMessage] = []
             if raw_request.system_prompt is not None:
                 messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
-            messages.extend(
-                [
-                    ProcessedMessage(role=message.role, content=message.content)
-                    for message in raw_request.messages
-                ]
-            )
+            for message in raw_request.messages:
+                if isinstance(message.content, str):
+                    messages.append(ProcessedMessage(role=message.role, content=message.content))
+                else:
+                    for c in message.content:
+                        messages.append(ProcessedMessage(role=message.role, content=c["text"]))
             processed_requests.append(
                 MistralRequest(
                     custom_id=f"{self.name}-sample-{i}",
