@@ -1,5 +1,5 @@
 import typing as t
-
+import json
 import structlog
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -33,7 +33,7 @@ class BatchResult(BaseModel):
         elif provider == "anthropic":
             answer = data.get("result").get("message").get("content")[0].get("text")
             if answer is None:
-                answer = data.get("result").get("message").get("content")[0].get("input")
+                answer = json.dumps(data.get("result").get("message").get("content")[0].get("input"))
             return cls(
                 id=data.get("result").get("message").get("id"),
                 custom_id=data.get("custom_id"),
