@@ -31,6 +31,9 @@ class BatchResult(BaseModel):
                 original=data,
             )
         elif provider == "anthropic":
+            answer = data.get("result").get("message").get("content")[0].get("text")
+            if answer is None:
+                answer = data.get("result").get("message").get("content")[0].get("input")
             return cls(
                 id=data.get("result").get("message").get("id"),
                 custom_id=data.get("custom_id"),
