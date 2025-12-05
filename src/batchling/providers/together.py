@@ -41,7 +41,6 @@ class TogetherExperiment(Experiment):
                         max_tokens=raw_request.max_tokens,
                         model=self.model,
                         response_format=self.response_format,
-                        logprobs=1,
                     ),
                 )
             )
