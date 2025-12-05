@@ -67,14 +67,10 @@ class GeminiExperiment(Experiment):
                 generation_config=GeminiConfig(
                     response_mime_type="application/json",
                     response_json_schema=self.response_format["json_schema"]["schema"],
-                    response_logprobs=True,
-                    logprobs=1,
                 )
                 if self.response_format
                 else GeminiConfig(
                     response_mime_type="text/plain",
-                    response_logprobs=True,
-                    logprobs=1,
                 ),
             )
             processed_requests.append(
