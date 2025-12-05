@@ -37,7 +37,7 @@ class BatchResult(BaseModel):
             return cls(
                 id=data.get("result").get("message").get("id"),
                 custom_id=data.get("custom_id"),
-                answer=data.get("result").get("message").get("content")[0].get("text"),
+                answer=answer,
                 model=data.get("result").get("message").get("model"),
                 original=data,
             )
