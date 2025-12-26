@@ -1,5 +1,6 @@
-import typing as t
 import json
+import typing as t
+
 import structlog
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -20,37 +21,44 @@ class BatchResult(BaseModel):
         log.debug("Generating BatchResult from provider response", provider=provider, data=data)
         if provider == "gemini":
             return cls(
-                id=data.get("response").get("responseId"),
+                id=data.get("response", {}).get("responseId"),
                 custom_id=data.get("key"),
-                answer=data.get("response")
-                .get("candidates")[0]
-                .get("content")
-                .get("parts")[0]
+                answer=data.get("response", {})
+                .get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
                 .get("text"),
-                model=data.get("response").get("modelVersion"),
+                model=data.get("response", {}).get("modelVersion"),
                 original=data,
             )
         elif provider == "anthropic":
-            answer = data.get("result").get("message").get("content")[0].get("text")
+            content = data.get("result", {}).get("message", {}).get("content", [{}])
+            answer = None
+            for c in content:
+                if c.get("type") == "text":
+                    answer = c.get("text")
+                    break
             if answer is None:
-                answer = json.dumps(data.get("result").get("message").get("content")[0].get("input"))
+                answer = json.dumps(
+                    data.get("result", {}).get("message", {}).get("content", [{}])[0].get("input")
+                )
             return cls(
-                id=data.get("result").get("message").get("id"),
+                id=data.get("result", {}).get("message", {}).get("id"),
                 custom_id=data.get("custom_id"),
                 answer=answer,
-                model=data.get("result").get("message").get("model"),
+                model=data.get("result", {}).get("message", {}).get("model"),
                 original=data,
             )
         else:
             return cls(
                 id=data.get("id"),
                 custom_id=data.get("custom_id"),
-                answer=data.get("response")
-                .get("body")
-                .get("choices")[0]
-                .get("message")
+                answer=data.get("response", {})
+                .get("body", {})
+                .get("choices", [{}])[0]
+                .get("message", {})
                 .get("content"),
-                model=data.get("response").get("body").get("model"),
+                model=data.get("response", {}).get("body", {}).get("model"),
                 original=data,
             )
 
@@ -74,7 +82,7 @@ class ProviderFile(BaseModel):
 class ProviderBatch(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-    id: str | None = Field(default=None, validation_alias=AliasChoices("id", "name"))
+    id: str = Field(validation_alias=AliasChoices("id", "name"))
     status: str = Field(
         default="created", validation_alias=AliasChoices("status", "processing_status")
     )

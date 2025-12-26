@@ -1,4 +1,3 @@
-import typing as t
 from functools import cached_property
 
 import structlog
@@ -24,14 +23,14 @@ class AnthropicExperiment(Experiment):
     def _headers(self) -> dict[str, str]:
         return {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
 
-    @field_validator("raw_requests", mode="before")
+    @field_validator("raw_requests", mode="after")
     @classmethod
-    def check_raw_requests_not_none(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
+    def validate_max_tokens(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
         if value is None:
             return None
         if any(request.max_tokens is None for request in value):
             raise ValueError(
-                "max_tokens is required to be set for each request for Anthropic experiments and cannot be None"
+                "max_tokens is required to be set for each request for Anthropic experiments"
             )
         return value
 
@@ -49,7 +48,7 @@ class AnthropicExperiment(Experiment):
                     for c in message.content:
                         if c.get("type") == "image_url":
                             raw_media_type, b64_data = (
-                                c.get("image_url").get("url").split(";base64,")
+                                c.get("image_url", {}).get("url", "").split(";base64,")
                             )
                             media_type = raw_media_type.strip("data:")
                             d = {
@@ -64,27 +63,39 @@ class AnthropicExperiment(Experiment):
                         else:
                             parts.append({"type": "text", "text": c.get("text")})
                     cleaned_messages.append(RawMessage(role=message.role, content=parts))
+            thinking_config = None
+            if self.thinking_budget is not None:
+                thinking_config = {"type": "enabled", "budget_tokens": self.thinking_budget}
+            elif self.thinking_level is not None:
+                raise ValueError(
+                    "thinking_level is not supported for Anthropic, use thinking_budget instead"
+                )
+
+            params_data = {
+                "model": self.model,
+                "max_tokens": raw_request.max_tokens,
+                "messages": cleaned_messages,
+                "tools": [
+                    {
+                        "name": "structured_output",
+                        "description": "Output a structured response",
+                        "input_schema": self.response_format["json_schema"]["schema"],
+                    }
+                ]
+                if self.response_format
+                else None,
+                "tool_choice": {"type": "tool", "name": "structured_output"}
+                if self.response_format
+                else None,
+                "system": [AnthropicPart(type="text", text=raw_request.system_prompt)],
+            }
+            if thinking_config:
+                params_data["thinking"] = thinking_config
+
             processed_requests.append(
                 AnthropicRequest(
                     custom_id=f"{self.name}-sample-{i}",
-                    params=AnthropicBody(
-                        model=self.model,
-                        max_tokens=raw_request.max_tokens,
-                        messages=cleaned_messages,
-                        tools=[
-                            {
-                                "name": "structured_output",
-                                "description": "Output a structured response",
-                                "input_schema": self.response_format["json_schema"]["schema"],
-                            }
-                        ]
-                        if self.response_format
-                        else None,
-                        tool_choice={"type": "tool", "name": "structured_output"}
-                        if self.response_format
-                        else None,
-                        system=[AnthropicPart(type="text", text=raw_request.system_prompt)],
-                    ),
+                    params=AnthropicBody.model_validate(params_data),
                 )
             )
         return processed_requests
@@ -112,8 +123,8 @@ class AnthropicExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal["created", "in_progress", "canceling", "ended"]:
-        if self.batch_id is None:
+    ) -> str:
+        if self.batch is None:
             return "created"
         return self.batch.status
 

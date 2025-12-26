@@ -206,6 +206,7 @@ def setup_gemini_mocks(respx_mock):
         return_value=httpx.Response(
             200,
             json={
+                "name": "batches/123",
                 "metadata": {"state": "BATCH_STATE_SUCCEEDED"},
                 "response": {"responsesFile": "files/results-123"},
             },

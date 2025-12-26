@@ -1,8 +1,7 @@
-import typing as t
 from functools import cached_property
 
 import structlog
-from pydantic import computed_field
+from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
 from batchling.models import BatchResult, ProviderBatch, ProviderFile
@@ -30,6 +29,13 @@ class GeminiExperiment(Experiment):
             "x-goog-api-key": self.api_key,
         }
 
+    @field_validator("thinking_level", mode="after")
+    @classmethod
+    def validate_thinking_level(cls, value: str | None) -> str | None:
+        if value is not None:
+            return value.upper()
+        return value
+
     @computed_field
     @cached_property
     def processed_requests(self) -> list[GeminiRequest]:
@@ -50,13 +56,30 @@ class GeminiExperiment(Experiment):
                             parts.append(
                                 GeminiPart(
                                     inline_data=GeminiBlob.from_bytes_str(
-                                        c.get("image_url").get("url")
+                                        c.get("image_url", {}).get("url", "")
                                     )
                                 )
                             )
                         else:
-                            parts.append(GeminiPart(text=c.get("text")))
+                            parts.append(GeminiPart(text=c.get("text", "")))
                 contents.append(GeminiMessage(role=message.role, parts=parts))
+            config_data = {
+                "response_mime_type": "application/json" if self.response_format else "text/plain",
+            }
+            if self.response_format:
+                config_data["response_json_schema"] = self.response_format["json_schema"]["schema"]
+            thinking_config = None
+            if self.thinking_level is not None or self.thinking_budget is not None:
+                thinking_config = dict()
+                if self.thinking_budget is not None:
+                    thinking_config["thinking_budget"] = self.thinking_budget
+                if self.thinking_level is not None:
+                    thinking_config["thinking_level"] = self.thinking_level
+            if thinking_config:
+                config_data["thinking_config"] = thinking_config
+            log.debug("Generation config", config_data=config_data)
+            generation_config = GeminiConfig.model_validate(config_data)
+
             request = GeminiBody(
                 system_instruction=GeminiSystemInstruction(
                     parts=[GeminiPart(text=raw_request.system_prompt)]
@@ -64,14 +87,7 @@ class GeminiExperiment(Experiment):
                 if raw_request.system_prompt
                 else None,
                 contents=contents,
-                generation_config=GeminiConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=self.response_format["json_schema"]["schema"],
-                )
-                if self.response_format
-                else GeminiConfig(
-                    response_mime_type="text/plain",
-                ),
+                generation_config=generation_config,
             )
             processed_requests.append(
                 GeminiRequest(
@@ -87,6 +103,7 @@ class GeminiExperiment(Experiment):
 
     def retrieve_provider_batch(self) -> ProviderBatch | None:
         data = self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
+        log.debug("Retrieved provider batch", data=data)
         return ProviderBatch.model_validate(data)
 
     @property
@@ -104,17 +121,8 @@ class GeminiExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal[
-        "created",
-        "BATCH_STATE_UNSPECIFIED",
-        "BATCH_STATE_PENDING",
-        "BATCH_STATE_RUNNING",
-        "BATCH_STATE_SUCCEEDED",
-        "BATCH_STATE_FAILED",
-        "BATCH_STATE_CANCELLED",
-        "BATCH_STATE_EXPIRED",
-    ]:
-        if self.batch_id is None:
+    ) -> str:
+        if self.batch is None:
             return "created"
         return self.batch.status
 

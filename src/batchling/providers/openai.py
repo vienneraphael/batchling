@@ -1,4 +1,3 @@
-import typing as t
 from functools import cached_property
 
 import structlog
@@ -33,15 +32,20 @@ class OpenAIExperiment(Experiment):
                     for message in raw_request.messages
                 ]
             )
+
+            body_data = {
+                "messages": messages,
+                "max_tokens": raw_request.max_tokens,
+                "model": self.model,
+                "response_format": self.response_format,
+            }
+            if self.thinking_level is not None:
+                body_data["reasoning_effort"] = self.thinking_level
+
             processed_requests.append(
                 OpenAIRequest(
                     custom_id=f"{self.name}-sample-{i}",
-                    body=OpenAIBody(
-                        messages=messages,
-                        max_tokens=raw_request.max_tokens,
-                        model=self.model,
-                        response_format=self.response_format,
-                    ),
+                    body=OpenAIBody.model_validate(body_data),
                     url=self.endpoint,
                 )
             )
@@ -70,18 +74,8 @@ class OpenAIExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal[
-        "created",
-        "validating",
-        "failed",
-        "in_progress",
-        "finalizing",
-        "completed",
-        "expired",
-        "cancelling",
-        "cancelled",
-    ]:
-        if self.batch_id is None:
+    ) -> str:
+        if self.batch is None:
             return "created"
         return self.batch.status
 
@@ -132,6 +126,8 @@ class OpenAIExperiment(Experiment):
     def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
         log.debug("Getting provider results", batch=batch)
-        if batch is None or not batch.output_file_id:
+        if batch is None:
+            return []
+        if not batch.output_file_id:
             return self._download_results(f"{self.BASE_URL}/files/{batch.error_file_id}/content")
         return self._download_results(f"{self.BASE_URL}/files/{batch.output_file_id}/content")

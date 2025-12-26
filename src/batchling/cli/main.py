@@ -184,6 +184,22 @@ def create_experiment(
     response_format_path: Annotated[
         Path | None, typer.Option(help="optional, the path to the response format file")
     ] = None,
+    thinking_budget: Annotated[
+        int | None,
+        typer.Option(
+            "-b",
+            "--thinking-budget",
+            help="optional, thinking budget in tokens (for Anthropic and Gemini 2.5 series). For Anthropic, this sets budget_tokens. For Gemini, this sets thinking_budget.",
+        ),
+    ] = None,
+    thinking_level: Annotated[
+        str | None,
+        typer.Option(
+            "-l",
+            "--thinking-level",
+            help="optional, thinking level (for OpenAI and Gemini 3.0+). For OpenAI: 'low', 'medium', or 'high'. For Gemini: 'low' or 'high'.",
+        ),
+    ] = None,
     start: Annotated[
         bool,
         typer.Option(
@@ -201,6 +217,7 @@ def create_experiment(
         else None
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
+
     experiment = ExperimentManager().create_experiment(
         experiment_name=name,
         model=model,
@@ -211,6 +228,8 @@ def create_experiment(
         api_key=api_key,
         raw_requests=raw_requests,
         response_format=response_format,
+        thinking_level=thinking_level,
+        thinking_budget=thinking_budget,
         processed_file_path=processed_file_path.as_posix(),
         results_file_path=results_file_path.as_posix(),
     )
@@ -240,12 +259,12 @@ def start_experiment(
 ):
     """Start an experiment by submitting the batch to the provider"""
     em = ExperimentManager()
-    experiment = em.retrieve(experiment_name=name)
-    if experiment is None:
-        typer.echo(f"Experiment with name: {name} not found")
+    try:
+        em.start_experiment(experiment_name=name)
+        print(f"Experiment with name: [green]{name}[/green] is started.")
+    except ValueError as e:
+        typer.echo(f"Error starting experiment: {e}")
         raise typer.Exit(1)
-    em.start_experiment(experiment_name=name)
-    print(f"Experiment with name: [green]{name}[/green] is started.")
 
 
 @app.command(name="results")

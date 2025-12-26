@@ -22,6 +22,8 @@ def create_experiment(
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
+    thinking_level: str | None = None,
+    thinking_budget: int | None = None,
     raw_requests: list["RawRequest"] | None = None,
     processed_requests: list["ProcessedRequest"] | None = None,
     response_format: dict | None = None,
@@ -56,6 +58,10 @@ def create_experiment(
         The provider of the experiment
     endpoint : str
         The generation endpoint of the experiment, e.g. /v1/chat/completions, /v1/embeddings..
+    thinking_level : str | None
+        The thinking level of the experiment
+    thinking_budget : int | None
+        The thinking budget of the experiment
     raw_requests : list[RawRequest] | None
         The raw requests of the experiment
     processed_requests : list[ProcessedRequest] | None
@@ -92,6 +98,8 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
+        thinking_level=thinking_level,
+        thinking_budget=thinking_budget,
         raw_requests=raw_requests,
         processed_requests=processed_requests,
         response_format=response_format,
@@ -131,7 +139,7 @@ def get_experiments(
     db: "Session",
     limit: int | None = None,
     offset: int | None = None,
-    order_by: str | None = "updated_at",
+    order_by: str = "updated_at",
     ascending: bool = False,
     filter_by: str | None = "id",
     filter_value: str | None = None,
@@ -148,7 +156,7 @@ def get_experiments(
         The limit of the experiments
     offset : int
         The offset of the experiments
-    order_by : str | None
+    order_by : str
         The field to order by
     ascending : bool
         Whether to order in ascending order (default is descending)
@@ -167,13 +175,13 @@ def get_experiments(
     """
     from sqlalchemy import asc, desc, select
 
-    direction = asc if ascending else desc
+    direction = asc(order_by) if ascending else desc(order_by)
     stmt = select(Experiment)
     if filter_by is not None and filter_value is not None:
         stmt = stmt.where(getattr(Experiment, filter_by) == filter_value)
     if starts_with_field is not None and starts_with is not None:
         stmt = stmt.where(getattr(Experiment, starts_with_field).istartswith(starts_with))
-    stmt = stmt.order_by(direction(order_by))
+    stmt = stmt.order_by(direction)
     if limit is not None:
         stmt = stmt.limit(limit)
     if offset is not None:

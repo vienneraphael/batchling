@@ -14,6 +14,7 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
+    model_validator,
 )
 
 from batchling.models import BatchResult, ProviderBatch, ProviderFile
@@ -52,13 +53,20 @@ class Experiment(BaseModel, ABC):
     api_key: str = Field(
         description="the API key to use for the provider if not using standard naming / env variables",
     )
-    raw_requests: list[RawRequest] | None = Field(
+    raw_requests: list[RawRequest] = Field(
         default_factory=list,
         description="optional, the raw requests used to build the batch. Required if processed file path does not exist",
         repr=False,
     )
     response_format: dict | None = Field(
         default_factory=dict, description="optional, the response format to use"
+    )
+    thinking_level: str | None = Field(
+        default=None, description="optional, thinking level (for OpenAI and Gemini 3.0+)"
+    )
+    thinking_budget: int | None = Field(
+        default=None,
+        description="optional, thinking budget in tokens (for Anthropic and Gemini 2.5 series)",
     )
     processed_file_path: str = Field(
         description="the processed batch input file path, sent to the provider. Will be used if path exists, else it will be created by batchling."
@@ -80,6 +88,22 @@ class Experiment(BaseModel, ABC):
                 raise ValueError("processed_file_path must be a .jsonl file")
         return value
 
+    @field_validator("raw_requests", mode="before")
+    @classmethod
+    def validate_raw_requests(cls, value: list[dict] | None) -> list[RawRequest] | None:
+        if value is None:
+            return None
+        return raw_request_list_adapter.validate_python(value)
+
+    @model_validator(mode="after")
+    def validate_thinking_params(self) -> "Experiment":
+        """Validate that both thinking_level and thinking_budget are not set."""
+        if self.thinking_level is not None and self.thinking_budget is not None:
+            raise ValueError(
+                "Cannot set both thinking_level and thinking_budget. Use only one based on your provider's requirements."
+            )
+        return self
+
     @abstractmethod
     def _headers(self) -> dict[str, str]:
         pass
@@ -97,6 +121,17 @@ class Experiment(BaseModel, ABC):
         if additional_headers:
             headers.update(additional_headers)
         response = httpx.post(url, headers=headers, json=json, timeout=30.0, **kwargs)
+        if response.is_error:
+            try:
+                error_body = response.json()
+            except Exception:
+                error_body = response.text
+            log.error(
+                "HTTP POST request failed",
+                url=url,
+                status_code=response.status_code,
+                error_body=error_body,
+            )
         response.raise_for_status()
         return response
 
@@ -278,6 +313,8 @@ class Experiment(BaseModel, ABC):
                 "endpoint",
                 "model",
                 "processed_file_path",
+                "thinking_level",
+                "thinking_budget",
             ]
         ) & set(kwargs):
             self.write_processed_batch_file()

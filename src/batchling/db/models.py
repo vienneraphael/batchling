@@ -1,7 +1,7 @@
 import typing as t
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, String
+from sqlalchemy import JSON, DateTime, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -23,6 +23,8 @@ class Experiment(Base):
         mapped_column(String, nullable=False)
     )
     endpoint: Mapped[str | None] = mapped_column(String, nullable=True)
+    thinking_level: Mapped[str | None] = mapped_column(String, nullable=True)
+    thinking_budget: Mapped[int | None] = mapped_column(Integer, nullable=True)
     api_key: Mapped[str] = mapped_column(String, nullable=False)
     raw_requests: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     processed_requests: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
