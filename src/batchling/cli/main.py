@@ -189,7 +189,7 @@ def create_experiment(
         typer.Option(
             "-b",
             "--thinking-budget",
-            help="optional, thinking budget in tokens (for Anthropic and Gemini 2.5 series). For Anthropic, this sets budget_tokens. For Gemini, this sets thinking_budget."
+            help="optional, thinking budget in tokens (for Anthropic and Gemini 2.5 series). For Anthropic, this sets budget_tokens. For Gemini, this sets thinking_budget.",
         ),
     ] = None,
     thinking_level: Annotated[
@@ -197,7 +197,7 @@ def create_experiment(
         typer.Option(
             "-l",
             "--thinking-level",
-            help="optional, thinking level (for OpenAI and Gemini 3.0+). For OpenAI: 'low', 'medium', or 'high'. For Gemini: 'low' or 'high'."
+            help="optional, thinking level (for OpenAI and Gemini 3.0+). For OpenAI: 'low', 'medium', or 'high'. For Gemini: 'low' or 'high'.",
         ),
     ] = None,
     start: Annotated[
@@ -217,7 +217,7 @@ def create_experiment(
         else None
     )
     response_format = json.load(response_format_path.open()) if response_format_path else None
-    
+
     experiment = ExperimentManager().create_experiment(
         experiment_name=name,
         model=model,

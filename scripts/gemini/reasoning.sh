@@ -27,4 +27,3 @@ batchling create\
  --results-file-path output/result_capitals_gemini_reasoning_budget.jsonl\
  --thinking-budget 1000\
  --start
-

@@ -12,4 +12,3 @@ batchling create\
  --results-file-path output/result_capitals_anthropic_reasoning.jsonl\
  --thinking-budget 1024\
  --start
-

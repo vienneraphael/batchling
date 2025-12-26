@@ -12,4 +12,3 @@ batchling create\
  --results-file-path output/result_capitals_openai_reasoning.jsonl\
  --thinking-level "medium"\
  --start
-
