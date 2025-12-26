@@ -23,14 +23,14 @@ class AnthropicExperiment(Experiment):
     def _headers(self) -> dict[str, str]:
         return {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
 
-    @field_validator("raw_requests", mode="before")
+    @field_validator("raw_requests", mode="after")
     @classmethod
-    def check_raw_requests_not_none(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
+    def validate_max_tokens(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
         if value is None:
             return None
         if any(request.max_tokens is None for request in value):
             raise ValueError(
-                "max_tokens is required to be set for each request for Anthropic experiments and cannot be None"
+                "max_tokens is required to be set for each request for Anthropic experiments"
             )
         return value
 
@@ -61,7 +61,7 @@ class AnthropicExperiment(Experiment):
                             }
                             parts.append(d)
                         else:
-                            parts.append({"type": "text", "text": c.get("text", "")})
+                            parts.append({"type": "text", "text": c.get("text")})
                     cleaned_messages.append(RawMessage(role=message.role, content=parts))
             thinking_config = None
             if self.thinking_budget is not None:
@@ -116,7 +116,7 @@ class AnthropicExperiment(Experiment):
 
     @property
     def batch(self) -> ProviderBatch | None:
-        if self.batch is None:
+        if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
 
