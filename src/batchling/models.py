@@ -32,7 +32,12 @@ class BatchResult(BaseModel):
                 original=data,
             )
         elif provider == "anthropic":
-            answer = data.get("result", {}).get("message", {}).get("content", [{}])[0].get("text")
+            content = data.get("result", {}).get("message", {}).get("content", [{}])
+            answer = None
+            for c in content:
+                if c.get("type") == "text":
+                    answer = c.get("text")
+                    break
             if answer is None:
                 answer = json.dumps(
                     data.get("result", {}).get("message", {}).get("content", [{}])[0].get("input")
