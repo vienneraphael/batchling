@@ -8,7 +8,7 @@ from batchling.db.crud import create_experiment, delete_experiment, update_exper
 from batchling.db.session import get_db, init_db
 from batchling.experiment import Experiment
 from batchling.models import BatchResult
-from batchling.request import RawRequest, raw_request_list_adapter
+from batchling.request import RawRequest
 from batchling.utils.api import get_default_api_key_from_provider
 from batchling.utils.classes import get_experiment_cls_from_provider
 
@@ -20,7 +20,7 @@ class ExperimentManager(BaseModel):
 
     @staticmethod
     def list_experiments(
-        order_by: str | None = "updated_at",
+        order_by: str = "updated_at",
         ascending: bool = False,
         limit: int | None = None,
         offset: int | None = None,
@@ -43,10 +43,6 @@ class ExperimentManager(BaseModel):
                 starts_with_field=starts_with_field,
                 starts_with=starts_with,
             )
-        for experiment in experiments:
-            experiment.raw_requests = raw_request_list_adapter.validate_python(
-                experiment.raw_requests
-            )
         return [
             get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
             for experiment in experiments
@@ -60,7 +56,6 @@ class ExperimentManager(BaseModel):
             experiment = get_experiment(db=db, name=experiment_name)
         if experiment is None:
             return None
-        experiment.raw_requests = raw_request_list_adapter.validate_python(experiment.raw_requests)
         return get_experiment_cls_from_provider(experiment.provider).model_validate(experiment)
 
     @staticmethod

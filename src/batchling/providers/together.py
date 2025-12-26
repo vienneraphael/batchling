@@ -1,4 +1,3 @@
-import typing as t
 from functools import cached_property
 
 import structlog
@@ -69,16 +68,8 @@ class TogetherExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal[
-        "created",
-        "VALIDATING",
-        "IN_PROGRESS",
-        "COMPLETED",
-        "FAILED",
-        "EXPIRED",
-        "CANCELLED",
-    ]:
-        if self.batch_id is None:
+    ) -> str:
+        if self.batch is None:
             return "created"
         return self.batch.status
 
@@ -129,6 +120,8 @@ class TogetherExperiment(Experiment):
     def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
         log.debug("Getting provider results", batch=batch)
-        if batch is None or not batch.output_file_id:
+        if batch is None:
+            return []
+        if not batch.output_file_id:
             return self._download_results(f"{self.BASE_URL}/files/{batch.error_file_id}/content")
         return self._download_results(f"{self.BASE_URL}/files/{batch.output_file_id}/content")

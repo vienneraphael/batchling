@@ -1,4 +1,3 @@
-import typing as t
 from functools import cached_property
 
 import structlog
@@ -32,10 +31,12 @@ class MistralExperiment(Experiment):
                     messages.append(ProcessedMessage(role=message.role, content=message.content))
                 else:
                     for c in message.content:
-                        if c.get("type") == "image_url":
-                            messages.append(ProcessedMessage(role=message.role, content=c.get("image_url").get("url")))
-                        else:
-                            messages.append(ProcessedMessage(role=message.role, content=c.get("text")))
+                        content: str = (
+                            c.get("image_url", {}).get("url", "")
+                            if c.get("type") == "image_url"
+                            else c.get("text", "")
+                        )
+                        messages.append(ProcessedMessage(role=message.role, content=content))
             processed_requests.append(
                 MistralRequest(
                     custom_id=f"{self.name}-sample-{i}",
@@ -71,17 +72,8 @@ class MistralExperiment(Experiment):
     @property
     def status(
         self,
-    ) -> t.Literal[
-        "created",
-        "QUEUED",
-        "RUNNING",
-        "SUCCESS",
-        "FAILED",
-        "TIMEOUT_EXCEEDED",
-        "CANCELLATION_REQUESTED",
-        "CANCELLED",
-    ]:
-        if self.batch_id is None:
+    ) -> str:
+        if self.batch is None:
             return "created"
         return self.batch.status
 
@@ -133,6 +125,8 @@ class MistralExperiment(Experiment):
     def get_provider_results(self) -> list[BatchResult]:
         batch = self.batch
         log.debug("Getting provider results", batch=batch)
-        if batch is None or not batch.output_file_id:
+        if batch is None:
+            return []
+        if not batch.output_file_id:
             return self._download_results(f"{self.BASE_URL}/files/{batch.error_file_id}/content")
         return self._download_results(f"{self.BASE_URL}/files/{batch.output_file_id}/content")

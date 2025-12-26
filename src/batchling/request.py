@@ -48,16 +48,6 @@ class OpenAIBody(ProcessedBody):
     response_format: dict | None = None
     reasoning: dict | None = None
 
-    @model_validator(mode="after")
-    def validate_reasoning(self) -> "OpenAIBody":
-        if self.reasoning is not None:
-            if "thinking_level" in self.reasoning:
-                level = self.reasoning["thinking_level"]
-                self.reasoning = {"effort": level}
-            elif "thinking_budget" in self.reasoning:
-                raise ValueError("thinking_budget is not supported for OpenAI")
-        return self
-
 
 class OpenAIRequest(ProcessedRequest):
     method: t.Literal["POST"] = Field(default="POST", init=False)
@@ -87,7 +77,7 @@ class TogetherRequest(ProcessedRequest):
 
 class GeminiBlob(BaseModel):
     mime_type: str
-    data: bytes
+    data: str
 
     @classmethod
     def from_bytes_str(cls, bytes_str: str) -> "GeminiBlob":
@@ -160,10 +150,7 @@ class AnthropicBody(BaseModel):
         if self.thinking is not None:
             if "thinking_budget" in self.thinking:
                 budget = self.thinking["thinking_budget"]
-                self.thinking = {
-                    "type": "enabled",
-                    "budget_tokens": budget
-                }
+                self.thinking = {"type": "enabled", "budget_tokens": budget}
             elif "thinking_level" in self.thinking:
                 raise ValueError("thinking_level is not supported for Anthropic")
         return self

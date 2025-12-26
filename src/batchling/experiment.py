@@ -53,7 +53,7 @@ class Experiment(BaseModel, ABC):
     api_key: str = Field(
         description="the API key to use for the provider if not using standard naming / env variables",
     )
-    raw_requests: list[RawRequest] | None = Field(
+    raw_requests: list[RawRequest] = Field(
         default_factory=list,
         description="optional, the raw requests used to build the batch. Required if processed file path does not exist",
         repr=False,
@@ -65,18 +65,12 @@ class Experiment(BaseModel, ABC):
         default=None, description="optional, thinking level (for OpenAI and Gemini 3.0+)"
     )
     thinking_budget: int | None = Field(
-        default=None, description="optional, thinking budget in tokens (for Anthropic and Gemini 2.5 series)"
+        default=None,
+        description="optional, thinking budget in tokens (for Anthropic and Gemini 2.5 series)",
     )
     processed_file_path: str = Field(
         description="the processed batch input file path, sent to the provider. Will be used if path exists, else it will be created by batchling."
     )
-
-    @model_validator(mode="after")
-    def validate_thinking_params(self) -> "Experiment":
-        """Validate that both thinking_level and thinking_budget are not set."""
-        if self.thinking_level is not None and self.thinking_budget is not None:
-            raise ValueError("Cannot set both thinking_level and thinking_budget. Use only one based on your provider's requirements.")
-        return self
     results_file_path: str = Field(
         default="results.jsonl",
         description="the path to the output file where batch results will be saved",
@@ -93,6 +87,22 @@ class Experiment(BaseModel, ABC):
             if not value.endswith(".jsonl"):
                 raise ValueError("processed_file_path must be a .jsonl file")
         return value
+
+    @field_validator("raw_requests", mode="before")
+    @classmethod
+    def validate_raw_requests(cls, value: list[dict] | None) -> list[RawRequest] | None:
+        if value is None:
+            return None
+        return raw_request_list_adapter.validate_python(value)
+
+    @model_validator(mode="after")
+    def validate_thinking_params(self) -> "Experiment":
+        """Validate that both thinking_level and thinking_budget are not set."""
+        if self.thinking_level is not None and self.thinking_budget is not None:
+            raise ValueError(
+                "Cannot set both thinking_level and thinking_budget. Use only one based on your provider's requirements."
+            )
+        return self
 
     @abstractmethod
     def _headers(self) -> dict[str, str]:
