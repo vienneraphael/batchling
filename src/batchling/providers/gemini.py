@@ -103,6 +103,7 @@ class GeminiExperiment(Experiment):
 
     def retrieve_provider_batch(self) -> ProviderBatch | None:
         data = self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
+        log.debug("Retrieved provider batch", data=data)
         return ProviderBatch.model_validate(data)
 
     @property

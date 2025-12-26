@@ -46,7 +46,7 @@ class MistralRequest(ProcessedRequest):
 class OpenAIBody(ProcessedBody):
     model: str
     response_format: dict | None = None
-    reasoning: dict | None = None
+    reasoning_effort: str | None = None
 
 
 class OpenAIRequest(ProcessedRequest):

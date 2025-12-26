@@ -40,7 +40,7 @@ class OpenAIExperiment(Experiment):
                 "response_format": self.response_format,
             }
             if self.thinking_level is not None:
-                body_data["reasoning"] = {"effort": self.thinking_level}
+                body_data["reasoning_effort"] = self.thinking_level
 
             processed_requests.append(
                 OpenAIRequest(
