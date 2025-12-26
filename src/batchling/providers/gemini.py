@@ -113,7 +113,7 @@ class GeminiExperiment(Experiment):
 
     @property
     def batch(self) -> ProviderBatch | None:
-        if self.batch is None:
+        if self.batch_id is None:
             return None
         return self.retrieve_provider_batch()
 
