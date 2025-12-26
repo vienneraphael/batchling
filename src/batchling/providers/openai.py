@@ -22,7 +22,7 @@ class OpenAIExperiment(Experiment):
     @cached_property
     def processed_requests(self) -> list[OpenAIRequest]:
         processed_requests: list[OpenAIRequest] = []
-        for i, raw_request in enumerate(self.raw_requests):
+        for raw_request in self.raw_requests:
             messages: list[ProcessedMessage] = []
             if raw_request.system_prompt is not None:
                 messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
@@ -44,7 +44,7 @@ class OpenAIExperiment(Experiment):
 
             processed_requests.append(
                 OpenAIRequest(
-                    custom_id=f"{self.name}-sample-{i}",
+                    custom_id=raw_request.id,
                     body=OpenAIBody.model_validate(body_data),
                     url=self.endpoint,
                 )

@@ -22,7 +22,7 @@ class GroqExperiment(Experiment):
     @cached_property
     def processed_requests(self) -> list[GroqRequest]:
         processed_requests: list[GroqRequest] = []
-        for i, raw_request in enumerate(self.raw_requests):
+        for raw_request in self.raw_requests:
             messages: list[ProcessedMessage] = []
             if raw_request.system_prompt is not None:
                 messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
@@ -34,7 +34,7 @@ class GroqExperiment(Experiment):
             )
             processed_requests.append(
                 GroqRequest(
-                    custom_id=f"{self.name}-sample-{i}",
+                    custom_id=raw_request.id,
                     body=GroqBody(
                         messages=messages,
                         max_tokens=raw_request.max_tokens,

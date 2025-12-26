@@ -38,7 +38,7 @@ class AnthropicExperiment(Experiment):
     @cached_property
     def processed_requests(self) -> list[AnthropicRequest]:
         processed_requests: list[AnthropicRequest] = []
-        for i, raw_request in enumerate(self.raw_requests):
+        for raw_request in self.raw_requests:
             cleaned_messages = []
             for message in raw_request.messages:
                 if isinstance(message.content, str):
@@ -94,7 +94,7 @@ class AnthropicExperiment(Experiment):
 
             processed_requests.append(
                 AnthropicRequest(
-                    custom_id=f"{self.name}-sample-{i}",
+                    custom_id=raw_request.id,
                     params=AnthropicBody.model_validate(params_data),
                 )
             )

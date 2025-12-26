@@ -40,7 +40,7 @@ class GeminiExperiment(Experiment):
     @cached_property
     def processed_requests(self) -> list[GeminiRequest]:
         processed_requests: list[GeminiRequest] = []
-        for i, raw_request in enumerate(self.raw_requests):
+        for raw_request in self.raw_requests:
             messages = [
                 RawMessage(role=message.role, content=message.content)
                 for message in raw_request.messages
@@ -91,7 +91,7 @@ class GeminiExperiment(Experiment):
             )
             processed_requests.append(
                 GeminiRequest(
-                    key=f"{self.name}-sample-{i}",
+                    key=raw_request.id,
                     request=request,
                 )
             )
