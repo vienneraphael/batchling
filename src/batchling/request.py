@@ -1,4 +1,5 @@
 import typing as t
+import uuid
 
 from pydantic import BaseModel, Field, TypeAdapter, model_validator
 
@@ -9,6 +10,7 @@ class RawMessage(BaseModel):
 
 
 class RawRequest(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     system_prompt: str = "You are a helpful assistant."
     messages: list[RawMessage]
     max_tokens: int | None = None
