@@ -2,7 +2,7 @@ import typing as t
 from functools import cached_property
 
 import structlog
-from pydantic import computed_field
+from pydantic import computed_field, field_validator
 
 from batchling.experiment import Experiment
 from batchling.models import BatchResult, ProviderBatch, ProviderFile
@@ -29,6 +29,13 @@ class GeminiExperiment(Experiment):
         return {
             "x-goog-api-key": self.api_key,
         }
+    
+    @field_validator("thinking_level", mode="after")
+    @classmethod
+    def validate_thinking_level(cls, value: str | None) -> str:
+        if value is not None:
+            return value.upper()
+        return value
 
     @computed_field
     @cached_property
@@ -57,6 +64,23 @@ class GeminiExperiment(Experiment):
                         else:
                             parts.append(GeminiPart(text=c.get("text")))
                 contents.append(GeminiMessage(role=message.role, parts=parts))
+            config_data = {
+                "response_mime_type": "application/json" if self.response_format else "text/plain",
+            }
+            if self.response_format:
+                config_data["response_json_schema"] = self.response_format["json_schema"]["schema"]
+            thinking_config = None
+            if self.thinking_level is not None or self.thinking_budget is not None:
+                thinking_config = {}
+                if self.thinking_budget is not None:
+                    thinking_config["thinking_budget"] = self.thinking_budget
+                if self.thinking_level is not None:
+                    thinking_config["thinking_level"] = self.thinking_level
+            if thinking_config:
+                config_data["thinking_config"] = thinking_config
+            log.debug("Generation config", config_data=config_data)
+            generation_config = GeminiConfig(**config_data)
+            
             request = GeminiBody(
                 system_instruction=GeminiSystemInstruction(
                     parts=[GeminiPart(text=raw_request.system_prompt)]
@@ -64,14 +88,7 @@ class GeminiExperiment(Experiment):
                 if raw_request.system_prompt
                 else None,
                 contents=contents,
-                generation_config=GeminiConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=self.response_format["json_schema"]["schema"],
-                )
-                if self.response_format
-                else GeminiConfig(
-                    response_mime_type="text/plain",
-                ),
+                generation_config=generation_config,
             )
             processed_requests.append(
                 GeminiRequest(

@@ -64,27 +64,37 @@ class AnthropicExperiment(Experiment):
                         else:
                             parts.append({"type": "text", "text": c.get("text")})
                     cleaned_messages.append(RawMessage(role=message.role, content=parts))
+            thinking_config = None
+            if self.thinking_budget is not None:
+                thinking_config = {"type": "enabled", "budget_tokens": self.thinking_budget}
+            elif self.thinking_level is not None:
+                raise ValueError("thinking_level is not supported for Anthropic, use thinking_budget instead")
+            
+            params_data = {
+                "model": self.model,
+                "max_tokens": raw_request.max_tokens,
+                "messages": cleaned_messages,
+                "tools": [
+                    {
+                        "name": "structured_output",
+                        "description": "Output a structured response",
+                        "input_schema": self.response_format["json_schema"]["schema"],
+                    }
+                ]
+                if self.response_format
+                else None,
+                "tool_choice": {"type": "tool", "name": "structured_output"}
+                if self.response_format
+                else None,
+                "system": [AnthropicPart(type="text", text=raw_request.system_prompt)],
+            }
+            if thinking_config:
+                params_data["thinking"] = thinking_config
+            
             processed_requests.append(
                 AnthropicRequest(
                     custom_id=f"{self.name}-sample-{i}",
-                    params=AnthropicBody(
-                        model=self.model,
-                        max_tokens=raw_request.max_tokens,
-                        messages=cleaned_messages,
-                        tools=[
-                            {
-                                "name": "structured_output",
-                                "description": "Output a structured response",
-                                "input_schema": self.response_format["json_schema"]["schema"],
-                            }
-                        ]
-                        if self.response_format
-                        else None,
-                        tool_choice={"type": "tool", "name": "structured_output"}
-                        if self.response_format
-                        else None,
-                        system=[AnthropicPart(type="text", text=raw_request.system_prompt)],
-                    ),
+                    params=AnthropicBody(**params_data),
                 )
             )
         return processed_requests

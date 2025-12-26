@@ -32,7 +32,10 @@ class MistralExperiment(Experiment):
                     messages.append(ProcessedMessage(role=message.role, content=message.content))
                 else:
                     for c in message.content:
-                        messages.append(ProcessedMessage(role=message.role, content=c["text"]))
+                        if c.get("type") == "image_url":
+                            messages.append(ProcessedMessage(role=message.role, content=c.get("image_url").get("url")))
+                        else:
+                            messages.append(ProcessedMessage(role=message.role, content=c.get("text")))
             processed_requests.append(
                 MistralRequest(
                     custom_id=f"{self.name}-sample-{i}",

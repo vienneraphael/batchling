@@ -72,6 +72,8 @@ class ExperimentManager(BaseModel):
                 db=db,
                 name=experiment.name,
                 model=experiment.model,
+                thinking_level=experiment.thinking_level,
+                thinking_budget=experiment.thinking_budget,
                 api_key=experiment.api_key,
                 uid=experiment.uid,
                 title=experiment.title,
@@ -98,6 +100,8 @@ class ExperimentManager(BaseModel):
         endpoint: str = "/v1/chat/completions",
         raw_requests: list[RawRequest] | None = None,
         response_format: BaseModel | dict | None = None,
+        thinking_level: str | None = None,
+        thinking_budget: int | None = None,
         results_file_path: str = "results.jsonl",
     ) -> Experiment:
         now = datetime.now()
@@ -131,6 +135,8 @@ class ExperimentManager(BaseModel):
                 "api_key": api_key,
                 "raw_requests": raw_requests,
                 "response_format": response_format,
+                "thinking_level": thinking_level,
+                "thinking_budget": thinking_budget,
                 "processed_file_path": processed_file_path,
                 "results_file_path": results_file_path,
                 "created_at": now,

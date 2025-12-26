@@ -19,8 +19,12 @@ class City(BaseModel):
 @pytest.fixture(
     params=["tests/test_data/raw_file_countries.jsonl", "tests/test_data/raw_file_multimodal.jsonl"]
 )
-def raw_requests_file_path(request):
-    return request.param
+def raw_requests_file_path(request, provider: str):
+    file_path = request.param
+    if provider == "anthropic":
+        # Replace .jsonl with _anthropic.jsonl
+        file_path = file_path.replace(".jsonl", "_anthropic.jsonl")
+    return file_path
 
 
 @pytest.fixture(params=["openai", "mistral", "together", "groq", "gemini", "anthropic"])

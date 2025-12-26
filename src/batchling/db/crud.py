@@ -22,6 +22,8 @@ def create_experiment(
     description: str | None = None,
     provider: str = "openai",
     endpoint: str = "/v1/chat/completions",
+    thinking_level: str | None = None,
+    thinking_budget: int | None = None,
     raw_requests: list["RawRequest"] | None = None,
     processed_requests: list["ProcessedRequest"] | None = None,
     response_format: dict | None = None,
@@ -56,6 +58,10 @@ def create_experiment(
         The provider of the experiment
     endpoint : str
         The generation endpoint of the experiment, e.g. /v1/chat/completions, /v1/embeddings..
+    thinking_level : str | None
+        The thinking level of the experiment
+    thinking_budget : int | None
+        The thinking budget of the experiment
     raw_requests : list[RawRequest] | None
         The raw requests of the experiment
     processed_requests : list[ProcessedRequest] | None
@@ -92,6 +98,8 @@ def create_experiment(
         provider=provider,
         endpoint=endpoint,
         api_key=api_key,
+        thinking_level=thinking_level,
+        thinking_budget=thinking_budget,
         raw_requests=raw_requests,
         processed_requests=processed_requests,
         response_format=response_format,

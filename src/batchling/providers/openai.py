@@ -33,15 +33,20 @@ class OpenAIExperiment(Experiment):
                     for message in raw_request.messages
                 ]
             )
+            
+            body_data = {
+                "messages": messages,
+                "max_tokens": raw_request.max_tokens,
+                "model": self.model,
+                "response_format": self.response_format,
+            }
+            if self.thinking_level is not None:
+                body_data["reasoning_effort"] = self.thinking_level
+            
             processed_requests.append(
                 OpenAIRequest(
                     custom_id=f"{self.name}-sample-{i}",
-                    body=OpenAIBody(
-                        messages=messages,
-                        max_tokens=raw_request.max_tokens,
-                        model=self.model,
-                        response_format=self.response_format,
-                    ),
+                    body=OpenAIBody(**body_data),
                     url=self.endpoint,
                 )
             )

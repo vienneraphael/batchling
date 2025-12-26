@@ -46,6 +46,17 @@ class MistralRequest(ProcessedRequest):
 class OpenAIBody(ProcessedBody):
     model: str
     response_format: dict | None = None
+    reasoning: dict | None = None
+
+    @model_validator(mode="after")
+    def validate_reasoning(self) -> "OpenAIBody":
+        if self.reasoning is not None:
+            if "thinking_level" in self.reasoning:
+                level = self.reasoning["thinking_level"]
+                self.reasoning = {"effort": level}
+            elif "thinking_budget" in self.reasoning:
+                raise ValueError("thinking_budget is not supported for OpenAI")
+        return self
 
 
 class OpenAIRequest(ProcessedRequest):
@@ -107,6 +118,7 @@ class GeminiPart(BaseModel):
 class GeminiConfig(BaseModel):
     response_mime_type: t.Literal["application/json", "text/plain"]
     response_json_schema: dict | None = None
+    thinking_config: dict | None = None
 
 
 class GeminiMessage(BaseModel):
@@ -141,6 +153,20 @@ class AnthropicBody(BaseModel):
     tools: list[dict] | None = None
     tool_choice: dict | None = None
     system: list[AnthropicPart] | None = None
+    thinking: dict | None = None
+
+    @model_validator(mode="after")
+    def validate_thinking(self) -> "AnthropicBody":
+        if self.thinking is not None:
+            if "thinking_budget" in self.thinking:
+                budget = self.thinking["thinking_budget"]
+                self.thinking = {
+                    "type": "enabled",
+                    "budget_tokens": budget
+                }
+            elif "thinking_level" in self.thinking:
+                raise ValueError("thinking_level is not supported for Anthropic")
+        return self
 
 
 class AnthropicRequest(BaseModel):
