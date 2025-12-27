@@ -21,7 +21,11 @@ class AnthropicExperiment(Experiment):
     BASE_URL: str = "https://api.anthropic.com/v1/messages/batches"
 
     def _headers(self) -> dict[str, str]:
-        return {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
+        return {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "structured-outputs-2025-11-13",
+        }
 
     @field_validator("raw_requests", mode="after")
     @classmethod
@@ -77,9 +81,7 @@ class AnthropicExperiment(Experiment):
                 "messages": cleaned_messages,
                 "output_format": {
                     "type": "json_schema",
-                    "schema": self.response_format["json_schema"]["schema"]
-                    if self.response_format
-                    else None,
+                    "schema": self.response_format["json_schema"]["schema"],
                 }
                 if self.response_format
                 else None,

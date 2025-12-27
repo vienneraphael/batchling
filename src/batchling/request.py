@@ -142,8 +142,7 @@ class AnthropicBody(BaseModel):
     model: str
     max_tokens: int
     messages: list[RawMessage]
-    tools: list[dict] | None = None
-    tool_choice: dict | None = None
+    output_format: dict | None = None
     system: list[AnthropicPart] | None = None
     thinking: dict | None = None
 
