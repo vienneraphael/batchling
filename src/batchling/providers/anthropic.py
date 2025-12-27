@@ -75,16 +75,12 @@ class AnthropicExperiment(Experiment):
                 "model": self.model,
                 "max_tokens": raw_request.max_tokens,
                 "messages": cleaned_messages,
-                "tools": [
-                    {
-                        "name": "structured_output",
-                        "description": "Output a structured response",
-                        "input_schema": self.response_format["json_schema"]["schema"],
-                    }
-                ]
-                if self.response_format
-                else None,
-                "tool_choice": {"type": "tool", "name": "structured_output"}
+                "output_format": {
+                    "type": "json_schema",
+                    "schema": self.response_format["json_schema"]["schema"]
+                    if self.response_format
+                    else None,
+                }
                 if self.response_format
                 else None,
                 "system": [AnthropicPart(type="text", text=raw_request.system_prompt)],
