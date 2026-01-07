@@ -28,7 +28,13 @@ class MistralExperiment(Experiment):
                 messages.append(ProcessedMessage(role="system", content=raw_request.system_prompt))
             for message in raw_request.messages:
                 if isinstance(message.content, str):
-                    messages.append(ProcessedMessage(role=message.role, content=message.content))
+                    if messages:
+                        if messages[-1].role == message.role:
+                            messages[-1].content += f"\n{message.content}"
+                        else:
+                            messages.append(
+                                ProcessedMessage(role=message.role, content=message.content)
+                            )
                 else:
                     for c in message.content:
                         content: str = (
