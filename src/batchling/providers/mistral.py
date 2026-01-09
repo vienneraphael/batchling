@@ -48,12 +48,23 @@ class MistralExperiment(Experiment):
                                 }
                             )
                         else:
-                            parts.append(
-                                {
-                                    "type": "text",
-                                    "text": c.get("text", ""),
-                                }
-                            )
+                            if parts:
+                                if parts[-1].get("type") == "text":
+                                    parts[-1]["text"] += c.get("text", "")
+                                else:
+                                    parts.append(
+                                        {
+                                            "type": "text",
+                                            "text": c.get("text", ""),
+                                        }
+                                    )
+                            else:
+                                parts.append(
+                                    {
+                                        "type": "text",
+                                        "text": c.get("text", ""),
+                                    }
+                                )
                     messages.append(ProcessedMessage(role=message.role, content=parts))
             processed_requests.append(
                 MistralRequest(
