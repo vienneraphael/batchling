@@ -36,13 +36,25 @@ class MistralExperiment(Experiment):
                                 ProcessedMessage(role=message.role, content=message.content)
                             )
                 else:
+                    parts = []
                     for c in message.content:
-                        content: str = (
-                            c.get("image_url", {}).get("url", "")
-                            if c.get("type") == "image_url"
-                            else c.get("text", "")
-                        )
-                        messages.append(ProcessedMessage(role=message.role, content=content))
+                        if c.get("type") == "image_url":
+                            parts.append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": c.get("image_url", {}).get("url", ""),
+                                    },
+                                }
+                            )
+                        else:
+                            parts.append(
+                                {
+                                    "type": "text",
+                                    "text": c.get("text", ""),
+                                }
+                            )
+                    messages.append(ProcessedMessage(role=message.role, content=parts))
             processed_requests.append(
                 MistralRequest(
                     custom_id=raw_request.id,
