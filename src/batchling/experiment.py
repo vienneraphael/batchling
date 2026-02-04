@@ -42,7 +42,9 @@ class Experiment(BaseModel, ABC):
         default=None, description="optional, description of the experiment"
     )
     model: str = Field(description="model to use")
-    provider: t.Literal["openai", "mistral", "together", "groq", "gemini", "anthropic"] = Field(
+    provider: t.Literal[
+        "openai", "mistral", "together", "groq", "gemini", "anthropic", "doubleword"
+    ] = Field(
         default="openai",
         description="provider to use",
     )
