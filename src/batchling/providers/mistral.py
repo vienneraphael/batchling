@@ -30,7 +30,7 @@ class MistralExperiment(Experiment):
                 if isinstance(message.content, str):
                     if messages:
                         if messages[-1].role == message.role:
-                            messages[-1].content += f"\n{message.content}"
+                            messages[-1].content += f"\n{message.content}"  # type: ignore
                         else:
                             messages.append(
                                 ProcessedMessage(role=message.role, content=message.content)

@@ -86,10 +86,11 @@ As of now, batchling supports the following providers:
 |-------------|--------------------------------------------------------------------------|
 | OpenAI      | <https://platform.openai.com/docs/guides/batch>                          |
 | Anthropic   | <https://docs.anthropic.com/en/docs/build-with-claude/batch-processing>  |
-| Gemini      | <https://ai.google.dev/gemini-api/docs/batch-mod>                        |
+| Gemini      | <https://ai.google.dev/gemini-api/docs/batch-mode>                       |
 | Groq        | <https://console.groq.com/docs/batch>                                    |
 | Mistral     | <https://docs.mistral.ai/capabilities/batch/>                            |
 | Together AI | <https://docs.together.ai/docs/batch-inference>                          |
+| Doubleword  | <https://docs.doubleword.ai/batches/getting-started-with-batched-api>    |
 
 For more information regarding model support and pricing details, refer to the Batch API Docs linked.
 

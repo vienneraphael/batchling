@@ -22,6 +22,11 @@ def get_experiment_cls_from_provider(provider: str | None = None) -> type[Experi
         from batchling.providers.anthropic import AnthropicExperiment
 
         return AnthropicExperiment
+
+    elif provider == "doubleword":
+        from batchling.providers.doubleword import DoublewordExperiment
+
+        return DoublewordExperiment
     else:
         from batchling.providers.openai import OpenAIExperiment
 

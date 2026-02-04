@@ -46,6 +46,7 @@ Make sure to call your API key in your `.env` file with the right name:
 - groq <> `GROQ_API_KEY`
 - gemini <> `GEMINI_API_KEY`
 - anthropic <> `ANTHROPIC_API_KEY`
+- doubleword <> `DOUBLEWORD_API_KEY`
 
 We recommend using a provider from which you already have an API key from to get started quickly.
 

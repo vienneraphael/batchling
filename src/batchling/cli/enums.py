@@ -16,3 +16,4 @@ class Provider(StrEnum):
     groq = "groq"
     gemini = "gemini"
     anthropic = "anthropic"
+    doubleword = "doubleword"
