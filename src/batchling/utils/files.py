@@ -9,6 +9,7 @@ def write_jsonl_file(file_path: str, data: list[str]) -> None:
         file_path (str): The path to the file to write
         data (list[str]): The data to write
     """
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, "w") as f:
         for sample in data:
             f.write(sample + "\n")
