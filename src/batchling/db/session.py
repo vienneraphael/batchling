@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -11,7 +12,9 @@ from batchling.db.models import Base
 APP_NAME = "batchling"
 APP_AUTHOR = "batchling"
 
-db_file_path = Path(user_data_dir(APP_NAME, APP_AUTHOR)) / f"{APP_NAME}.db"
+# Use test.db when running tests (detected via TESTING env var set in conftest.py)
+db_filename = "test.db" if os.getenv("TESTING") else f"{APP_NAME}.db"
+db_file_path = Path(user_data_dir(APP_NAME, APP_AUTHOR)) / db_filename
 db_file_path.parent.mkdir(parents=True, exist_ok=True)
 engine = create_engine(f"sqlite:///{db_file_path}", echo=False, future=True)
 

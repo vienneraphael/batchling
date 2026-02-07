@@ -12,6 +12,7 @@ from tests.mocks.providers import (
 
 @pytest.fixture(autouse=True)
 def test_set_env(monkeypatch):
+    monkeypatch.setenv("TESTING", "1")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
     monkeypatch.setenv("GROQ_API_KEY", "test-key")
