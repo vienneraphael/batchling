@@ -10,8 +10,8 @@ import respx
 
 import importlib
 
-# Import hooks module (async is a reserved keyword, so we use importlib)
-hooks_module = importlib.import_module("batchling.async.hooks")
+# Import hooks module
+hooks_module = importlib.import_module("batchling.batching.hooks")
 allow_requests = hooks_module.allow_requests
 install_hooks = hooks_module.install_hooks
 
@@ -20,7 +20,7 @@ install_hooks = hooks_module.install_hooks
 def restore_hooks():
     """Fixture to restore original httpx.AsyncClient.request after tests."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     
     # Store original state
     original_request = httpx.AsyncClient.request
@@ -40,7 +40,7 @@ def restore_hooks():
 def reset_allow_requests(restore_hooks):
     """Fixture to ensure allow_requests is reset to True after tests."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     yield
     hooks_module.allow_requests = True
@@ -64,7 +64,7 @@ def test_install_hooks_idempotent(restore_hooks):
 async def test_hook_intercepts_get_request(restore_hooks, reset_allow_requests):
     """Test that the hook intercepts GET requests."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -85,7 +85,7 @@ async def test_hook_intercepts_get_request(restore_hooks, reset_allow_requests):
 async def test_hook_intercepts_post_request_with_json(restore_hooks, reset_allow_requests):
     """Test that the hook intercepts POST requests with JSON body."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -109,7 +109,7 @@ async def test_hook_intercepts_post_request_with_json(restore_hooks, reset_allow
 async def test_hook_intercepts_request_with_headers(restore_hooks, reset_allow_requests):
     """Test that the hook intercepts requests with custom headers."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -132,7 +132,7 @@ async def test_hook_intercepts_request_with_headers(restore_hooks, reset_allow_r
 async def test_hook_blocks_request_when_allow_requests_false(restore_hooks, reset_allow_requests):
     """Test that the hook blocks requests when allow_requests is False."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = False
     
     install_hooks()
@@ -155,7 +155,7 @@ async def test_hook_blocks_request_when_allow_requests_false(restore_hooks, rese
 async def test_hook_allows_request_when_allow_requests_true(restore_hooks, reset_allow_requests):
     """Test that the hook allows requests when allow_requests is True."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -180,7 +180,7 @@ async def test_hook_allows_request_when_allow_requests_true(restore_hooks, reset
 async def test_hook_handles_post_with_content(restore_hooks, reset_allow_requests):
     """Test that the hook handles POST requests with content (not JSON)."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -204,7 +204,7 @@ async def test_hook_handles_post_with_content(restore_hooks, reset_allow_request
 async def test_hook_handles_post_with_data(restore_hooks, reset_allow_requests):
     """Test that the hook handles POST requests with form data."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -228,7 +228,7 @@ async def test_hook_handles_post_with_data(restore_hooks, reset_allow_requests):
 async def test_hook_logs_request_details(restore_hooks, reset_allow_requests):
     """Test that the hook logs request details using structlog."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()
@@ -259,7 +259,7 @@ async def test_hook_logs_request_details(restore_hooks, reset_allow_requests):
 async def test_hook_logs_blocked_request(restore_hooks, reset_allow_requests):
     """Test that the hook logs a warning when blocking requests."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = False
     
     install_hooks()
@@ -282,7 +282,7 @@ async def test_hook_logs_blocked_request(restore_hooks, reset_allow_requests):
 async def test_hook_handles_different_http_methods(restore_hooks, reset_allow_requests):
     """Test that the hook handles different HTTP methods."""
     import importlib
-    hooks_module = importlib.import_module("batchling.async.hooks")
+    hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
     
     install_hooks()

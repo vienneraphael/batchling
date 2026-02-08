@@ -1,5 +1,5 @@
 """
-Tests for the Batcher class in batchling.async.core.
+Tests for the Batcher class in batchling.batching.core.
 """
 
 import asyncio
@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 
-# Import core module (async is a reserved keyword, so we use importlib)
-core_module = importlib.import_module("batchling.async.core")
+# Import core module
+core_module = importlib.import_module("batchling.batching.core")
 Batcher = core_module.Batcher
 
 
