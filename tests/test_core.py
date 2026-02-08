@@ -3,14 +3,11 @@ Tests for the Batcher class in batchling.batching.core.
 """
 
 import asyncio
-import importlib
 
 import httpx
 import pytest
 
-# Import core module
-core_module = importlib.import_module("batchling.batching.core")
-Batcher = core_module.Batcher
+from batchling.batching.core import Batcher
 
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 

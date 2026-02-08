@@ -23,7 +23,6 @@ active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher"
 # Original method storage to avoid infinite recursion
 _original_httpx_request: t.Callable[..., t.Awaitable[httpx.Response]] | None = None
 _hooks_installed = False
-allow_requests: bool = False
 
 
 async def _httpx_hook(self, method: str, url: str | httpx.URL, **kwargs: t.Any) -> httpx.Response:

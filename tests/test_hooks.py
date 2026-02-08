@@ -2,25 +2,20 @@
 Tests for the httpx request hook system.
 """
 
-import importlib
 from unittest.mock import patch
 
 import httpx
 import pytest
 import respx
 
-# Import hooks module
-hooks_module = importlib.import_module("batchling.batching.hooks")
+import batchling.batching.hooks as hooks_module
+
 install_hooks = hooks_module.install_hooks
 
 
 @pytest.fixture
 def restore_hooks():
     """Fixture to restore original httpx.AsyncClient.request after tests."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-
     # Store original state
     original_request = httpx.AsyncClient.request
     original_hooks_installed = hooks_module._hooks_installed
@@ -51,11 +46,6 @@ def test_install_hooks_idempotent(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_intercepts_get_request(restore_hooks):
     """Test that the hook intercepts GET requests."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     with respx.mock:
@@ -73,11 +63,6 @@ async def test_hook_intercepts_get_request(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_intercepts_post_request_with_json(restore_hooks):
     """Test that the hook intercepts POST requests with JSON body."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     with respx.mock:
@@ -97,11 +82,6 @@ async def test_hook_intercepts_post_request_with_json(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_intercepts_request_with_headers(restore_hooks):
     """Test that the hook intercepts requests with custom headers."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     with respx.mock:
@@ -119,13 +99,8 @@ async def test_hook_intercepts_request_with_headers(restore_hooks):
 
 
 @pytest.mark.asyncio
-async def test_hook_allows_request_when_allow_requests_true(restore_hooks):
-    """Test that the hook allows requests when allow_requests is True."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
+async def test_hook_allows_request(restore_hooks):
+    """Test that the hook allows requests."""
     install_hooks()
 
     with respx.mock:
@@ -144,11 +119,6 @@ async def test_hook_allows_request_when_allow_requests_true(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_handles_post_with_content(restore_hooks):
     """Test that the hook handles POST requests with content (not JSON)."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     with respx.mock:
@@ -166,11 +136,6 @@ async def test_hook_handles_post_with_content(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_handles_post_with_data(restore_hooks):
     """Test that the hook handles POST requests with form data."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     with respx.mock:
@@ -190,11 +155,6 @@ async def test_hook_handles_post_with_data(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_logs_request_details(restore_hooks):
     """Test that the hook logs request details using structlog."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     # Mock structlog logger to capture log calls
@@ -219,11 +179,6 @@ async def test_hook_logs_request_details(restore_hooks):
 @pytest.mark.asyncio
 async def test_hook_handles_different_http_methods(restore_hooks):
     """Test that the hook handles different HTTP methods."""
-    import importlib
-
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-
     install_hooks()
 
     methods = ["GET", "POST", "PUT", "DELETE", "PATCH"]

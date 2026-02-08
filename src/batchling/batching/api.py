@@ -27,7 +27,7 @@ def batchify(target: t.Callable[P, R], **kwargs: t.Any) -> t.Callable[P, R]:
 
 
 @t.overload
-def batchify(target: T, **kwargs: t.Any) -> "BatchingProxy[T]":
+def batchify(target: T, **kwargs: t.Any) -> T:
     """Overload for object instance targets (preserves the wrapped type for IDE autocomplete)."""
     ...
 
@@ -89,5 +89,5 @@ def batchify(
         return decorated_function
 
     # 4. If target is an object (instance), return BatchingProxy
-    # The overloads ensure the return type is BatchingProxy[T] where T is the input type
-    return BatchingProxy(target, batcher)
+    # The overloads ensure the return type is T where T is the input type
+    return t.cast(T, BatchingProxy(target, batcher))

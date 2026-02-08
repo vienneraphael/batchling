@@ -12,6 +12,10 @@ import inspect
 import typing as t
 import warnings
 
+import wrapt
+
+from batchling.batching.hooks import active_batcher
+
 # Type variable for the wrapped object type
 T = t.TypeVar("T")
 
@@ -58,107 +62,100 @@ if t.TYPE_CHECKING:
             exc_val: BaseException | None,
             exc_tb: t.Any,
         ) -> None: ...
-        def __getattr__(self, name: str) -> t.Any: ...
 
-else:
-    import wrapt
 
-    from batchling.batching.hooks import active_batcher
+class BatchingProxy(wrapt.ObjectProxy):
+    """
+    Proxy that wraps an object and sets batcher context on method calls.
 
-    class BatchingProxy(wrapt.ObjectProxy):
-        """
-        Proxy that wraps an object and sets batcher context on method calls.
+    This proxy preserves the type of the wrapped object for IDE autocomplete
+    and type checking. When you wrap a ``Client`` instance, the proxy will
+    have all the same methods and attributes as ``Client``.
 
-        This proxy preserves the type of the wrapped object for IDE autocomplete
-        and type checking. When you wrap a ``Client`` instance, the proxy will
-        have all the same methods and attributes as ``Client``.
+    Type parameter:
+        T: The type of the wrapped object
 
-        Type parameter:
-            T: The type of the wrapped object
+    Example:
+        >>> client = MockClient()
+        >>> proxy: BatchingProxy[MockClient] = batchify(client)
+        >>> proxy.sync_method(5)  # IDE will know this method exists
+    """
 
-        Example:
-            >>> client = MockClient()
-            >>> proxy: BatchingProxy[MockClient] = batchify(client)
-            >>> proxy.sync_method(5)  # IDE will know this method exists
-        """
+    def __init__(self, wrapped, batcher):
+        super().__init__(wrapped)
+        # We store batcher on self, but be careful not to conflict with wrapped attrs
+        self._self_batcher = batcher
 
-        def __init__(self, wrapped, batcher):
-            super().__init__(wrapped)
-            # We store batcher on self, but be careful not to conflict with wrapped attrs
-            self._self_batcher = batcher
+    def __class_getitem__(cls, item):
+        """Make BatchingProxy subscriptable for type hints: BatchingProxy[Client]"""
+        return cls
 
-        def __class_getitem__(cls, item):
-            """Make BatchingProxy subscriptable for type hints: BatchingProxy[Client]"""
-            return cls
+    def __getattr__(self, name):
+        # 1. Get the attribute from the wrapped object
+        # (super().__getattr__ doesn't exist in wrapt, we access the wrapped obj directly)
+        original_attr = getattr(self.__wrapped__, name)
 
-        def __getattr__(self, name):
-            # 1. Get the attribute from the wrapped object
-            # (super().__getattr__ doesn't exist in wrapt, we access the wrapped obj directly)
-            original_attr = getattr(self.__wrapped__, name)
+        # 2. Check if we should wrap it
+        # We don't wrap dunder methods, basic types, etc.
+        if name.startswith("__") or isinstance(original_attr, (int, str, float, bool, list, dict)):
+            return original_attr
 
-            # 2. Check if we should wrap it
-            # We don't wrap dunder methods, basic types, etc.
-            if name.startswith("__") or isinstance(
-                original_attr, (int, str, float, bool, list, dict)
-            ):
-                return original_attr
+        # 3. If it's a method/function, we wrap it to Activate Context
+        if callable(original_attr):
+            # Check if the method is async
+            is_async = inspect.iscoroutinefunction(original_attr)
 
-            # 3. If it's a method/function, we wrap it to Activate Context
-            if callable(original_attr):
-                # Check if the method is async
-                is_async = inspect.iscoroutinefunction(original_attr)
+            if is_async:
 
-                if is_async:
+                @functools.wraps(original_attr)
+                async def wrapper(*args, **kwargs):
+                    token = active_batcher.set(self._self_batcher)
+                    try:
+                        return await original_attr(*args, **kwargs)
+                    finally:
+                        active_batcher.reset(token)
+            else:
 
-                    @functools.wraps(original_attr)
-                    async def wrapper(*args, **kwargs):
-                        token = active_batcher.set(self._self_batcher)
-                        try:
-                            return await original_attr(*args, **kwargs)
-                        finally:
-                            active_batcher.reset(token)
-                else:
+                @functools.wraps(original_attr)
+                def wrapper(*args, **kwargs):
+                    token = active_batcher.set(self._self_batcher)
+                    try:
+                        return original_attr(*args, **kwargs)
+                    finally:
+                        active_batcher.reset(token)
 
-                    @functools.wraps(original_attr)
-                    def wrapper(*args, **kwargs):
-                        token = active_batcher.set(self._self_batcher)
-                        try:
-                            return original_attr(*args, **kwargs)
-                        finally:
-                            active_batcher.reset(token)
+            return wrapper
 
-                return wrapper
+        # 4. If it's an object (like 'chat' or 'completions'), RECURSE!
+        # This keeps the chain alive.
+        return BatchingProxy(original_attr, self._self_batcher)
 
-            # 4. If it's an object (like 'chat' or 'completions'), RECURSE!
-            # This keeps the chain alive.
-            return BatchingProxy(original_attr, self._self_batcher)
+    def __enter__(self):
+        return self
 
-        def __enter__(self):
-            return self
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Note: close() is async, so we can't properly close in a sync context manager.
+        # Try to schedule it if there's an event loop running, otherwise warn.
+        try:
+            loop = asyncio.get_running_loop()
+            # Schedule the close for later execution
+            loop.create_task(self._self_batcher.close())
+        except RuntimeError:
+            # No event loop running - warn the user
+            warnings.warn(
+                "BatchingProxy used with sync context manager. "
+                "Use 'async with' for proper cleanup, or manually call await proxy._self_batcher.close()",
+                UserWarning,
+                stacklevel=2,
+            )
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            # Note: close() is async, so we can't properly close in a sync context manager.
-            # Try to schedule it if there's an event loop running, otherwise warn.
-            try:
-                loop = asyncio.get_running_loop()
-                # Schedule the close for later execution
-                loop.create_task(self._self_batcher.close())
-            except RuntimeError:
-                # No event loop running - warn the user
-                warnings.warn(
-                    "BatchingProxy used with sync context manager. "
-                    "Use 'async with' for proper cleanup, or manually call await proxy._self_batcher.close()",
-                    UserWarning,
-                    stacklevel=2,
-                )
+    # Async context manager support
+    async def __aenter__(self):
+        # When entering 'async with', we don't necessarily set the context globally
+        # because the Proxy ALREADY sets it on every method call.
+        # However, we can use this to initialize the batcher if needed.
+        return self
 
-        # Async context manager support
-        async def __aenter__(self):
-            # When entering 'async with', we don't necessarily set the context globally
-            # because the Proxy ALREADY sets it on every method call.
-            # However, we can use this to initialize the batcher if needed.
-            return self
-
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            # Crucial: Ensure the batcher flushes any remaining items and closes
-            await self._self_batcher.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # Crucial: Ensure the batcher flushes any remaining items and closes
+        await self._self_batcher.close()
