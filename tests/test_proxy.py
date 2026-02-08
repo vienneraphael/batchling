@@ -3,6 +3,7 @@ Tests for the BatchingProxy class in batchling.batching.proxy.
 """
 
 import asyncio
+import typing as t
 import warnings
 from unittest.mock import AsyncMock, patch
 
@@ -208,9 +209,10 @@ async def test_batching_proxy_sync_context_manager_warns_without_loop(batcher):
 
     # Ensure no event loop is running
     try:
-        loop = asyncio.get_running_loop()
+        _ = asyncio.get_running_loop()
         # If we're here, there's a loop, so skip this test
-        pytest.skip("Event loop is already running")
+        skip = t.cast(t.Callable[[str], t.NoReturn], pytest.skip)
+        skip("Event loop is already running")
     except RuntimeError:
         pass
 

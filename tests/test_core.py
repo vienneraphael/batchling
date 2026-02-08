@@ -257,15 +257,17 @@ async def test_batch_submission_error_handling(batcher):
         raise Exception("Batch submission failed")
 
     batcher._submit_batch = failing_submit
+    try:
+        # Submit requests
+        task1 = asyncio.create_task(batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/1"))
+        task2 = asyncio.create_task(batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/2"))
+        task3 = asyncio.create_task(batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/3"))
 
-    # Submit requests
-    task1 = asyncio.create_task(batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/1"))
-    task2 = asyncio.create_task(batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/2"))
-    task3 = asyncio.create_task(batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/3"))
-
-    # All should fail with the error
-    with pytest.raises(Exception, match="Batch submission failed"):
-        await asyncio.gather(task1, task2, task3, return_exceptions=False)
+        # All should fail with the error
+        with pytest.raises(Exception, match="Batch submission failed"):
+            await asyncio.gather(task1, task2, task3, return_exceptions=False)
+    finally:
+        batcher._submit_batch = original_submit
 
 
 @pytest.mark.asyncio

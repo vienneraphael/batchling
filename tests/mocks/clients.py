@@ -3,6 +3,7 @@ Mock client classes for testing batchify and BatchingProxy.
 """
 
 import asyncio
+import typing as t
 
 
 class MockClient:
@@ -31,6 +32,12 @@ class MockClient:
 
     def __repr__(self):
         return "<MockClient>"
+
+    def __getattr__(self, name: str) -> t.Any:
+        raise AttributeError(name)
+
+    def __setattr__(self, name: str, value: t.Any) -> None:
+        object.__setattr__(self, name, value)
 
 
 class MockNested:

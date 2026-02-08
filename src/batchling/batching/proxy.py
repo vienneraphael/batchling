@@ -9,17 +9,17 @@ because wrapt.ObjectProxy does not support recursive attribute access.
 import asyncio
 import functools
 import inspect
+import typing as t
 import warnings
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 # Type variable for the wrapped object type
-T = TypeVar("T")
+T = t.TypeVar("T")
 
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from batchling.batching.core import Batcher
 
-    class BatchingProxy(Generic[T]):
+    class BatchingProxy(t.Generic[T]):
         """
         Proxy that wraps an object and sets batcher context on method calls.
 
@@ -41,23 +41,24 @@ if TYPE_CHECKING:
         _self_batcher: Batcher
         __wrapped__: T
 
-        def __new__(cls, wrapped: T, batcher: Batcher) -> T: ...  # type: ignore[misc]
+        def __new__(cls, wrapped: T, batcher: Batcher) -> T: ...
         def __init__(self, wrapped: T, batcher: Batcher) -> None: ...
         def __class_getitem__(cls, item: type) -> type: ...
-        def __enter__(self) -> T: ...  # type: ignore[misc]
+        def __enter__(self) -> T: ...
         def __exit__(
             self,
             exc_type: type[BaseException] | None,
             exc_val: BaseException | None,
-            exc_tb: Any,
+            exc_tb: t.Any,
         ) -> None: ...
-        async def __aenter__(self) -> T: ...  # type: ignore[misc]
+        async def __aenter__(self) -> T: ...
         async def __aexit__(
             self,
             exc_type: type[BaseException] | None,
             exc_val: BaseException | None,
-            exc_tb: Any,
+            exc_tb: t.Any,
         ) -> None: ...
+        def __getattr__(self, name: str) -> t.Any: ...
 
 else:
     import wrapt

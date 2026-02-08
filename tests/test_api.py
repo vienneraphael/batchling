@@ -3,6 +3,7 @@ Tests for the batchify function in batchling.batching.api.
 """
 
 import asyncio
+import types
 
 import pytest
 
@@ -128,6 +129,7 @@ async def test_batchify_preserves_function_metadata(reset_hooks, reset_context):
     wrapped_func = batchify(sync_function, batch_size=10)
 
     # Should preserve function name
+    assert isinstance(wrapped_func, types.FunctionType)
     assert wrapped_func.__name__ == "sync_function"
 
     # Should preserve docstring

@@ -8,7 +8,7 @@ The context var is set by the `batchify` function upon calling.
 
 import contextvars
 import json
-from typing import Any
+import typing as t
 
 import httpx
 import structlog
@@ -21,11 +21,12 @@ log = structlog.get_logger(__name__)
 active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher", default=None)
 
 # Original method storage to avoid infinite recursion
-_original_httpx_request = None
+_original_httpx_request: t.Callable[..., t.Awaitable[httpx.Response]] | None = None
 _hooks_installed = False
+allow_requests: bool = False
 
 
-async def _httpx_hook(self, method: str, url: str | httpx.URL, **kwargs: Any) -> httpx.Response:
+async def _httpx_hook(self, method: str, url: str | httpx.URL, **kwargs: t.Any) -> httpx.Response:
     """
     The replacement for httpx.AsyncClient.request.
     Intercepts requests, prints details, and conditionally allows or blocks them.
@@ -90,6 +91,9 @@ async def _httpx_hook(self, method: str, url: str | httpx.URL, **kwargs: Any) ->
         )
 
     # Call the original method
+    if _original_httpx_request is None:
+        raise RuntimeError("HTTPX hooks have not been installed")
+
     return await _original_httpx_request(self, method, url, **kwargs)
 
 
@@ -104,9 +108,12 @@ def install_hooks():
         return
 
     # Store the original request method
-    _original_httpx_request = httpx.AsyncClient.request
+    _original_httpx_request = t.cast(
+        t.Callable[..., t.Awaitable[httpx.Response]],
+        httpx.AsyncClient.request,
+    )
 
     # Patch httpx.AsyncClient.request with our hook
-    httpx.AsyncClient.request = _httpx_hook
+    httpx.AsyncClient.request = t.cast(t.Any, _httpx_hook)
 
     _hooks_installed = True

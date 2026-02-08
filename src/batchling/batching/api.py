@@ -7,34 +7,34 @@ whenever any method on the wrapped object is called.
 
 import functools
 import inspect
-from typing import Any, Callable, ParamSpec, TypeVar, overload
+import typing as t
 
 from batchling.batching.core import Batcher
 from batchling.batching.hooks import active_batcher, install_hooks
 from batchling.batching.proxy import BatchingProxy
 
-P = ParamSpec("P")
-R = TypeVar("R")
+P = t.ParamSpec("P")
+R = t.TypeVar("R")
 
 # Type variable for the wrapped object type
-T = TypeVar("T")
+T = t.TypeVar("T")
 
 
-@overload
-def batchify(target: Callable[P, R], **kwargs: Any) -> Callable[P, R]:
+@t.overload
+def batchify(target: t.Callable[P, R], **kwargs: t.Any) -> t.Callable[P, R]:
     """Overload for callable targets (preserves the function signature for IDE autocomplete)."""
     ...
 
 
-@overload
-def batchify(target: T, **kwargs: Any) -> T:
+@t.overload
+def batchify(target: T, **kwargs: t.Any) -> "BatchingProxy[T]":
     """Overload for object instance targets (preserves the wrapped type for IDE autocomplete)."""
     ...
 
 
 def batchify(
-    target: Callable[..., Any] | Any, **kwargs: Any
-) -> BatchingProxy[Any] | Callable[..., Any]:
+    target: t.Callable[..., t.Any] | t.Any, **kwargs: t.Any
+) -> BatchingProxy[t.Any] | t.Callable[..., t.Any]:
     """
     Universal adapter.
 
@@ -70,7 +70,7 @@ def batchify(
         if is_async:
 
             @functools.wraps(target)
-            async def decorated_function(*args: Any, **func_kwargs: Any) -> Any:
+            async def decorated_function(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
                 token = active_batcher.set(batcher)
                 try:
                     return await target(*args, **func_kwargs)
@@ -79,7 +79,7 @@ def batchify(
         else:
 
             @functools.wraps(target)
-            def decorated_function(*args: Any, **func_kwargs: Any) -> Any:
+            def decorated_function(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
                 token = active_batcher.set(batcher)
                 try:
                     return target(*args, **func_kwargs)
@@ -90,4 +90,4 @@ def batchify(
 
     # 4. If target is an object (instance), return BatchingProxy
     # The overloads ensure the return type is BatchingProxy[T] where T is the input type
-    return BatchingProxy(target, batcher)  # type: ignore[return-value]
+    return BatchingProxy(target, batcher)
