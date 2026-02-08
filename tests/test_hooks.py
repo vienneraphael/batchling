@@ -173,7 +173,9 @@ async def test_hook_logs_request_details(restore_hooks):
         assert "httpx request intercepted" in call_args[0][0]
         assert call_args[1]["method"] == "GET"
         assert call_args[1]["url"] == "https://example.com/test"
-        assert call_args[1]["headers"]["X-Test"] == "header-value"
+        logged_headers = call_args[1]["headers"]
+        header_value = logged_headers.get("X-Test") or logged_headers.get("x-test")
+        assert header_value == "header-value"
 
 
 @pytest.mark.asyncio

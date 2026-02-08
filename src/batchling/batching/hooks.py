@@ -9,7 +9,7 @@ The context var is set by the `batchify` function upon calling.
 import contextvars
 import json
 import typing as t
-import asyncio
+
 import httpx
 import structlog
 
@@ -21,6 +21,7 @@ log = structlog.get_logger(__name__)
 active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher", default=None)
 
 # Original method storage to avoid infinite recursion
+_BASE_HTTPX_ASYNC_SEND = httpx.AsyncClient.send
 _original_httpx_async_send: t.Callable[..., t.Awaitable[httpx.Response]] | None = None
 _hooks_installed = False
 
@@ -127,18 +128,20 @@ def _maybe_route_to_batcher(
             )
         return None
 
-    return batcher, provider, {
-        "client_type": "httpx",
-        "method": method,
-        "url": url,
-        "headers": headers,
-        "body": body,
-    }
+    return (
+        batcher,
+        provider,
+        {
+            "client_type": "httpx",
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "body": body,
+        },
+    )
 
 
-async def _httpx_async_send_hook(
-    self, request: httpx.Request, **kwargs: t.Any
-) -> httpx.Response:
+async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) -> httpx.Response:
     url_str = str(request.url)
     headers, body = _extract_body_and_headers_from_request(request)
 
@@ -170,6 +173,9 @@ async def _httpx_async_send_hook(
     if _original_httpx_async_send is None:
         raise RuntimeError("HTTPX async send hooks have not been installed")
 
+    if _original_httpx_async_send is _httpx_async_send_hook:
+        return await _BASE_HTTPX_ASYNC_SEND(self, request, **kwargs)
+
     return await _original_httpx_async_send(self, request, **kwargs)
 
 
@@ -183,12 +189,20 @@ def install_hooks():
 
     if _hooks_installed:
         return
+    if httpx.AsyncClient.send is _httpx_async_send_hook:
+        if _original_httpx_async_send is None:
+            _original_httpx_async_send = _BASE_HTTPX_ASYNC_SEND
+        _hooks_installed = True
+        return
 
     # Store the original request methods
-    _original_httpx_async_send = t.cast(
-        t.Callable[..., t.Awaitable[httpx.Response]],
-        httpx.AsyncClient.send,
-    )
+    if httpx.AsyncClient.send is _httpx_async_send_hook:
+        _original_httpx_async_send = _BASE_HTTPX_ASYNC_SEND
+    else:
+        _original_httpx_async_send = t.cast(
+            t.Callable[..., t.Awaitable[httpx.Response]],
+            httpx.AsyncClient.send,
+        )
     # Patch httpx clients with our hooks
     httpx.AsyncClient.send = t.cast(t.Any, _httpx_async_send_hook)
 
