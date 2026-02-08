@@ -57,16 +57,12 @@ def mock_providers(respx_mock, request):
 @pytest.fixture
 def reset_hooks():
     """Reset hook state and restore original httpx client methods."""
-    original_async_request = httpx.AsyncClient.request
     original_async_send = httpx.AsyncClient.send
     hooks_module._hooks_installed = False
-    hooks_module._original_httpx_async_request = None
     hooks_module._original_httpx_async_send = None
     yield
-    httpx.AsyncClient.request = original_async_request
     httpx.AsyncClient.send = original_async_send
     hooks_module._hooks_installed = False
-    hooks_module._original_httpx_async_request = None
     hooks_module._original_httpx_async_send = None
 
 

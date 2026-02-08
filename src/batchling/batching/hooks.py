@@ -21,7 +21,6 @@ log = structlog.get_logger(__name__)
 active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher", default=None)
 
 # Original method storage to avoid infinite recursion
-_original_httpx_async_request: t.Callable[..., t.Awaitable[httpx.Response]] | None = None
 _original_httpx_async_send: t.Callable[..., t.Awaitable[httpx.Response]] | None = None
 _hooks_installed = False
 
@@ -137,63 +136,6 @@ def _maybe_route_to_batcher(
     }
 
 
-async def _httpx_async_request_hook(
-    self, method: str, url: str | httpx.URL, **kwargs: t.Any
-) -> httpx.Response:
-    """
-    The replacement for httpx.AsyncClient.request.
-    Intercepts requests, prints details, and conditionally allows or blocks them.
-    """
-    # Log request details
-    url_str = str(url)
-    headers = kwargs.get("headers", {})
-    content = kwargs.get("content")
-    json_data = kwargs.get("json")
-    data = kwargs.get("data")
-
-    _log_httpx_request(
-        method=method,
-        url=url_str,
-        headers=dict(headers) if headers else None,
-        json_data=json_data,
-        content=content,
-        data=data,
-    )
-
-    # If there's an active batcher and the URL is supported, route to batcher
-    body = None
-    if json_data is not None:
-        body = json_data
-    elif content is not None:
-        body = content
-    elif data is not None:
-        body = data
-
-    routed = _maybe_route_to_batcher(
-        method=method,
-        url=url_str,
-        headers=dict(headers) if headers else None,
-        body=body,
-    )
-    if routed is not None:
-        batcher, _provider, submit_kwargs = routed
-        response = await batcher.submit(**submit_kwargs)
-        if isinstance(response, httpx.Response):
-            return _ensure_response_request(
-                response,
-                method=method,
-                url=url_str,
-                headers=dict(headers) if headers else None,
-            )
-        return response
-
-    # Call the original method
-    if _original_httpx_async_request is None:
-        raise RuntimeError("HTTPX async request hooks have not been installed")
-
-    return await _original_httpx_async_request(self, method, url, **kwargs)
-
-
 async def _httpx_async_send_hook(
     self, request: httpx.Request, **kwargs: t.Any
 ) -> httpx.Response:
@@ -236,23 +178,18 @@ def install_hooks():
     Idempotent function to install global hooks on supported libraries.
     Currently supports: httpx
     """
-    global _original_httpx_async_request, _original_httpx_async_send
+    global _original_httpx_async_send
     global _hooks_installed
 
     if _hooks_installed:
         return
 
     # Store the original request methods
-    _original_httpx_async_request = t.cast(
-        t.Callable[..., t.Awaitable[httpx.Response]],
-        httpx.AsyncClient.request,
-    )
     _original_httpx_async_send = t.cast(
         t.Callable[..., t.Awaitable[httpx.Response]],
         httpx.AsyncClient.send,
     )
     # Patch httpx clients with our hooks
-    httpx.AsyncClient.request = t.cast(t.Any, _httpx_async_request_hook)
     httpx.AsyncClient.send = t.cast(t.Any, _httpx_async_send_hook)
 
     _hooks_installed = True

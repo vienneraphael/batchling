@@ -1,7 +1,7 @@
 # HTTP hooks: request interception
 
 Hooks intercept HTTP client requests and decide whether to batch them. The current
-implementation targets `httpx.AsyncClient.request`, but the hook mechanism is intended to
+implementation targets `httpx.AsyncClient.send`, but the hook mechanism is intended to
 expand to other clients.
 
 ## Responsibilities
@@ -14,8 +14,8 @@ expand to other clients.
 
 ## Flow summary
 
-1. `install_hooks()` stores the original method and patches `httpx.AsyncClient.request`.
-2. `_httpx_hook()` logs request details and checks `active_batcher`.
+1. `install_hooks()` stores the original method and patches `httpx.AsyncClient.send`.
+2. `_httpx_async_send_hook()` logs request details and checks `active_batcher`.
 3. If a provider supports the URL and a batcher is active, the request is enqueued via
    `batcher.submit()` and an `httpx.Response` is returned later.
 4. Otherwise, the original request is invoked.
