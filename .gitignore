@@ -17,6 +17,7 @@ TODO.md
 profile_reports/
 .pytest_cache/
 .ruff_cache/
+.skylos/
 
 output/
 *.jsonl
