@@ -10,19 +10,46 @@ import asyncio
 import functools
 import inspect
 import warnings
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import wrapt
 
 from batchling.batching.hooks import active_batcher
 
+if TYPE_CHECKING:
+    from batchling.batching.core import Batcher
+
+# Type variable for the wrapped object type
+T = TypeVar("T")
+
 
 class BatchingProxy(wrapt.ObjectProxy):
-    def __init__(self, wrapped, batcher):
+    """
+    Proxy that wraps an object and sets batcher context on method calls.
+
+    This proxy preserves the type of the wrapped object for IDE autocomplete
+    and type checking. When you wrap a `Client` instance, the proxy will have
+    all the same methods and attributes as `Client`.
+
+    Type parameter:
+        T: The type of the wrapped object
+
+    Example:
+        >>> client = MockClient()
+        >>> proxy: BatchingProxy[MockClient] = batchify(client)
+        >>> proxy.sync_method(5)  # IDE will know this method exists
+    """
+
+    def __init__(self, wrapped: T, batcher: "Batcher") -> None:
         super().__init__(wrapped)
         # We store batcher on self, but be careful not to conflict with wrapped attrs
-        self._self_batcher = batcher
+        self._self_batcher: "Batcher" = batcher
 
-    def __getattr__(self, name):
+    def __class_getitem__(cls, item: type[T]) -> type["BatchingProxy[T]"]:
+        """Make BatchingProxy subscriptable for type hints: BatchingProxy[Client]"""
+        return cls
+
+    def __getattr__(self, name: str) -> Any:
         # 1. Get the attribute from the wrapped object
         # (super().__getattr__ doesn't exist in wrapt, we access the wrapped obj directly)
         original_attr = getattr(self.__wrapped__, name)
@@ -38,6 +65,7 @@ class BatchingProxy(wrapt.ObjectProxy):
             is_async = inspect.iscoroutinefunction(original_attr)
 
             if is_async:
+
                 @functools.wraps(original_attr)
                 async def wrapper(*args, **kwargs):
                     token = active_batcher.set(self._self_batcher)
@@ -46,6 +74,7 @@ class BatchingProxy(wrapt.ObjectProxy):
                     finally:
                         active_batcher.reset(token)
             else:
+
                 @functools.wraps(original_attr)
                 def wrapper(*args, **kwargs):
                     token = active_batcher.set(self._self_batcher)

@@ -7,14 +7,37 @@ whenever any method on the wrapped object is called.
 
 import functools
 import inspect
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from batchling.batching.core import Batcher
 from batchling.batching.hooks import active_batcher, install_hooks
 from batchling.batching.proxy import BatchingProxy
 
+if TYPE_CHECKING:
+    from typing import ParamSpec
 
-def batchify(target: Callable[..., Any] | Any, **kwargs) -> BatchingProxy | Callable[..., Any]:
+    P = ParamSpec("P")
+    R = TypeVar("R")
+
+# Type variable for the wrapped object type
+T = TypeVar("T")
+
+
+@overload
+def batchify(target: Callable[..., Any], **kwargs: Any) -> Callable[..., Any]:
+    """Overload for callable targets (functions)."""
+    ...
+
+
+@overload
+def batchify(target: T, **kwargs: Any) -> BatchingProxy[T]:
+    """Overload for object instance targets."""
+    ...
+
+
+def batchify(
+    target: Callable[..., Any] | Any, **kwargs: Any
+) -> BatchingProxy[Any] | Callable[..., Any]:
     """
     Universal adapter.
 
@@ -24,6 +47,14 @@ def batchify(target: Callable[..., Any] | Any, **kwargs) -> BatchingProxy | Call
 
     Returns:
         Wrapped target (Proxy or decorated function)
+
+    Note:
+        For better IDE autocomplete and type checking, use type annotations:
+
+        >>> from batchling.batching import batchify
+        >>> client = MyClient()
+        >>> wrapped: BatchingProxy[MyClient] = batchify(client)
+        >>> wrapped.my_method()  # IDE will know this method exists
     """
     # 1. Install hooks globally (idempotent)
     install_hooks()
@@ -35,11 +66,12 @@ def batchify(target: Callable[..., Any] | Any, **kwargs) -> BatchingProxy | Call
     if callable(target) and not isinstance(target, type):
         # Check if it's a class (type) - we don't want to wrap classes, only instances
         # For functions, create a decorator that sets the batcher context
-        
+
         # Check if the function is a coroutine function
         is_async = inspect.iscoroutinefunction(target)
 
         if is_async:
+
             @functools.wraps(target)
             async def decorated_function(*args: Any, **func_kwargs: Any) -> Any:
                 token = active_batcher.set(batcher)
@@ -48,6 +80,7 @@ def batchify(target: Callable[..., Any] | Any, **kwargs) -> BatchingProxy | Call
                 finally:
                     active_batcher.reset(token)
         else:
+
             @functools.wraps(target)
             def decorated_function(*args: Any, **func_kwargs: Any) -> Any:
                 token = active_batcher.set(batcher)
@@ -59,4 +92,5 @@ def batchify(target: Callable[..., Any] | Any, **kwargs) -> BatchingProxy | Call
         return decorated_function
 
     # 4. If target is an object (instance), return BatchingProxy
-    return BatchingProxy(target, batcher)
+    # The overloads ensure the return type is BatchingProxy[T] where T is the input type
+    return BatchingProxy(target, batcher)  # type: ignore[return-value]
