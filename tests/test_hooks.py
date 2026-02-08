@@ -2,17 +2,15 @@
 Tests for the httpx request hook system.
 """
 
+import importlib
 from unittest.mock import patch
 
 import httpx
 import pytest
 import respx
 
-import importlib
-
 # Import hooks module
 hooks_module = importlib.import_module("batchling.batching.hooks")
-allow_requests = hooks_module.allow_requests
 install_hooks = hooks_module.install_hooks
 
 
@@ -20,30 +18,20 @@ install_hooks = hooks_module.install_hooks
 def restore_hooks():
     """Fixture to restore original httpx.AsyncClient.request after tests."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
-    
+
     # Store original state
     original_request = httpx.AsyncClient.request
     original_hooks_installed = hooks_module._hooks_installed
-    
+
     yield
-    
+
     # Restore original state
     httpx.AsyncClient.request = original_request
     # Reset module-level variables
     hooks_module._hooks_installed = original_hooks_installed
     hooks_module._original_httpx_request = original_request
-    hooks_module.allow_requests = True
-
-
-@pytest.fixture
-def reset_allow_requests(restore_hooks):
-    """Fixture to ensure allow_requests is reset to True after tests."""
-    import importlib
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = True
-    yield
-    hooks_module.allow_requests = True
 
 
 def test_install_hooks_idempotent(restore_hooks):
@@ -51,201 +39,174 @@ def test_install_hooks_idempotent(restore_hooks):
     # First installation
     install_hooks()
     first_request_method = httpx.AsyncClient.request
-    
+
     # Second installation should not change anything
     install_hooks()
     second_request_method = httpx.AsyncClient.request
-    
+
     assert first_request_method is second_request_method
     assert httpx.AsyncClient.request is not httpx.AsyncClient.__dict__.get("request", None) or True
 
 
 @pytest.mark.asyncio
-async def test_hook_intercepts_get_request(restore_hooks, reset_allow_requests):
+async def test_hook_intercepts_get_request(restore_hooks):
     """Test that the hook intercepts GET requests."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     with respx.mock:
         respx.get("https://example.com/test").mock(
             return_value=httpx.Response(200, json={"status": "ok"})
         )
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.get("https://example.com/test")
-        
+
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
 
 @pytest.mark.asyncio
-async def test_hook_intercepts_post_request_with_json(restore_hooks, reset_allow_requests):
+async def test_hook_intercepts_post_request_with_json(restore_hooks):
     """Test that the hook intercepts POST requests with JSON body."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     with respx.mock:
         respx.post("https://example.com/api").mock(
             return_value=httpx.Response(201, json={"id": "123"})
         )
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://example.com/api",
-                json={"name": "test", "value": 42}
+                "https://example.com/api", json={"name": "test", "value": 42}
             )
-        
+
         assert response.status_code == 201
         assert response.json() == {"id": "123"}
 
 
 @pytest.mark.asyncio
-async def test_hook_intercepts_request_with_headers(restore_hooks, reset_allow_requests):
+async def test_hook_intercepts_request_with_headers(restore_hooks):
     """Test that the hook intercepts requests with custom headers."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     with respx.mock:
         respx.get("https://example.com/api").mock(
             return_value=httpx.Response(200, json={"data": "test"})
         )
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://example.com/api",
-                headers={"Authorization": "Bearer token123", "X-Custom": "value"}
+                headers={"Authorization": "Bearer token123", "X-Custom": "value"},
             )
-        
+
         assert response.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_hook_blocks_request_when_allow_requests_false(restore_hooks, reset_allow_requests):
-    """Test that the hook blocks requests when allow_requests is False."""
-    import importlib
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = False
-    
-    install_hooks()
-    
-    # Even with respx mock, the hook should return a mock response
-    with respx.mock:
-        respx.get("https://example.com/test").mock(
-            return_value=httpx.Response(200, json={"should": "not", "reach": "here"})
-        )
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get("https://example.com/test")
-        
-        # Should get the mock response from the hook, not the respx mock
-        assert response.status_code == 200
-        assert response.text == ""  # Empty text from blocked response
-
-
-@pytest.mark.asyncio
-async def test_hook_allows_request_when_allow_requests_true(restore_hooks, reset_allow_requests):
+async def test_hook_allows_request_when_allow_requests_true(restore_hooks):
     """Test that the hook allows requests when allow_requests is True."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     with respx.mock:
         respx.post("https://example.com/api").mock(
             return_value=httpx.Response(200, json={"result": "success"})
         )
-        
+
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://example.com/api",
-                json={"test": "data"}
-            )
-        
+            response = await client.post("https://example.com/api", json={"test": "data"})
+
         # Should get the actual response from respx mock
         assert response.status_code == 200
         assert response.json() == {"result": "success"}
 
 
 @pytest.mark.asyncio
-async def test_hook_handles_post_with_content(restore_hooks, reset_allow_requests):
+async def test_hook_handles_post_with_content(restore_hooks):
     """Test that the hook handles POST requests with content (not JSON)."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     with respx.mock:
         respx.post("https://example.com/upload").mock(
             return_value=httpx.Response(200, text="uploaded")
         )
-        
+
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://example.com/upload",
-                content=b"binary data here"
-            )
-        
+            response = await client.post("https://example.com/upload", content=b"binary data here")
+
         assert response.status_code == 200
         assert response.text == "uploaded"
 
 
 @pytest.mark.asyncio
-async def test_hook_handles_post_with_data(restore_hooks, reset_allow_requests):
+async def test_hook_handles_post_with_data(restore_hooks):
     """Test that the hook handles POST requests with form data."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     with respx.mock:
         respx.post("https://example.com/form").mock(
             return_value=httpx.Response(200, json={"submitted": True})
         )
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://example.com/form",
-                data={"key": "value", "another": "field"}
+                "https://example.com/form", data={"key": "value", "another": "field"}
             )
-        
+
         assert response.status_code == 200
         assert response.json() == {"submitted": True}
 
 
 @pytest.mark.asyncio
-async def test_hook_logs_request_details(restore_hooks, reset_allow_requests):
+async def test_hook_logs_request_details(restore_hooks):
     """Test that the hook logs request details using structlog."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     # Mock structlog logger to capture log calls
     with patch.object(hooks_module.log, "info") as mock_info:
         with respx.mock:
             respx.get("https://example.com/test").mock(
                 return_value=httpx.Response(200, json={"status": "ok"})
             )
-            
+
             async with httpx.AsyncClient() as client:
-                await client.get(
-                    "https://example.com/test",
-                    headers={"X-Test": "header-value"}
-                )
-        
+                await client.get("https://example.com/test", headers={"X-Test": "header-value"})
+
         # Verify that log.info was called
         assert mock_info.called
         call_args = mock_info.call_args
@@ -256,45 +217,23 @@ async def test_hook_logs_request_details(restore_hooks, reset_allow_requests):
 
 
 @pytest.mark.asyncio
-async def test_hook_logs_blocked_request(restore_hooks, reset_allow_requests):
-    """Test that the hook logs a warning when blocking requests."""
-    import importlib
-    hooks_module = importlib.import_module("batchling.batching.hooks")
-    hooks_module.allow_requests = False
-    
-    install_hooks()
-    
-    # Mock structlog logger to capture log calls
-    with patch.object(hooks_module.log, "warning") as mock_warning:
-        with respx.mock:
-            async with httpx.AsyncClient() as client:
-                await client.get("https://example.com/blocked")
-        
-        # Verify that log.warning was called for blocked request
-        assert mock_warning.called
-        call_args = mock_warning.call_args
-        assert "Request blocked by allow_requests flag" in call_args[0][0]
-        assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "https://example.com/blocked"
-
-
-@pytest.mark.asyncio
-async def test_hook_handles_different_http_methods(restore_hooks, reset_allow_requests):
+async def test_hook_handles_different_http_methods(restore_hooks):
     """Test that the hook handles different HTTP methods."""
     import importlib
+
     hooks_module = importlib.import_module("batchling.batching.hooks")
     hooks_module.allow_requests = True
-    
+
     install_hooks()
-    
+
     methods = ["GET", "POST", "PUT", "DELETE", "PATCH"]
-    
+
     for method in methods:
         with respx.mock:
             respx.request(method, "https://example.com/resource").mock(
                 return_value=httpx.Response(200, json={"method": method})
             )
-            
+
             async with httpx.AsyncClient() as client:
                 if method == "GET":
                     response = await client.get("https://example.com/resource")
@@ -306,6 +245,6 @@ async def test_hook_handles_different_http_methods(restore_hooks, reset_allow_re
                     response = await client.delete("https://example.com/resource")
                 elif method == "PATCH":
                     response = await client.patch("https://example.com/resource")
-            
+
             assert response.status_code == 200
             assert response.json()["method"] == method

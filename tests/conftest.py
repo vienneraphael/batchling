@@ -1,5 +1,8 @@
+import httpx
 import pytest
 
+import batchling.batching.hooks as hooks_module
+from batchling.batching.hooks import active_batcher
 from tests.mocks.providers import (
     setup_anthropic_mocks,
     setup_gemini_mocks,
@@ -49,3 +52,29 @@ def mock_providers(respx_mock, request):
             fn(respx_mock)
 
     yield
+
+
+@pytest.fixture
+def reset_hooks():
+    """Reset hook state and restore original httpx.AsyncClient.request."""
+    original_request = httpx.AsyncClient.request
+    hooks_module._hooks_installed = False
+    hooks_module._original_httpx_request = None
+    yield
+    httpx.AsyncClient.request = original_request
+    hooks_module._hooks_installed = False
+    hooks_module._original_httpx_request = None
+
+
+@pytest.fixture
+def reset_context():
+    """Reset the active_batcher context."""
+    try:
+        active_batcher.set(None)
+    except LookupError:
+        pass
+    yield
+    try:
+        active_batcher.set(None)
+    except LookupError:
+        pass

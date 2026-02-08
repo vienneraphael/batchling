@@ -13,13 +13,12 @@ from typing import Any
 import httpx
 import structlog
 
+from batchling.batching.providers import get_provider_for_url
+
 log = structlog.get_logger(__name__)
 
 # ContextVar to hold the active Batcher for the current Task
 active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher", default=None)
-
-# Global flag to control request flow
-allow_requests: bool = True
 
 # Original method storage to avoid infinite recursion
 _original_httpx_request = None
@@ -37,16 +36,16 @@ async def _httpx_hook(self, method: str, url: str | httpx.URL, **kwargs: Any) ->
     content = kwargs.get("content")
     json_data = kwargs.get("json")
     data = kwargs.get("data")
-    
+
     # Prepare log context
     log_context = {
         "method": method,
         "url": url_str,
     }
-    
+
     if headers:
         log_context["headers"] = dict(headers)
-    
+
     # Try to extract body content for logging
     body_str = None
     if json_data is not None:
@@ -64,21 +63,32 @@ async def _httpx_hook(self, method: str, url: str | httpx.URL, **kwargs: Any) ->
             body_str = "<binary or non-serializable content>"
     elif data is not None:
         body_str = str(data)[:200] if len(str(data)) > 200 else str(data)
-    
+
     if body_str:
         log_context["body"] = body_str
-    
+
     log.info("httpx request intercepted", **log_context)
-    
-    # Check if requests are allowed
-    if not allow_requests:
-        log.warning("Request blocked by allow_requests flag", method=method, url=url_str)
-        # Return a mock response
-        return httpx.Response(
-            status_code=200,
-            text="",
+
+    # If there's an active batcher and the URL is supported, route to batcher
+    batcher = active_batcher.get()
+    provider = get_provider_for_url(url_str)
+    if batcher is not None and provider is not None:
+        body = None
+        if json_data is not None:
+            body = json_data
+        elif content is not None:
+            body = content
+        elif data is not None:
+            body = data
+
+        return await batcher.submit(
+            client_type="httpx",
+            method=method,
+            url=url_str,
+            headers=dict(headers) if headers else None,
+            body=body,
         )
-    
+
     # Call the original method
     return await _original_httpx_request(self, method, url, **kwargs)
 
@@ -89,14 +99,14 @@ def install_hooks():
     Currently supports: httpx
     """
     global _original_httpx_request, _hooks_installed
-    
+
     if _hooks_installed:
         return
-    
+
     # Store the original request method
     _original_httpx_request = httpx.AsyncClient.request
-    
+
     # Patch httpx.AsyncClient.request with our hook
     httpx.AsyncClient.request = _httpx_hook
-    
+
     _hooks_installed = True

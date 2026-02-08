@@ -14,6 +14,8 @@ from typing import Any
 
 import structlog
 
+from batchling.batching.providers import BaseProvider, get_provider_for_url
+
 log = structlog.get_logger(__name__)
 
 
@@ -27,6 +29,7 @@ class _PendingRequest:
 
     custom_id: str
     params: dict[str, Any]
+    provider: BaseProvider
     future: asyncio.Future[Any]
 
 
@@ -45,18 +48,18 @@ class _ActiveBatch:
 class Batcher:
     """
     Manages queues, timers, and the accumulate-submit-poll lifecycle.
-    
+
     Collects requests over a time window or until a size threshold, then submits
     them as batches. Batches are sent when either:
     - The batch queue reaches batch_size, OR
     - The batch_window_seconds time elapses
-    
+
     Usage:
         batcher = Batcher(
             batch_size=100,
             batch_window_seconds=1.0,
         )
-        
+
         # Submit requests
         result = await batcher.submit(...)
     """
@@ -95,6 +98,8 @@ class Batcher:
         client_type: str,
         method: str,
         url: str,
+        headers: dict[str, str] | None = None,
+        body: Any = None,
         **kwargs: Any,
     ) -> Any:
         """
@@ -116,14 +121,23 @@ class Batcher:
         loop = asyncio.get_running_loop()
         future: asyncio.Future[Any] = loop.create_future()
 
+        provider = get_provider_for_url(url)
+        if provider is None:
+            raise ValueError(f"No provider registered for URL: {url}")
+
+        custom_id = str(uuid.uuid4())
+
         request = _PendingRequest(
-            custom_id=str(uuid.uuid4()),
+            custom_id=custom_id,
             params={
                 "client_type": client_type,
                 "method": method,
                 "url": url,
+                "headers": headers,
+                "body": body,
                 **kwargs,
             },
+            provider=provider,
             future=future,
         )
 
@@ -214,7 +228,15 @@ class Batcher:
             for req in requests:
                 if not req.future.done():
                     # TODO: Replace with actual response from batch API
-                    req.future.set_result(None)
+                    result_item = {
+                        "custom_id": req.custom_id,
+                        "error": {
+                            "status_code": 501,
+                            "message": "Batch submission not yet implemented",
+                        },
+                    }
+                    response = req.provider.from_batch_result(result_item)
+                    req.future.set_result(response)
 
         except Exception as e:
             log.error("Batch submission failed", error=str(e))
@@ -222,11 +244,6 @@ class Batcher:
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)
-
-    def identifies_provider(self, url: str) -> bool:
-        """True if we have a Provider strategy for this URL."""
-        # TODO: Implement provider identification logic
-        return False
 
     async def _worker_loop(self) -> None:
         """Background task that watches queues."""

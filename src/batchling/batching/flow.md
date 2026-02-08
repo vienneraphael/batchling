@@ -16,6 +16,7 @@ client = batchling.batchify(
 ```
 
 ### Context Manager
+
 ```
 with batchling.batchify(
     OpenAI(),
@@ -69,5 +70,3 @@ asyncio.run(process_many())
 ### APIs and Queues
 
 TBD
-
-

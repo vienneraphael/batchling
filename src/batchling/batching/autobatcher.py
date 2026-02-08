@@ -8,10 +8,10 @@ as a batch, polls for results, and returns them to waiting callers.
 from __future__ import annotations
 
 import asyncio
-import json
 import io
-import uuid
+import json
 import time
+import uuid
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -181,8 +181,7 @@ class BatchOpenAI:
             if pending_count == 1:
                 logger.debug("Starting {}s batch window timer", self._batch_window_seconds)
                 self._window_task = asyncio.create_task(
-                    self._window_timer(),
-                    name="batch_window_timer"
+                    self._window_timer(), name="batch_window_timer"
                 )
 
             # Check if we've hit the size threshold
@@ -217,7 +216,11 @@ class BatchOpenAI:
 
         # Cancel the window timer if running (but not if we ARE the window timer)
         current_task = asyncio.current_task()
-        if self._window_task and not self._window_task.done() and self._window_task is not current_task:
+        if (
+            self._window_task
+            and not self._window_task.done()
+            and self._window_task is not current_task
+        ):
             self._window_task.cancel()
         self._window_task = None
 
@@ -270,10 +273,7 @@ class BatchOpenAI:
 
             # Start the poller if not running
             if self._poller_task is None or self._poller_task.done():
-                self._poller_task = asyncio.create_task(
-                    self._poll_batches(),
-                    name="batch_poller"
-                )
+                self._poller_task = asyncio.create_task(self._poll_batches(), name="batch_poller")
 
         except Exception as e:
             logger.error("Batch submission failed: {}", e)
@@ -297,9 +297,10 @@ class BatchOpenAI:
                     counts = status.request_counts
                     logger.debug(
                         "Batch {} status: {} (completed={}/{})",
-                        batch.batch_id[:12], status.status,
+                        batch.batch_id[:12],
+                        status.status,
                         counts.completed if counts else 0,
-                        counts.total if counts else 0
+                        counts.total if counts else 0,
                     )
 
                     # Update output_file_id if it becomes available
@@ -424,9 +425,7 @@ class BatchOpenAI:
             for req in batch.requests.values():
                 if not req.future.done():
                     logger.warning("No result for request {}", req.custom_id)
-                    req.future.set_exception(
-                        Exception(f"No result for request {req.custom_id}")
-                    )
+                    req.future.set_exception(Exception(f"No result for request {req.custom_id}"))
 
         except Exception as e:
             logger.error("Error processing batch results: {}", e)

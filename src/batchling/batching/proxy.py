@@ -97,7 +97,9 @@ else:
 
             # 2. Check if we should wrap it
             # We don't wrap dunder methods, basic types, etc.
-            if name.startswith("__") or isinstance(original_attr, (int, str, float, bool, list, dict)):
+            if name.startswith("__") or isinstance(
+                original_attr, (int, str, float, bool, list, dict)
+            ):
                 return original_attr
 
             # 3. If it's a method/function, we wrap it to Activate Context

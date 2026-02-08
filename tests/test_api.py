@@ -17,32 +17,6 @@ from tests.mocks.clients import (
 )
 
 
-@pytest.fixture
-def reset_hooks():
-    """Fixture to reset hooks state."""
-    hooks_module._hooks_installed = False
-    hooks_module._original_httpx_request = None
-    yield
-    hooks_module._hooks_installed = False
-    hooks_module._original_httpx_request = None
-
-
-@pytest.fixture
-def reset_context():
-    """Fixture to reset the active_batcher context."""
-    # Reset context before test
-    try:
-        active_batcher.set(None)
-    except LookupError:
-        pass
-    yield
-    # Reset context after test
-    try:
-        active_batcher.set(None)
-    except LookupError:
-        pass
-
-
 @pytest.mark.asyncio
 async def test_batchify_installs_hooks(reset_hooks):
     """Test that batchify installs hooks."""
