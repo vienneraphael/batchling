@@ -231,7 +231,7 @@ class Batcher:
                     result_item = {
                         "custom_id": req.custom_id,
                         "error": {
-                            "status_code": 501,
+                            "status_code": 400,
                             "message": "Batch submission not yet implemented",
                         },
                     }

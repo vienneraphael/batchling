@@ -10,7 +10,7 @@ introspection and `isinstance` behavior while supporting recursive attribute acc
 - Set the `active_batcher` context around every method invocation (sync or async).
 - Recurse into nested attributes (e.g., `client.chat.completions`) to keep batching
   active across namespaces.
-- Support sync and async context manager patterns for cleanup.
+- Support sync and async context manager patterns for cleanup and context scoping.
 
 ## Flow summary
 
@@ -18,4 +18,5 @@ introspection and `isinstance` behavior while supporting recursive attribute acc
 2. `__getattr__` resolves the attribute on the wrapped object.
 3. Callable attributes are wrapped with a context-setting wrapper.
 4. Non-primitive attributes are wrapped recursively in another `BatchingProxy`.
-5. `__aexit__` triggers `batcher.close()` to flush pending work.
+5. `__enter__`/`__aenter__` set the active batcher for the entire context block.
+6. `__exit__`/`__aexit__` reset the context and trigger `batcher.close()`.

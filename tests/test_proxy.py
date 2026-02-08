@@ -189,7 +189,7 @@ async def test_batching_proxy_handles_exception_in_async_method(batcher, reset_c
 
 
 @pytest.mark.asyncio
-async def test_batching_proxy_sync_context_manager(batcher):
+async def test_batching_proxy_sync_context_manager(batcher, reset_context):
     """Test that BatchingProxy works as a sync context manager."""
     client = MockClient()
     proxy = BatchingProxy(client, batcher)
@@ -198,11 +198,13 @@ async def test_batching_proxy_sync_context_manager(batcher):
     with patch.object(batcher, "close", new_callable=AsyncMock):
         with proxy:
             # Should be able to use proxy inside context
+            assert active_batcher.get() is batcher
             assert proxy.value == 42
+        assert active_batcher.get() is None
 
 
 @pytest.mark.asyncio
-async def test_batching_proxy_sync_context_manager_warns_without_loop(batcher):
+async def test_batching_proxy_sync_context_manager_warns_without_loop(batcher, reset_context):
     """Test that sync context manager warns when no event loop is running."""
     client = MockClient()
     proxy = BatchingProxy(client, batcher)
@@ -220,15 +222,16 @@ async def test_batching_proxy_sync_context_manager_warns_without_loop(batcher):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         with proxy:
-            pass
+            assert active_batcher.get() is batcher
 
         # Should have a warning
         assert len(w) > 0
         assert any("sync context manager" in str(warning.message).lower() for warning in w)
+    assert active_batcher.get() is None
 
 
 @pytest.mark.asyncio
-async def test_batching_proxy_async_context_manager(batcher):
+async def test_batching_proxy_async_context_manager(batcher, reset_context):
     """Test that BatchingProxy works as an async context manager."""
     client = MockClient()
     proxy = BatchingProxy(client, batcher)
@@ -237,7 +240,9 @@ async def test_batching_proxy_async_context_manager(batcher):
     with patch.object(batcher, "close", new_callable=AsyncMock) as mock_close:
         async with proxy:
             # Should be able to use proxy inside context
+            assert active_batcher.get() is batcher
             assert proxy.value == 42
+        assert active_batcher.get() is None
 
         # Should have called close
         mock_close.assert_called_once()

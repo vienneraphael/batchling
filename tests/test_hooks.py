@@ -15,18 +15,21 @@ install_hooks = hooks_module.install_hooks
 
 @pytest.fixture
 def restore_hooks():
-    """Fixture to restore original httpx.AsyncClient.request after tests."""
+    """Fixture to restore original httpx client methods after tests."""
     # Store original state
-    original_request = httpx.AsyncClient.request
+    original_async_request = httpx.AsyncClient.request
+    original_async_send = httpx.AsyncClient.send
     original_hooks_installed = hooks_module._hooks_installed
 
     yield
 
     # Restore original state
-    httpx.AsyncClient.request = original_request
+    httpx.AsyncClient.request = original_async_request
+    httpx.AsyncClient.send = original_async_send
     # Reset module-level variables
     hooks_module._hooks_installed = original_hooks_installed
-    hooks_module._original_httpx_request = original_request
+    hooks_module._original_httpx_async_request = original_async_request
+    hooks_module._original_httpx_async_send = original_async_send
 
 
 def test_install_hooks_idempotent(restore_hooks):

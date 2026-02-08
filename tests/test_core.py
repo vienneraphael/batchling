@@ -47,7 +47,7 @@ async def test_submit_single_request(batcher):
 
     # Currently returns a placeholder response as batch submission is not implemented
     assert isinstance(result, httpx.Response)
-    assert result.status_code == 501
+    assert result.status_code == 400
     assert len(batcher._pending) == 0
     assert len(batcher._active_batches) == 1
 
@@ -81,7 +81,7 @@ async def test_batch_size_threshold_triggers_submission(batcher):
     )
 
     # All requests should complete
-    assert all(isinstance(r, httpx.Response) and r.status_code == 501 for r in results)
+    assert all(isinstance(r, httpx.Response) and r.status_code == 400 for r in results)
 
     # Pending queue should be empty (batch was submitted)
     assert len(batcher._pending) == 0
@@ -105,7 +105,7 @@ async def test_window_time_triggers_submission(fast_batcher):
     # Request should complete
     result = await task
     assert isinstance(result, httpx.Response)
-    assert result.status_code == 501
+    assert result.status_code == 400
 
     # Pending queue should be empty
     assert len(fast_batcher._pending) == 0
@@ -168,7 +168,7 @@ async def test_concurrent_requests(batcher):
     results = await asyncio.gather(*tasks)
 
     # All should complete
-    assert all(isinstance(r, httpx.Response) and r.status_code == 501 for r in results)
+    assert all(isinstance(r, httpx.Response) and r.status_code == 400 for r in results)
 
     # Should have 2 batches (3 + 2)
     assert len(batcher._active_batches) == 2
@@ -187,7 +187,7 @@ async def test_submit_with_kwargs(batcher):
     )
 
     assert isinstance(result, httpx.Response)
-    assert result.status_code == 501
+    assert result.status_code == 400
 
     # Check that the batch contains the request with kwargs
     assert len(batcher._active_batches) == 1
@@ -216,7 +216,7 @@ async def test_close_submits_remaining_requests(fast_batcher):
     # Request should complete
     result = await task
     assert isinstance(result, httpx.Response)
-    assert result.status_code == 501
+    assert result.status_code == 400
 
     # Pending should be empty
     assert len(fast_batcher._pending) == 0
@@ -381,7 +381,7 @@ async def test_large_batch_size(fast_batcher):
     ]
 
     results = await asyncio.gather(*tasks)
-    assert all(isinstance(r, httpx.Response) and r.status_code == 501 for r in results)
+    assert all(isinstance(r, httpx.Response) and r.status_code == 400 for r in results)
     assert len(large_batcher._active_batches) == 1
     assert len(large_batcher._pending) == 0
 
@@ -406,4 +406,4 @@ async def test_submit_after_close(batcher):
     # The batcher doesn't prevent new submissions after close
     result = await batcher.submit("httpx", "GET", f"{OPENAI_BASE_URL}/1")
     assert isinstance(result, httpx.Response)
-    assert result.status_code == 501
+    assert result.status_code == 400

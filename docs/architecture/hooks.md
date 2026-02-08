@@ -24,3 +24,20 @@ expand to other clients.
 
 - When adding new HTTP client support, mirror the `httpx` pattern: store the original
   method, patch it, and route to `batcher.submit()` when eligible.
+
+## Context vs provider integration tradeoff
+
+Batch routing currently relies on `active_batcher` (a context variable) as an opt-in gate.
+There are two main strategies to keep batching behavior correct and ergonomic:
+
+- Context manager scoping (`with` / `async with` on the proxy): reliably sets the active
+  batcher for the entire block so any tasks spawned inside inherit it. This is simple,
+  predictable, and keeps batching opt-in, but it requires callers to adopt the context
+  manager pattern.
+- Provider/framework-specific integration: attach the batcher directly to a provider's
+  client (or intercept a framework-specific call path) so routing does not rely on task
+  context propagation. This is seamless for callers but requires deeper per-provider
+  maintenance and is more fragile to upstream SDK changes.
+
+In practice, the context manager is the most stable default, and provider-specific
+integration can be added selectively where ergonomics matter most.

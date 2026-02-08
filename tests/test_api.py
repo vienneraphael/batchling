@@ -182,11 +182,11 @@ async def test_batchify_idempotent_hooks(reset_hooks):
     """Test that install_hooks is idempotent."""
     # First call
     _ = batchify(MockClient(), batch_size=10)
-    original_request = hooks_module._original_httpx_request
+    original_request = hooks_module._original_httpx_async_request
 
     # Second call should not change hooks
     _ = batchify(MockClient(), batch_size=10)
-    assert hooks_module._original_httpx_request is original_request
+    assert hooks_module._original_httpx_async_request is original_request
     assert hooks_module._hooks_installed is True
 
 

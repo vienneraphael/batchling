@@ -85,6 +85,7 @@ class BatchingProxy(wrapt.ObjectProxy):
         super().__init__(wrapped)
         # We store batcher on self, but be careful not to conflict with wrapped attrs
         self._self_batcher = batcher
+        self._self_context_token: t.Any | None = None
 
     def __class_getitem__(cls, item):
         """Make BatchingProxy subscriptable for type hints: BatchingProxy[Client]"""
@@ -131,9 +132,13 @@ class BatchingProxy(wrapt.ObjectProxy):
         return BatchingProxy(original_attr, self._self_batcher)
 
     def __enter__(self):
+        self._self_context_token = active_batcher.set(self._self_batcher)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._self_context_token is not None:
+            active_batcher.reset(self._self_context_token)
+            self._self_context_token = None
         # Note: close() is async, so we can't properly close in a sync context manager.
         # Try to schedule it if there's an event loop running, otherwise warn.
         try:
@@ -151,11 +156,12 @@ class BatchingProxy(wrapt.ObjectProxy):
 
     # Async context manager support
     async def __aenter__(self):
-        # When entering 'async with', we don't necessarily set the context globally
-        # because the Proxy ALREADY sets it on every method call.
-        # However, we can use this to initialize the batcher if needed.
+        self._self_context_token = active_batcher.set(self._self_batcher)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._self_context_token is not None:
+            active_batcher.reset(self._self_context_token)
+            self._self_context_token = None
         # Crucial: Ensure the batcher flushes any remaining items and closes
         await self._self_batcher.close()
