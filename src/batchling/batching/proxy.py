@@ -64,7 +64,7 @@ if t.TYPE_CHECKING:
         ) -> None: ...
 
 
-class BatchingProxy(wrapt.ObjectProxy):
+class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
     """
     Proxy that wraps an object and sets batcher context on method calls.
 
@@ -131,11 +131,16 @@ class BatchingProxy(wrapt.ObjectProxy):
         # This keeps the chain alive.
         return BatchingProxy(original_attr, self._self_batcher)
 
-    def __enter__(self):
+    def __enter__(self) -> T:
         self._self_context_token = active_batcher.set(self._self_batcher)
-        return self
+        return t.cast(T, self)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: t.Any,
+    ) -> None:
         if self._self_context_token is not None:
             active_batcher.reset(self._self_context_token)
             self._self_context_token = None
@@ -155,11 +160,16 @@ class BatchingProxy(wrapt.ObjectProxy):
             )
 
     # Async context manager support
-    async def __aenter__(self):
+    async def __aenter__(self) -> T:
         self._self_context_token = active_batcher.set(self._self_batcher)
-        return self
+        return t.cast(T, self)
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: t.Any,
+    ) -> None:
         if self._self_context_token is not None:
             active_batcher.reset(self._self_context_token)
             self._self_context_token = None
