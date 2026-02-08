@@ -7,25 +7,22 @@ whenever any method on the wrapped object is called.
 
 import functools
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from typing import Any, Callable, ParamSpec, TypeVar, overload
 
 from batchling.batching.core import Batcher
 from batchling.batching.hooks import active_batcher, install_hooks
 from batchling.batching.proxy import BatchingProxy
 
-if TYPE_CHECKING:
-    from typing import ParamSpec
-
-    P = ParamSpec("P")
-    R = TypeVar("R")
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # Type variable for the wrapped object type
 T = TypeVar("T")
 
 
 @overload
-def batchify(target: Callable[..., Any], **kwargs: Any) -> Callable[..., Any]:
-    """Overload for callable targets (functions)."""
+def batchify(target: Callable[P, R], **kwargs: Any) -> Callable[P, R]:
+    """Overload for callable targets (preserves the function signature for IDE autocomplete)."""
     ...
 
 
