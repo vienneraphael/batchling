@@ -12,14 +12,17 @@
 ## Development workflows
 
 - Run tests (using pytest) for every code change but not when changing code comments or documentation.
+If the pytest command does not work due to missing imports, try activating the environment first with `source .venv/bin/activate`
 - Run pre-commits (using `prek run -a`) for every code change including code comments or documentation.
 
 pre-commits to check for:
+
 - pre-commit-hooks/ruff-check/ruff-format: syntax/style related, they autofix most of the time
 - markdownlint-cli: syntax/style related, does not autofix.
 - ty-check: type hinting, does not autofix
 - bandit/detect-secrets: security-related, does not autofix but can have false flags.
-
+- complexipy: outputs a function complexity report. For high-complexity functions/methods, try to find a way to better organize the code for readability, if possible.
+- skylos: finds dead code. Can have false positive but review each case and make a decision.
 
 ## Component index
 

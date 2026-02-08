@@ -25,6 +25,7 @@ source = "https://github.com/vienneraphael/batchling"
 
 [dependency-groups]
 dev = [
+    "complexipy>=5.2.0",
     "coverage>=7.11.0",
     "ipykernel>=7.0.1",
     "prek>=0.2.10",
@@ -34,6 +35,7 @@ dev = [
     "python-dotenv>=1.1.1",
     "respx>=0.22.0",
     "ruff>=0.14.2",
+    "skylos>=3.2.3",
 ]
 
 [build-system]
