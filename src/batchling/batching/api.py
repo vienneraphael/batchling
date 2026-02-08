@@ -30,8 +30,8 @@ def batchify(target: Callable[..., Any], **kwargs: Any) -> Callable[..., Any]:
 
 
 @overload
-def batchify(target: T, **kwargs: Any) -> BatchingProxy[T]:
-    """Overload for object instance targets."""
+def batchify(target: T, **kwargs: Any) -> T:
+    """Overload for object instance targets (preserves the wrapped type for IDE autocomplete)."""
     ...
 
 
