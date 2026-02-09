@@ -1,0 +1,189 @@
+{
+  "config": {
+    "lang": [
+      "en"
+    ],
+    "separator": "[\\s\\-]+",
+    "pipeline": [
+      "stopWordFilter"
+    ],
+    "fields": {
+      "title": {
+        "boost": 1000.0
+      },
+      "text": {
+        "boost": 1.0
+      },
+      "tags": {
+        "boost": 1000000.0
+      }
+    }
+  },
+  "docs": [
+    {
+      "location": "",
+      "title": "Batchling",
+      "text": "<p>Batchling is a Python library to run large-scale GenAI batch experiments across providers with a unified API. It helps with batch creation, file management, error handling, and structured outputs while keeping experiments reproducible.</p>"
+    },
+    {
+      "location": "#get-started",
+      "title": "Get started",
+      "text": "<ul> <li>Read the architecture overview to understand how batch requests flow through the system.</li> <li>Explore provider adapters to see how URLs are normalized and results decoded.</li> <li>Check the API surface to learn how to integrate batchify into your code.</li> </ul>"
+    },
+    {
+      "location": "#quick-links",
+      "title": "Quick links",
+      "text": "<ul> <li>Architecture overview: architecture/overview.md</li> <li>API surface: architecture/api.md</li> <li>Core engine: architecture/core.md</li> <li>Hooks: architecture/hooks.md</li> <li>Proxy wrapper: architecture/proxy.md</li> <li>Providers: architecture/providers.md</li> </ul>"
+    },
+    {
+      "location": "#repository",
+      "title": "Repository",
+      "text": "<p>Visit the GitHub repository for installation instructions, CLI usage, and examples.</p> <ul> <li>https://github.com/vienneraphael/batchling</li> </ul>"
+    },
+    {
+      "location": "architecture/api/",
+      "title": "API surface: <code>batchify</code>",
+      "text": "<p><code>batchify</code> is the public entry point that activates batching for either a callable or an object instance. It installs global hooks, creates a <code>Batcher</code>, and then returns either a decorated function or a <code>BatchingProxy</code> for instances.</p>"
+    },
+    {
+      "location": "architecture/api/#responsibilities",
+      "title": "Responsibilities",
+      "text": "<ul> <li>Install HTTP hooks once (idempotent).</li> <li>Construct a <code>Batcher</code> with configuration such as <code>batch_size</code> and <code>batch_window_seconds</code>.</li> <li>Wrap callables with a decorator that sets the active batcher in a context variable.</li> <li>Wrap objects with <code>BatchingProxy</code> so all method calls inherit the batching context.</li> </ul>"
+    },
+    {
+      "location": "architecture/api/#inputs-and-outputs",
+      "title": "Inputs and outputs",
+      "text": "<ul> <li>Inputs: a callable or instance plus batcher configuration keyword arguments.</li> <li>Outputs: a decorated callable or <code>BatchingProxy[T]</code> instance that preserves the wrapped type.</li> </ul>"
+    },
+    {
+      "location": "architecture/api/#extension-notes",
+      "title": "Extension notes",
+      "text": "<ul> <li>Any new hook types should be installed by <code>install_hooks()</code> so the behavior stays centralized.</li> <li>Configuration changes to <code>Batcher</code> should be surfaced through keyword arguments on <code>batchify</code>.</li> </ul>"
+    },
+    {
+      "location": "architecture/api/#code-reference",
+      "title": "Code reference",
+      "text": "<ul> <li><code>src/batchling/batching/api.py</code></li> </ul>"
+    },
+    {
+      "location": "architecture/core/",
+      "title": "Batching engine: <code>Batcher</code>",
+      "text": "<p><code>Batcher</code> is the core queueing and lifecycle manager for batching requests. It collects pending requests, triggers batch submission when size/time thresholds are reached, and resolves futures back to callers.</p>"
+    },
+    {
+      "location": "architecture/core/#responsibilities",
+      "title": "Responsibilities",
+      "text": "<ul> <li>Maintain per-provider pending queues protected by an async lock.</li> <li>Start a per-provider window timer when the first request arrives and submit when it elapses.</li> <li>Submit immediately when a provider queue reaches <code>batch_size</code>.</li> <li>Track active batches and resolve per-request futures with provider-parsed responses.</li> <li>Provide cleanup via <code>close()</code> to flush remaining work.</li> </ul>"
+    },
+    {
+      "location": "architecture/core/#key-data-structures",
+      "title": "Key data structures",
+      "text": "<ul> <li><code>_PendingRequest</code>: per-request data (custom ID, parameters, provider, and future).</li> <li><code>_ActiveBatch</code>: a submitted batch with result tracking and request mapping.</li> </ul>"
+    },
+    {
+      "location": "architecture/core/#lifecycle-outline",
+      "title": "Lifecycle outline",
+      "text": "<ol> <li><code>submit()</code> builds a <code>_PendingRequest</code> and queues it in the provider\u2019s pending list.</li> <li>When thresholds are hit, <code>_submit_requests()</code> starts a provider-specific batch submission task.</li> <li>For OpenAI, the batcher uploads JSONL input to <code>/v1/files</code>, creates a <code>/v1/batches</code>    job, then polls until results are ready.</li> <li>Provider adapters convert batch results back into HTTP responses for each request.</li> <li><code>close()</code> flushes remaining requests and cancels timers.</li> </ol>"
+    },
+    {
+      "location": "architecture/core/#extension-notes",
+      "title": "Extension notes",
+      "text": "<ul> <li>Add new provider adapters by implementing batch submission + polling in <code>Batcher</code>.</li> <li><code>_process_batch()</code> currently supports OpenAI only; other providers must add a submission   path (or return a clear error if unsupported).</li> </ul>"
+    },
+    {
+      "location": "architecture/core/#code-reference",
+      "title": "Code reference",
+      "text": "<ul> <li><code>src/batchling/batching/core.py</code></li> </ul>"
+    },
+    {
+      "location": "architecture/hooks/",
+      "title": "HTTP hooks: request interception",
+      "text": "<p>Hooks intercept HTTP client requests and decide whether to batch them. The current implementation targets <code>httpx.AsyncClient.send</code>, but the hook mechanism is intended to expand to other clients.</p>"
+    },
+    {
+      "location": "architecture/hooks/#responsibilities",
+      "title": "Responsibilities",
+      "text": "<ul> <li>Patch supported HTTP client methods once globally (idempotent install).</li> <li>Capture request details for logging and diagnostics.</li> <li>Look up the active <code>Batcher</code> context and route supported URLs into batching.</li> <li>Fall back to the original client behavior for unsupported URLs or when no active   batcher is set.</li> </ul>"
+    },
+    {
+      "location": "architecture/hooks/#flow-summary",
+      "title": "Flow summary",
+      "text": "<ol> <li><code>install_hooks()</code> stores the original method and patches <code>httpx.AsyncClient.send</code>.</li> <li><code>_httpx_async_send_hook()</code> logs request details and checks <code>active_batcher</code>.</li> <li>If the request is marked as internal (<code>x-batchling-internal: 1</code>), the hook bypasses    batching to avoid recursion.</li> <li>If a provider supports the URL and a batcher is active, the request is enqueued via    <code>batcher.submit()</code> and the resolved response is returned (often an <code>httpx.Response</code>,    but providers can return other shapes).</li> <li>Otherwise, the original request is invoked.</li> </ol>"
+    },
+    {
+      "location": "architecture/hooks/#extension-notes",
+      "title": "Extension notes",
+      "text": "<ul> <li>When adding new HTTP client support, mirror the <code>httpx</code> pattern: store the original   method, patch it, and route to <code>batcher.submit()</code> when eligible.</li> </ul>"
+    },
+    {
+      "location": "architecture/hooks/#context-vs-provider-integration-tradeoff",
+      "title": "Context vs provider integration tradeoff",
+      "text": "<p>Batch routing currently relies on <code>active_batcher</code> (a context variable) as an opt-in gate. There are two main strategies to keep batching behavior correct and ergonomic:</p> <ul> <li>Context manager scoping (<code>with</code> / <code>async with</code> on the proxy): reliably sets the active   batcher for the entire block so any tasks spawned inside inherit it. This is simple,   predictable, and keeps batching opt-in, but it requires callers to adopt the context   manager pattern.</li> <li>Provider/framework-specific integration: attach the batcher directly to a provider's   client (or intercept a framework-specific call path) so routing does not rely on task   context propagation. This is seamless for callers but requires deeper per-provider   maintenance and is more fragile to upstream SDK changes.</li> </ul> <p>In practice, the context manager is the most stable default, and provider-specific integration can be added selectively where ergonomics matter most.</p>"
+    },
+    {
+      "location": "architecture/hooks/#code-reference",
+      "title": "Code reference",
+      "text": "<ul> <li><code>src/batchling/batching/hooks.py</code></li> </ul>"
+    },
+    {
+      "location": "architecture/overview/",
+      "title": "Architecture Overview",
+      "text": "<pre><code>flowchart TB\n    subgraph Caller[Caller Code]\n        app[Application or Client Code]\n        batchify[batchify adapter]\n    end\n\n    subgraph Runtime[Runtime Context]\n        proxy[BatchingProxy]\n        ctx[ContextVar: active Batcher]\n    end\n\n    subgraph Hooks[HTTP Hooks]\n        intercept[Request Interception]\n        enqueue[Enqueue Requests]\n    end\n\n    subgraph Engine[Batching Engine]\n        batcher[Batcher lifecycle]\n        pending[Pending Requests]\n        submit[Submit Batch]\n        resolve[Resolve Futures]\n    end\n\n    subgraph Providers[Provider Adapters]\n        match[URL Matching]\n        decode[Response Decoding]\n    end\n\n    app --&gt;|calls wrapped function or client| batchify\n    batchify --&gt;|returns wrapper or proxy| app\n\n    batchify --&gt;|wraps client with| proxy\n    batchify --&gt;|installs hooks and seeds| ctx\n    proxy --&gt;|activates| ctx\n\n    ctx --&gt;|scopes hooks to active batcher| intercept\n    intercept --&gt;|captures supported requests| enqueue\n    enqueue --&gt;|adds request to| pending\n    pending --&gt;|drains into| submit\n\n    submit --&gt;|select adapter by URL| match\n    match --&gt;|decode batch response| decode\n    decode --&gt;|resolve per-request futures| resolve\n    resolve --&gt;|returns results to caller| app\n</code></pre>"
+    },
+    {
+      "location": "architecture/overview/#notes",
+      "title": "Notes",
+      "text": "<ol> <li><code>batchify</code> wraps a function or client instance and installs hooks.</li> <li><code>BatchingProxy</code> activates the context variable that holds the active <code>Batcher</code>.</li> <li>HTTP hooks capture supported requests and enqueue them into the <code>Batcher</code>.</li> <li>The <code>Batcher</code> batches pending requests, submits them, and resolves per-request futures.</li> <li>Provider adapters normalize URLs and decode batch results into responses.</li> </ol>"
+    },
+    {
+      "location": "architecture/providers/",
+      "title": "Provider adapters",
+      "text": "<p>Providers translate between ordinary HTTP requests and provider-specific batch APIs. They are responsible for URL matching and for reconstructing <code>httpx.Response</code> objects from batch results.</p>"
+    },
+    {
+      "location": "architecture/providers/#responsibilities",
+      "title": "Responsibilities",
+      "text": "<ul> <li>Declare supported hostnames and path prefixes.</li> <li>Identify whether a URL belongs to a provider.</li> <li>Normalize request URLs if required by the provider's batch API.</li> <li>Convert JSONL batch result lines into <code>httpx.Response</code> objects for callers.</li> </ul>"
+    },
+    {
+      "location": "architecture/providers/#registry-and-lookup",
+      "title": "Registry and lookup",
+      "text": "<ul> <li>Providers are registered in <code>batchling.batching.providers</code>.</li> <li><code>get_provider_for_url()</code> indexes providers by hostname and path prefix for efficient   lookup, with a fallback match if indices do not produce a candidate.</li> </ul>"
+    },
+    {
+      "location": "architecture/providers/#openai-provider",
+      "title": "OpenAI provider",
+      "text": "<p>The OpenAI provider implements <code>from_batch_result()</code> to:</p> <ul> <li>Extract success or error payloads from a batch result line.</li> <li>Convert payloads into raw bytes.</li> <li>Return an <code>httpx.Response</code> with appropriate headers.</li> </ul>"
+    },
+    {
+      "location": "architecture/providers/#extension-notes",
+      "title": "Extension notes",
+      "text": "<ul> <li>Add new provider classes by subclassing <code>BaseProvider</code> and registering them in   <code>PROVIDERS</code>.</li> <li>Keep <code>matches_url()</code> conservative to avoid batch-routing unsupported URLs.</li> </ul>"
+    },
+    {
+      "location": "architecture/providers/#code-reference",
+      "title": "Code reference",
+      "text": "<ul> <li><code>src/batchling/batching/providers/base.py</code></li> <li><code>src/batchling/batching/providers/openai.py</code></li> <li><code>src/batchling/batching/providers/__init__.py</code></li> </ul>"
+    },
+    {
+      "location": "architecture/proxy/",
+      "title": "Proxy wrapper: <code>BatchingProxy</code>",
+      "text": "<p><code>BatchingProxy</code> wraps an object instance and ensures every method call runs with the active <code>Batcher</code> set in a context variable. It uses <code>wrapt.ObjectProxy</code> to preserve introspection and <code>isinstance</code> behavior while supporting recursive attribute access.</p>"
+    },
+    {
+      "location": "architecture/proxy/#responsibilities",
+      "title": "Responsibilities",
+      "text": "<ul> <li>Preserve the wrapped object's type for IDE autocomplete and type checking.</li> <li>Set the <code>active_batcher</code> context around every method invocation (sync or async).</li> <li>Recurse into nested attributes (e.g., <code>client.chat.completions</code>) to keep batching   active across namespaces.</li> <li>Support sync and async context manager patterns for cleanup and context scoping.</li> </ul>"
+    },
+    {
+      "location": "architecture/proxy/#flow-summary",
+      "title": "Flow summary",
+      "text": "<ol> <li><code>BatchingProxy</code> stores the <code>Batcher</code> on initialization.</li> <li><code>__getattr__</code> resolves the attribute on the wrapped object.</li> <li>Callable attributes are wrapped with a context-setting wrapper.</li> <li>Non-primitive attributes are wrapped recursively in another <code>BatchingProxy</code>.</li> <li><code>__enter__</code>/<code>__aenter__</code> set the active batcher for the entire context block.</li> <li><code>__exit__</code> resets the context and schedules <code>batcher.close()</code> if an event loop is    running (otherwise it warns).</li> <li><code>__aexit__</code> resets the context and awaits <code>batcher.close()</code> to flush pending work.</li> </ol>"
+    },
+    {
+      "location": "architecture/proxy/#code-reference",
+      "title": "Code reference",
+      "text": "<ul> <li><code>src/batchling/batching/proxy.py</code></li> </ul>"
+    }
+  ]
+}

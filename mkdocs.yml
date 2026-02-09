@@ -1,0 +1,27 @@
+site_name: Batchling
+site_url: https://vienneraphael.github.io/batchling/
+repo_name: vienneraphael/batchling
+repo_url: https://github.com/vienneraphael/batchling
+site_dir: docs-site
+
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: indigo
+    accent: indigo
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - API Surface: architecture/api.md
+      - Core Engine: architecture/core.md
+      - Hooks: architecture/hooks.md
+      - Proxy: architecture/proxy.md
+      - Providers: architecture/providers.md
