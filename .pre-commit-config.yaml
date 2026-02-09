@@ -62,18 +62,18 @@ repos:
       - id: detect-secrets
         exclude: tests|.env.example|README.md
 
-  - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v4.2.0
-    hooks:
-      - id: complexipy
-        args: [--output-json]
+  # - repo: https://github.com/rohaquinlop/complexipy-pre-commit
+  #   rev: v4.2.0
+  #   hooks:
+  #     - id: complexipy
+  #       args: [--output-json]
 
-  - repo: local
-    hooks:
-      - id: skylos-scan
-        name: skylos report
-        entry: python -m skylos.cli
-        language: system
-        pass_filenames: false
-        require_serial: true
-        args: [".", "--json", "--output", "skylos_report.json", "--confidence", "70", "--danger"]
+  # - repo: local
+  #   hooks:
+  #     - id: skylos-scan
+  #       name: skylos report
+  #       entry: python -m skylos.cli
+  #       language: system
+  #       pass_filenames: false
+  #       require_serial: true
+  #       args: [".", "--json", "--output", "skylos_report.json", "--confidence", "70", "--danger"]

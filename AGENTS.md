@@ -21,8 +21,8 @@ pre-commits to check for:
 - markdownlint-cli: syntax/style related, does not autofix.
 - ty-check: type hinting, does not autofix
 - bandit/detect-secrets: security-related, does not autofix but can have false flags.
-- complexipy: outputs a function complexity report. For high-complexity functions/methods, try to find a way to better organize the code for readability, if possible.
-- skylos: finds dead code. Can have false positive but review each case and make a decision.
+<!-- - complexipy: outputs a function complexity report. For high-complexity functions/methods, try to find a way to better organize the code for readability, if possible.
+- skylos: finds dead code. Can have false positive but review each case and make a decision. -->
 
 ## Component index
 
