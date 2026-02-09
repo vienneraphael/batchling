@@ -6,9 +6,9 @@ resolves futures back to callers.
 
 ## Responsibilities
 
-- Maintain a pending queue protected by an async lock.
-- Start a window timer when the first request arrives and submit when it elapses.
-- Submit immediately when the pending queue reaches `batch_size`.
+- Maintain per-provider pending queues protected by an async lock.
+- Start a per-provider window timer when the first request arrives and submit when it elapses.
+- Submit immediately when a provider queue reaches `batch_size`.
 - Track active batches and resolve per-request futures with provider-parsed responses.
 - Provide cleanup via `close()` to flush remaining work.
 
@@ -19,14 +19,18 @@ resolves futures back to callers.
 
 ## Lifecycle outline
 
-1. `submit()` builds a `_PendingRequest` and queues it.
-2. When thresholds are hit, `_submit_batch()` creates a new batch ID and attaches queued
-   requests to an `_ActiveBatch` record.
-3. Provider adapters convert batch results back into HTTP responses for each request.
-4. `close()` flushes remaining requests and cancels timers.
+1. `submit()` builds a `_PendingRequest` and queues it in the provider’s pending list.
+2. When thresholds are hit, `_submit_requests()` starts a provider-specific batch submission task.
+3. For OpenAI, the batcher uploads JSONL input to `/v1/files`, creates a `/v1/batches`
+   job, then polls until results are ready.
+4. Provider adapters convert batch results back into HTTP responses for each request.
+5. `close()` flushes remaining requests and cancels timers.
 
 ## Extension notes
 
-- Replace the placeholder submission behavior in `_submit_batch()` with actual provider
-  batch API calls.
-- Implement `_worker_loop()` to poll active batches and stream partial results.
+- Add new provider adapters by implementing batch submission + polling in `Batcher`.
+- Implement `_worker_loop()` to stream partial results when providers support it.
+
+## Code reference
+
+- `src/batchling/batching/core.py`

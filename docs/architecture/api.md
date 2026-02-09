@@ -20,3 +20,7 @@ decorated function or a `BatchingProxy` for instances.
 
 - Any new hook types should be installed by `install_hooks()` so the behavior stays centralized.
 - Configuration changes to `Batcher` should be surfaced through keyword arguments on `batchify`.
+
+## Code reference
+
+- `src/batchling/batching/api.py`

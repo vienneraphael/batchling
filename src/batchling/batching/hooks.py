@@ -29,11 +29,68 @@ _hooks_installed = False
 def _extract_body_and_headers_from_request(
     request: httpx.Request,
 ) -> tuple[dict[str, str], t.Any]:
-    headers = dict(request.headers)
+    """
+    Extract headers and body from an httpx request.
+
+    Parameters
+    ----------
+    request : httpx.Request
+        Request instance to extract data from.
+
+    Returns
+    -------
+    tuple[dict[str, str], typing.Any]
+        Request headers and body.
+    """
+    headers = _normalize_httpx_headers(headers=request.headers)
     body: t.Any = None
-    if request.content:
-        body = request.content
+    try:
+        content = request.content
+    except httpx.RequestNotRead:
+        request.read()
+        content = request.content
+    if content:
+        body = content
     return headers, body
+
+
+def _normalize_httpx_headers(*, headers: httpx.Headers) -> dict[str, str]:
+    """
+    Normalize httpx headers into a plain dictionary.
+
+    Parameters
+    ----------
+    headers : httpx.Headers
+        Incoming headers.
+
+    Returns
+    -------
+    dict[str, str]
+        Normalized header mapping.
+    """
+    return {
+        _decode_header_value(value=key).lower(): _decode_header_value(value=value)
+        for key, value in headers.raw
+    }
+
+
+def _decode_header_value(*, value: bytes | str) -> str:
+    """
+    Decode header values into strings.
+
+    Parameters
+    ----------
+    value : bytes | str
+        Header value.
+
+    Returns
+    -------
+    str
+        Decoded header value.
+    """
+    if isinstance(value, bytes):
+        return value.decode("latin1")
+    return str(object=value)
 
 
 def _ensure_response_request(
@@ -65,37 +122,118 @@ def _log_httpx_request(
     }
 
     if headers:
-        log_context["headers"] = dict(headers)
+        log_context["headers"] = headers
 
-    body_str = None
-    if json_data is not None:
-        try:
-            body_str = json.dumps(json_data, indent=2)
-        except Exception:
-            body_str = str(json_data)
-    elif content is not None:
-        try:
-            if isinstance(content, (str, bytes)):
-                body_str = content[:200] if len(str(content)) > 200 else str(content)
-            else:
-                body_str = str(content)
-        except Exception:
-            body_str = "<binary or non-serializable content>"
-    elif data is not None:
-        body_str = str(data)[:200] if len(str(data)) > 200 else str(data)
-    elif body is not None:
-        try:
-            if isinstance(body, (str, bytes)):
-                body_str = body[:200] if len(str(body)) > 200 else str(body)
-            else:
-                body_str = str(body)
-        except Exception:
-            body_str = "<binary or non-serializable content>"
-
+    body_str = _format_httpx_body(
+        json_data=json_data,
+        content=content,
+        data=data,
+        body=body,
+    )
     if body_str:
         log_context["body"] = body_str
 
     log.info("httpx request intercepted", **log_context)
+
+
+def _format_httpx_body(
+    *,
+    json_data: t.Any = None,
+    content: t.Any = None,
+    data: t.Any = None,
+    body: t.Any = None,
+) -> str | None:
+    """
+    Format request payload for structured logging.
+
+    Parameters
+    ----------
+    json_data : typing.Any, optional
+        JSON payload.
+    content : typing.Any, optional
+        Raw content payload.
+    data : typing.Any, optional
+        Form data payload.
+    body : typing.Any, optional
+        Generic body payload.
+
+    Returns
+    -------
+    str | None
+        Truncated string representation of the payload.
+    """
+    if json_data is not None:
+        return _safe_json_dump(value=json_data)
+    if content is not None:
+        return _safe_repr(value=content)
+    if data is not None:
+        return _truncate(text=str(object=data))
+    if body is not None:
+        return _safe_repr(value=body)
+    return None
+
+
+def _safe_json_dump(*, value: t.Any) -> str:
+    """
+    Safely serialize JSON payloads for logging.
+
+    Parameters
+    ----------
+    value : typing.Any
+        Value to serialize.
+
+    Returns
+    -------
+    str
+        Serialized payload string.
+    """
+    try:
+        return json.dumps(obj=value, indent=2)
+    except Exception:
+        return str(object=value)
+
+
+def _safe_repr(*, value: t.Any) -> str:
+    """
+    Build a safe string representation of payloads for logging.
+
+    Parameters
+    ----------
+    value : typing.Any
+        Value to represent.
+
+    Returns
+    -------
+    str
+        Truncated string representation.
+    """
+    try:
+        if isinstance(value, (str, bytes)):
+            return _truncate(text=str(object=value))
+        return str(object=value)
+    except Exception:
+        return "<binary or non-serializable content>"
+
+
+def _truncate(*, text: str, limit: int = 200) -> str:
+    """
+    Truncate a string for logging.
+
+    Parameters
+    ----------
+    text : str
+        Input string.
+    limit : int, optional
+        Maximum length.
+
+    Returns
+    -------
+    str
+        Truncated string.
+    """
+    if len(text) > limit:
+        return text[:limit]
+    return text
 
 
 def _maybe_route_to_batcher(
@@ -106,7 +244,7 @@ def _maybe_route_to_batcher(
     body: t.Any,
 ):
     batcher = active_batcher.get()
-    provider = get_provider_for_url(url)
+    provider = get_provider_for_url(url=url)
     if batcher is None or provider is None:
         if batcher is None and provider is None:
             log.debug(
@@ -142,8 +280,16 @@ def _maybe_route_to_batcher(
 
 
 async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) -> httpx.Response:
-    url_str = str(request.url)
-    headers, body = _extract_body_and_headers_from_request(request)
+    url_str = str(object=request.url)
+    headers, body = _extract_body_and_headers_from_request(request=request)
+    request_headers = _normalize_httpx_headers(headers=request.headers)
+    if headers:
+        headers = {**request_headers, **headers}
+    else:
+        headers = request_headers
+
+    if headers.get("x-batchling-internal") == "1":
+        return await _BASE_HTTPX_ASYNC_SEND(self, request, **kwargs)
 
     _log_httpx_request(
         method=request.method,

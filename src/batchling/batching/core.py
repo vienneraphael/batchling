@@ -7,14 +7,18 @@ Should support multiple queues for multiple providers/models called in same job.
 from __future__ import annotations
 
 import asyncio
+import json
 import time
+import typing as t
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from urllib.parse import urlparse
 
+import httpx
 import structlog
 
 from batchling.batching.providers import BaseProvider, get_provider_for_url
+from batchling.utils.api import get_default_api_key_from_provider
 
 log = structlog.get_logger(__name__)
 
@@ -28,9 +32,9 @@ class _PendingRequest:
     """A request waiting to be batched."""
 
     custom_id: str
-    params: dict[str, Any]
+    params: dict[str, t.Any]
     provider: BaseProvider
-    future: asyncio.Future[Any]
+    future: asyncio.Future[t.Any]
 
 
 @dataclass
@@ -47,21 +51,16 @@ class _ActiveBatch:
 
 class Batcher:
     """
-    Manages queues, timers, and the accumulate-submit-poll lifecycle.
+    Manage queues, timers, and the accumulate-submit-poll lifecycle.
 
-    Collects requests over a time window or until a size threshold, then submits
+    Collect requests over a time window or until a size threshold, then submit
     them as batches. Batches are sent when either:
-    - The batch queue reaches batch_size, OR
-    - The batch_window_seconds time elapses
+    - The provider queue reaches ``batch_size``, OR
+    - The provider ``batch_window_seconds`` time elapses
 
-    Usage:
-        batcher = Batcher(
-            batch_size=100,
-            batch_window_seconds=1.0,
-        )
-
-        # Submit requests
-        result = await batcher.submit(...)
+    Notes
+    -----
+    The pending queue is partitioned by provider to apply batching limits per provider.
     """
 
     def __init__(
@@ -70,22 +69,29 @@ class Batcher:
         batch_window_seconds: float = 2.0,
     ):
         """
-        Initialize Batcher.
+        Initialize the batcher.
 
-        Args:
-            batch_size: Submit batch when this many requests are queued
-            batch_window_seconds: Submit batch after this many seconds, even if size not reached
+        Parameters
+        ----------
+        batch_size : int
+            Submit a batch when this many requests are queued for a provider.
+        batch_window_seconds : float
+            Submit a provider batch after this many seconds, even if size not reached.
         """
         self._batch_size = batch_size
         self._batch_window_seconds = batch_window_seconds
 
         # Request collection
-        self._pending: list[_PendingRequest] = []
+        self._pending_by_provider: dict[str, list[_PendingRequest]] = {}
         self._pending_lock = asyncio.Lock()
-        self._window_task: asyncio.Task[None] | None = None
+        self._window_tasks: dict[str, asyncio.Task[None]] = {}
 
         # Active batches being tracked
         self._active_batches: list[_ActiveBatch] = []
+        self._client_factory: t.Callable[[], httpx.AsyncClient] = lambda: httpx.AsyncClient(
+            timeout=30.0
+        )
+        self._poll_interval_seconds = 2.0
 
         log.debug(
             "Initialized Batcher",
@@ -99,29 +105,36 @@ class Batcher:
         method: str,
         url: str,
         headers: dict[str, str] | None = None,
-        body: Any = None,
-        **kwargs: Any,
-    ) -> Any:
+        body: t.Any = None,
+        **kwargs: t.Any,
+    ) -> t.Any:
         """
-        Main entry point for the Hook.
-        1. Transforms request using Provider adapter (TODO)
-        2. Adds to queue
-        3. Awaits Future
-        4. Returns reconstructed Response (TODO)
+        Queue a request for batching and return its resolved response.
 
-        Args:
-            client_type: Type of client (e.g., 'httpx', 'aiohttp')
-            method: HTTP method (e.g., 'GET', 'POST')
-            url: Request URL
-            **kwargs: Additional request parameters
+        Parameters
+        ----------
+        client_type : str
+            Type of client (e.g., ``"httpx"`` or ``"aiohttp"``).
+        method : str
+            HTTP method (e.g., ``"GET"`` or ``"POST"``).
+        url : str
+            Request URL.
+        headers : dict[str, str] | None, optional
+            HTTP headers for the request.
+        body : typing.Any, optional
+            Raw request body.
+        **kwargs : typing.Any
+            Additional request parameters forwarded from the hook.
 
-        Returns:
-            Response object (to be implemented)
+        Returns
+        -------
+        typing.Any
+            Provider-decoded response.
         """
         loop = asyncio.get_running_loop()
-        future: asyncio.Future[Any] = loop.create_future()
+        future: asyncio.Future[t.Any] = loop.create_future()
 
-        provider = get_provider_for_url(url)
+        provider = get_provider_for_url(url=url)
         if provider is None:
             raise ValueError(f"No provider registered for URL: {url}")
 
@@ -141,133 +154,758 @@ class Batcher:
             future=future,
         )
 
+        provider_name = provider.name
+        requests_to_submit: list[_PendingRequest] = []
+
         async with self._pending_lock:
-            self._pending.append(request)
-            pending_count = len(self._pending)
+            queue = self._pending_by_provider.setdefault(provider_name, [])
+            queue.append(request)
+            pending_count = len(queue)
 
             # Start window timer if this is the first request
             if pending_count == 1:
                 log.debug(
                     "Starting batch window timer",
+                    provider=provider_name,
                     batch_window_seconds=self._batch_window_seconds,
                 )
-                self._window_task = asyncio.create_task(
-                    self._window_timer(),
-                    name="batch_window_timer",
+                self._window_tasks[provider_name] = asyncio.create_task(
+                    coro=self._window_timer(provider_name=provider_name),
+                    name=f"batch_window_timer_{provider_name}",
                 )
 
             # Check if we've hit the size threshold
             if pending_count >= self._batch_size:
-                log.debug("Batch size reached", batch_size=self._batch_size)
-                await self._submit_batch()
+                log.debug(
+                    "Batch size reached",
+                    provider=provider_name,
+                    batch_size=self._batch_size,
+                )
+                requests_to_submit = self._drain_provider_queue(
+                    provider_name=provider_name,
+                )
+
+        if requests_to_submit:
+            await self._submit_requests(
+                provider_name=provider_name,
+                requests=requests_to_submit,
+            )
 
         return await future
 
-    async def _window_timer(self) -> None:
-        """Timer that triggers batch submission after the window elapses."""
+    async def _window_timer(self, *, provider_name: str) -> None:
+        """
+        Trigger provider batch submission after the window elapses.
+
+        Parameters
+        ----------
+        provider_name : str
+            Provider key for the pending queue.
+        """
         try:
-            await asyncio.sleep(self._batch_window_seconds)
+            await asyncio.sleep(delay=self._batch_window_seconds)
+            requests_to_submit: list[_PendingRequest] = []
             async with self._pending_lock:
-                if self._pending:
-                    log.debug("Batch window elapsed, submitting batch")
-                    await self._submit_batch()
+                queue = self._pending_by_provider.get(provider_name, [])
+                if queue:
+                    log.debug(
+                        "Batch window elapsed, submitting batch",
+                        provider=provider_name,
+                    )
+                    requests_to_submit = self._drain_provider_queue(
+                        provider_name=provider_name,
+                    )
+            if requests_to_submit:
+                await self._submit_requests(
+                    provider_name=provider_name,
+                    requests=requests_to_submit,
+                )
         except asyncio.CancelledError:
-            log.debug("Window timer cancelled")
+            log.debug("Window timer cancelled", provider=provider_name)
             raise
         except Exception as e:
-            log.error("Window timer error", error=str(e))
-            # Fail all pending futures
-            async with self._pending_lock:
-                for req in self._pending:
-                    if not req.future.done():
-                        req.future.set_exception(e)
+            log.error(
+                "Window timer error",
+                provider=provider_name,
+                error=str(e),
+            )
+            await self._fail_pending_provider_requests(
+                provider_name=provider_name,
+                error=e,
+            )
             raise
 
-    async def _submit_batch(self) -> None:
-        """Submit all pending requests as a batch."""
-        if not self._pending:
+    async def _submit_requests(
+        self,
+        *,
+        provider_name: str,
+        requests: list[_PendingRequest],
+    ) -> None:
+        """
+        Submit a provider-specific batch in the background.
+
+        Parameters
+        ----------
+        provider_name : str
+            Provider key associated with the batch.
+        requests : list[_PendingRequest]
+            Requests to submit in a single provider batch.
+        """
+        if not requests:
             return
 
-        # Cancel the window timer if running (but not if we ARE the window timer)
-        current_task = asyncio.current_task()
-        if (
-            self._window_task
-            and not self._window_task.done()
-            and self._window_task is not current_task
-        ):
-            self._window_task.cancel()
-        self._window_task = None
+        log.info(
+            "Submitting batch",
+            provider=provider_name,
+            request_count=len(requests),
+        )
+        asyncio.create_task(
+            coro=self._process_batch(requests=requests),
+            name=f"batch_submit_{provider_name}_{uuid.uuid4()}",
+        )
 
-        # Take all pending requests
-        requests = self._pending
-        self._pending = []
+    def _drain_provider_queue(self, *, provider_name: str) -> list[_PendingRequest]:
+        """
+        Drain pending requests for a provider and cancel its window timer.
+
+        Parameters
+        ----------
+        provider_name : str
+            Provider key for the pending queue.
+
+        Returns
+        -------
+        list[_PendingRequest]
+            Drained requests for that provider.
+        """
+        current_task = asyncio.current_task()
+        window_task = self._window_tasks.get(provider_name)
+        if window_task and not window_task.done() and window_task is not current_task:
+            window_task.cancel()
+        self._window_tasks.pop(provider_name, None)
+
+        requests = self._pending_by_provider.pop(provider_name, [])
+        return requests
+
+    async def _fail_pending_provider_requests(
+        self,
+        *,
+        provider_name: str,
+        error: Exception,
+    ) -> None:
+        """
+        Fail all pending requests for a provider.
+
+        Parameters
+        ----------
+        provider_name : str
+            Provider key for the pending queue.
+        error : Exception
+            Exception to attach to pending futures.
+        """
+        async with self._pending_lock:
+            queue = self._pending_by_provider.get(provider_name, [])
+            for req in queue:
+                if not req.future.done():
+                    req.future.set_exception(error)
+
+    def _extract_body(self, *, params: dict[str, t.Any]) -> t.Any:
+        """
+        Extract a request body from hook parameters.
+
+        Parameters
+        ----------
+        params : dict[str, typing.Any]
+            Hook parameters captured from the HTTP request.
+
+        Returns
+        -------
+        typing.Any
+            Extracted body value, if any.
+        """
+        if params.get("json") is not None:
+            return params["json"]
+        for key in ("body", "content", "data"):
+            if params.get(key) is not None:
+                return params[key]
+        return None
+
+    def _normalize_body(self, *, body: t.Any) -> t.Any:
+        """
+        Normalize a request body for JSONL serialization.
+
+        Parameters
+        ----------
+        body : typing.Any
+            Raw request body.
+
+        Returns
+        -------
+        typing.Any
+            Normalized request body.
+        """
+        if body is None:
+            return None
+        if isinstance(body, (dict, list)):
+            return body
+        if isinstance(body, (bytes, bytearray)):
+            try:
+                decoded = body.decode("utf-8")
+            except Exception:
+                return body.decode("utf-8", errors="replace")
+            return self._maybe_parse_json(value=decoded)
+        if isinstance(body, str):
+            return self._maybe_parse_json(value=body)
+        return body
+
+    def _maybe_parse_json(self, *, value: str) -> t.Any:
+        """
+        Parse a JSON string if possible.
+
+        Parameters
+        ----------
+        value : str
+            String payload.
+
+        Returns
+        -------
+        typing.Any
+            Parsed JSON or original string.
+        """
+        try:
+            return json.loads(s=value)
+        except Exception:
+            return value
+
+    def _normalize_headers(
+        self,
+        *,
+        headers: dict[str, str] | None,
+    ) -> dict[str, str]:
+        """
+        Normalize headers into a mutable mapping.
+
+        Parameters
+        ----------
+        headers : dict[str, str] | None
+            Input headers.
+
+        Returns
+        -------
+        dict[str, str]
+            Normalized headers.
+        """
+        return dict(headers) if headers else {}
+
+    def _build_api_headers(
+        self,
+        *,
+        provider: BaseProvider,
+        headers: dict[str, str],
+    ) -> dict[str, str]:
+        """
+        Build API headers for provider batch requests.
+
+        Parameters
+        ----------
+        provider : BaseProvider
+            Provider adapter.
+        headers : dict[str, str]
+            Original request headers.
+
+        Returns
+        -------
+        dict[str, str]
+            Headers to use for provider API calls.
+        """
+        api_headers: dict[str, str] = {}
+        for key, value in headers.items():
+            lower_key = key.lower()
+            if lower_key == "authorization":
+                api_headers["Authorization"] = value
+            elif lower_key.startswith("openai-"):
+                api_headers[key] = value
+
+        if "Authorization" not in api_headers:
+            api_key = get_default_api_key_from_provider(provider=provider.name)
+            api_headers["Authorization"] = f"Bearer {api_key}"
+        return api_headers
+
+    def _build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
+        """
+        Add internal bypass headers for provider API calls.
+
+        Parameters
+        ----------
+        headers : dict[str, str]
+            Base headers.
+
+        Returns
+        -------
+        dict[str, str]
+            Headers with internal bypass marker.
+        """
+        return {**headers, "x-batchling-internal": "1"}
+
+    def _extract_base_and_endpoint(
+        self,
+        *,
+        provider: BaseProvider,
+        url: str,
+    ) -> tuple[str, str]:
+        """
+        Extract base URL and endpoint path for a provider request.
+
+        Parameters
+        ----------
+        provider : BaseProvider
+            Provider adapter.
+        url : str
+            Original request URL.
+
+        Returns
+        -------
+        tuple[str, str]
+            Base URL and endpoint path.
+        """
+        parsed = urlparse(url)
+        if parsed.scheme and parsed.netloc:
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            endpoint = provider.normalize_url(url=url)
+            return base_url, endpoint
+
+        if provider.hostnames:
+            base_url = f"https://{provider.hostnames[0]}"
+            endpoint = provider.normalize_url(url=url)
+            return base_url, endpoint
+
+        raise ValueError(f"Unable to determine base URL for request: {url}")
+
+    async def _process_batch(self, *, requests: list[_PendingRequest]) -> None:
+        """
+        Upload, create, and poll a provider batch for results.
+
+        Parameters
+        ----------
+        requests : list[_PendingRequest]
+            Requests to submit in the batch.
+        """
+        provider = requests[0].provider
+        if provider.name != "openai":
+            error = NotImplementedError(
+                f"Batch submission not implemented for provider: {provider.name}"
+            )
+            for req in requests:
+                if not req.future.done():
+                    req.future.set_exception(error)
+            return
 
         try:
-            log.info("Submitting batch", request_count=len(requests))
+            base_url, endpoint = self._extract_base_and_endpoint(
+                provider=provider,
+                url=requests[0].params["url"],
+            )
+            api_headers = self._build_api_headers(
+                provider=provider,
+                headers=self._normalize_headers(
+                    headers=requests[0].params.get("headers"),
+                ),
+            )
+            api_headers = self._build_internal_headers(headers=api_headers)
 
-            # Create a batch ID
-            batch_id = str(uuid.uuid4())
+            jsonl_lines = self._build_jsonl_lines(
+                provider=provider,
+                requests=requests,
+            )
+            file_id = await self._upload_batch_file(
+                base_url=base_url,
+                api_headers=api_headers,
+                jsonl_lines=jsonl_lines,
+            )
+            batch_id = await self._create_batch_job(
+                base_url=base_url,
+                api_headers=api_headers,
+                file_id=file_id,
+                endpoint=endpoint,
+            )
 
-            # Track the active batch
             active_batch = _ActiveBatch(
                 batch_id=batch_id,
-                output_file_id="",  # TODO: Set when batch is submitted
-                error_file_id="",  # TODO: Set when batch is submitted
+                output_file_id="",
+                error_file_id="",
                 requests={req.custom_id: req for req in requests},
                 created_at=time.time(),
             )
             self._active_batches.append(active_batch)
 
-            # TODO: Actually submit the batch to the provider's batch API
-            # For now, we'll simulate by immediately resolving futures
-            # This should be replaced with actual batch submission logic
-            log.warning(
-                "Batch submission not yet implemented - resolving futures immediately",
-                batch_id=batch_id,
+            await self._poll_batch(
+                base_url=base_url,
+                api_headers=api_headers,
+                provider=provider,
+                active_batch=active_batch,
             )
-            for req in requests:
-                if not req.future.done():
-                    # TODO: Replace with actual response from batch API
-                    result_item = {
-                        "custom_id": req.custom_id,
-                        "error": {
-                            "status_code": 400,
-                            "message": "Batch submission not yet implemented",
-                        },
-                    }
-                    response = req.provider.from_batch_result(result_item)
-                    req.future.set_result(response)
-
         except Exception as e:
             log.error("Batch submission failed", error=str(e))
-            # If batch submission fails, fail all waiting requests
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)
 
-    async def _worker_loop(self) -> None:
-        """Background task that watches queues."""
-        # TODO: Implement worker loop for polling batch status
-        # This would poll active batches and resolve futures as results come in
-        pass
+    def _build_jsonl_lines(
+        self,
+        *,
+        provider: BaseProvider,
+        requests: list[_PendingRequest],
+    ) -> list[dict[str, t.Any]]:
+        """
+        Build JSONL request lines for a provider batch.
+
+        Parameters
+        ----------
+        provider : BaseProvider
+            Provider adapter.
+        requests : list[_PendingRequest]
+            Pending requests to serialize.
+
+        Returns
+        -------
+        list[dict[str, typing.Any]]
+            JSONL-ready line objects.
+        """
+        jsonl_lines: list[dict[str, t.Any]] = []
+        for req in requests:
+            body = self._normalize_body(
+                body=self._extract_body(params=req.params),
+            )
+            line: dict[str, t.Any] = {
+                "custom_id": req.custom_id,
+                "method": req.params["method"],
+                "url": provider.normalize_url(url=req.params["url"]),
+            }
+            if body is not None:
+                line["body"] = body
+            jsonl_lines.append(line)
+        return jsonl_lines
+
+    async def _upload_batch_file(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        jsonl_lines: list[dict[str, t.Any]],
+    ) -> str:
+        """
+        Upload a JSONL batch input file.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        jsonl_lines : list[dict[str, typing.Any]]
+            JSONL line payloads.
+
+        Returns
+        -------
+        str
+            Provider file ID.
+        """
+        file_content = "\n".join(json.dumps(obj=line) for line in jsonl_lines).encode("utf-8")
+        files = {
+            "file": ("batch.jsonl", file_content, "application/jsonl"),
+        }
+
+        async with self._client_factory() as client:
+            response = await client.post(
+                url=f"{base_url}/v1/files",
+                headers=api_headers,
+                files=files,
+                data={"purpose": "batch"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        return payload["id"]
+
+    async def _create_batch_job(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        file_id: str,
+        endpoint: str,
+    ) -> str:
+        """
+        Create a provider batch job.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        file_id : str
+            Uploaded batch file ID.
+        endpoint : str
+            Provider endpoint path.
+
+        Returns
+        -------
+        str
+            Provider batch ID.
+        """
+        async with self._client_factory() as client:
+            response = await client.post(
+                url=f"{base_url}/v1/batches",
+                headers=api_headers,
+                json={
+                    "input_file_id": file_id,
+                    "endpoint": endpoint,
+                    "completion_window": "24h",
+                    "metadata": {"description": "batchling runtime batch"},
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+        return payload["id"]
+
+    async def _poll_batch(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        provider: BaseProvider,
+        active_batch: _ActiveBatch,
+    ) -> None:
+        """
+        Poll a provider batch until completion and resolve results.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        provider : BaseProvider
+            Provider adapter.
+        active_batch : _ActiveBatch
+            Active batch metadata.
+        """
+        terminal_states = {"completed", "failed", "cancelled", "expired"}
+        while True:
+            async with self._client_factory() as client:
+                response = await client.get(
+                    url=f"{base_url}/v1/batches/{active_batch.batch_id}",
+                    headers=api_headers,
+                )
+                response.raise_for_status()
+                payload = response.json()
+
+            status = payload.get("status", "created")
+            active_batch.output_file_id = payload.get("output_file_id") or ""
+            active_batch.error_file_id = payload.get("error_file_id") or ""
+
+            if status in terminal_states:
+                await self._resolve_batch_results(
+                    base_url=base_url,
+                    api_headers=api_headers,
+                    provider=provider,
+                    active_batch=active_batch,
+                )
+                return
+
+            await asyncio.sleep(delay=self._poll_interval_seconds)
+
+    async def _resolve_batch_results(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        provider: BaseProvider,
+        active_batch: _ActiveBatch,
+    ) -> None:
+        """
+        Download batch results and resolve pending futures.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        provider : BaseProvider
+            Provider adapter.
+        active_batch : _ActiveBatch
+            Active batch metadata.
+        """
+        file_id = self._resolve_batch_file_id(active_batch=active_batch)
+        if file_id is None:
+            return
+
+        content = await self._download_batch_content(
+            base_url=base_url,
+            api_headers=api_headers,
+            file_id=file_id,
+        )
+        seen = self._apply_batch_results(
+            provider=provider,
+            active_batch=active_batch,
+            content=content,
+        )
+        self._fail_missing_results(active_batch=active_batch, seen=seen)
+
+    def _resolve_batch_file_id(self, *, active_batch: _ActiveBatch) -> str | None:
+        """
+        Resolve the output or error file ID for a batch.
+
+        Parameters
+        ----------
+        active_batch : _ActiveBatch
+            Active batch metadata.
+
+        Returns
+        -------
+        str | None
+            File identifier or ``None`` if unavailable.
+        """
+        file_id = active_batch.output_file_id or active_batch.error_file_id
+        if not file_id:
+            error = RuntimeError("Batch completed without output or error file")
+            for req in active_batch.requests.values():
+                if not req.future.done():
+                    req.future.set_exception(error)
+            return None
+        return file_id
+
+    async def _download_batch_content(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        file_id: str,
+    ) -> str:
+        """
+        Download batch results file content.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        file_id : str
+            Provider file ID.
+
+        Returns
+        -------
+        str
+            Raw JSONL content.
+        """
+        async with self._client_factory() as client:
+            response = await client.get(
+                url=f"{base_url}/v1/files/{file_id}/content",
+                headers=api_headers,
+            )
+            response.raise_for_status()
+            return response.text
+
+    def _apply_batch_results(
+        self,
+        *,
+        provider: BaseProvider,
+        active_batch: _ActiveBatch,
+        content: str,
+    ) -> set[str]:
+        """
+        Apply batch results to pending futures.
+
+        Parameters
+        ----------
+        provider : BaseProvider
+            Provider adapter.
+        active_batch : _ActiveBatch
+            Active batch metadata.
+        content : str
+            Raw JSONL content.
+
+        Returns
+        -------
+        set[str]
+            Custom IDs that were resolved.
+        """
+        seen: set[str] = set()
+        for line in content.splitlines():
+            if not line.strip():
+                continue
+            result_item = json.loads(s=line)
+            custom_id = result_item.get("custom_id")
+            if custom_id is None:
+                continue
+            seen.add(custom_id)
+            pending = active_batch.requests.get(custom_id)
+            if pending and not pending.future.done():
+                pending.future.set_result(
+                    provider.from_batch_result(result_item=result_item),
+                )
+        return seen
+
+    def _fail_missing_results(
+        self,
+        *,
+        active_batch: _ActiveBatch,
+        seen: set[str],
+    ) -> None:
+        """
+        Fail futures that did not appear in the results.
+
+        Parameters
+        ----------
+        active_batch : _ActiveBatch
+            Active batch metadata.
+        seen : set[str]
+            Custom IDs observed in the results.
+        """
+        missing = set(active_batch.requests.keys()) - seen
+        if not missing:
+            return
+        error = RuntimeError(f"Missing results for {len(missing)} request(s)")
+        for custom_id in missing:
+            pending = active_batch.requests.get(custom_id)
+            if pending and not pending.future.done():
+                pending.future.set_exception(error)
 
     async def close(self) -> None:
-        """Cleanup resources."""
-        # Cancel the window timer if running
-        if self._window_task and not self._window_task.done():
-            self._window_task.cancel()
-            try:
-                await self._window_task
-            except asyncio.CancelledError:
-                pass
+        """
+        Cleanup resources and flush pending requests.
 
-        # Submit any remaining pending requests
+        Notes
+        -----
+        Pending requests are submitted per provider before closing.
+        """
+        for provider_name, window_task in list(self._window_tasks.items()):
+            if window_task and not window_task.done():
+                window_task.cancel()
+                try:
+                    await window_task
+                except asyncio.CancelledError:
+                    pass
+        self._window_tasks.clear()
+
+        pending_batches: list[tuple[str, list[_PendingRequest]]] = []
         async with self._pending_lock:
-            if self._pending:
-                log.info(
-                    "Submitting final batch on close",
-                    request_count=len(self._pending),
-                )
-                await self._submit_batch()
+            for provider_name in list(self._pending_by_provider.keys()):
+                requests = self._drain_provider_queue(provider_name=provider_name)
+                if requests:
+                    pending_batches.append((provider_name, requests))
+
+        for provider_name, requests in pending_batches:
+            log.info(
+                "Submitting final batch on close",
+                provider=provider_name,
+                request_count=len(requests),
+            )
+            await self._submit_requests(
+                provider_name=provider_name,
+                requests=requests,
+            )
 
         log.debug("Batcher closed")

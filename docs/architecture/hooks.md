@@ -41,3 +41,7 @@ There are two main strategies to keep batching behavior correct and ergonomic:
 
 In practice, the context manager is the most stable default, and provider-specific
 integration can be added selectively where ergonomics matter most.
+
+## Code reference
+
+- `src/batchling/batching/hooks.py`

@@ -20,3 +20,7 @@ introspection and `isinstance` behavior while supporting recursive attribute acc
 4. Non-primitive attributes are wrapped recursively in another `BatchingProxy`.
 5. `__enter__`/`__aenter__` set the active batcher for the entire context block.
 6. `__exit__`/`__aexit__` reset the context and trigger `batcher.close()`.
+
+## Code reference
+
+- `src/batchling/batching/proxy.py`

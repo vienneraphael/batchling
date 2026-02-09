@@ -30,3 +30,9 @@ The OpenAI provider implements `from_batch_result()` to:
 - Add new provider classes by subclassing `BaseProvider` and registering them in
   `PROVIDERS`.
 - Keep `matches_url()` conservative to avoid batch-routing unsupported URLs.
+
+## Code reference
+
+- `src/batchling/batching/providers/base.py`
+- `src/batchling/batching/providers/openai.py`
+- `src/batchling/batching/providers/__init__.py`

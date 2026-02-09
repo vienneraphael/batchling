@@ -66,6 +66,7 @@ repos:
     rev: v4.2.0
     hooks:
       - id: complexipy
+        args: [--output-json]
 
   - repo: local
     hooks:
@@ -75,4 +76,4 @@ repos:
         language: system
         pass_filenames: false
         require_serial: true
-        args: [".", "--json", "--confidence", "70", "--danger"]
+        args: [".", "--json", "--output", "skylos_report.json", "--confidence", "70", "--danger"]

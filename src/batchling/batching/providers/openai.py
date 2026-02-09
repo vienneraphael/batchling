@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+import typing as t
 from urllib.parse import urlparse
 
 import httpx
@@ -25,7 +25,7 @@ class OpenAIProvider(BaseProvider):
             )
         return parsed.path.startswith(self.path_prefixes)
 
-    def from_batch_result(self, result_item: dict[str, Any]) -> httpx.Response:
+    def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
         response = result_item.get("response")
         error = result_item.get("error")
 
@@ -47,7 +47,15 @@ class OpenAIProvider(BaseProvider):
             content=content,
         )
 
-    def _encode_body(self, body: Any) -> tuple[bytes, dict[str, str]]:
+    def normalize_url(self, url: str) -> str:
+        parsed = urlparse(url)
+        if parsed.scheme and parsed.netloc:
+            if parsed.query:
+                return f"{parsed.path}?{parsed.query}"
+            return parsed.path
+        return url
+
+    def _encode_body(self, body: t.Any) -> tuple[bytes, dict[str, str]]:
         if body is None:
             return b"", {}
         if isinstance(body, (dict, list)):
