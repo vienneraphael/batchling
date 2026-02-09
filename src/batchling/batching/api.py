@@ -13,22 +13,50 @@ from batchling.batching.core import Batcher
 from batchling.batching.hooks import active_batcher, install_hooks
 from batchling.batching.proxy import BatchingProxy
 
-P = t.ParamSpec("P")
-R = t.TypeVar("R")
+P = t.ParamSpec(name="P")
+R = t.TypeVar(name="R")
 
 # Type variable for the wrapped object type
-T = t.TypeVar("T")
+T = t.TypeVar(name="T")
 
 
 @t.overload
 def batchify(target: t.Callable[P, R], **kwargs: t.Any) -> t.Callable[P, R]:
-    """Overload for callable targets (preserves the function signature for IDE autocomplete)."""
+    """
+    Wrap a callable target while preserving its signature.
+
+    Parameters
+    ----------
+    target : typing.Callable[P, R]
+        Callable to wrap.
+    **kwargs : typing.Any
+        Batcher configuration (``batch_size``, ``batch_window_seconds``, etc.).
+
+    Returns
+    -------
+    typing.Callable[P, R]
+        Wrapped callable.
+    """
     ...
 
 
 @t.overload
 def batchify(target: T, **kwargs: t.Any) -> BatchingProxy[T]:
-    """Overload for object instance targets (preserves the wrapped type for IDE autocomplete)."""
+    """
+    Wrap an object instance while preserving its type.
+
+    Parameters
+    ----------
+    target : T
+        Instance to wrap.
+    **kwargs : typing.Any
+        Batcher configuration (``batch_size``, ``batch_window_seconds``, etc.).
+
+    Returns
+    -------
+    BatchingProxy[T]
+        Proxy wrapper.
+    """
     ...
 
 
@@ -38,20 +66,26 @@ def batchify(
     """
     Universal adapter.
 
-    Args:
-        target: Function or Object (Client, Agent, etc.)
-        **kwargs: Batcher configuration (batch_size, batch_window_seconds, etc.)
+    Parameters
+    ----------
+    target : typing.Callable[..., typing.Any] | typing.Any
+        Function or object instance (client, agent, etc.).
+    **kwargs : typing.Any
+        Batcher configuration (``batch_size``, ``batch_window_seconds``, etc.).
 
-    Returns:
-        Wrapped target (Proxy or decorated function)
+    Returns
+    -------
+    BatchingProxy[typing.Any] | typing.Callable[..., typing.Any]
+        Wrapped target (proxy or decorated function).
 
-    Note:
-        For better IDE autocomplete and type checking, use type annotations:
+    Notes
+    -----
+    For better IDE autocomplete and type checking, use type annotations:
 
-        >>> from batchling.batching import batchify
-        >>> client = MyClient()
-        >>> wrapped: BatchingProxy[MyClient] = batchify(client)
-        >>> wrapped.my_method()  # IDE will know this method exists
+    >>> from batchling.batching import batchify
+    >>> client = MyClient()
+    >>> wrapped: BatchingProxy[MyClient] = batchify(client)
+    >>> wrapped.my_method()  # IDE will know this method exists
     """
     # 1. Install hooks globally (idempotent)
     install_hooks()
@@ -65,12 +99,27 @@ def batchify(
         # For functions, create a decorator that sets the batcher context
 
         # Check if the function is a coroutine function
-        is_async = inspect.iscoroutinefunction(target)
+        is_async = inspect.iscoroutinefunction(obj=target)
 
         if is_async:
 
-            @functools.wraps(target)
+            @functools.wraps(wrapped=target)
             async def decorated_function(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
+                """
+                Execute the wrapped coroutine under the active batcher context.
+
+                Parameters
+                ----------
+                *args : typing.Any
+                    Positional arguments forwarded to the target.
+                **func_kwargs : typing.Any
+                    Keyword arguments forwarded to the target.
+
+                Returns
+                -------
+                typing.Any
+                    Target return value.
+                """
                 token = active_batcher.set(batcher)
                 try:
                     return await target(*args, **func_kwargs)
@@ -78,8 +127,23 @@ def batchify(
                     active_batcher.reset(token)
         else:
 
-            @functools.wraps(target)
+            @functools.wraps(wrapped=target)
             def decorated_function(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
+                """
+                Execute the wrapped function under the active batcher context.
+
+                Parameters
+                ----------
+                *args : typing.Any
+                    Positional arguments forwarded to the target.
+                **func_kwargs : typing.Any
+                    Keyword arguments forwarded to the target.
+
+                Returns
+                -------
+                typing.Any
+                    Target return value.
+                """
                 token = active_batcher.set(batcher)
                 try:
                     return target(*args, **func_kwargs)
@@ -90,4 +154,10 @@ def batchify(
 
     # 4. If target is an object (instance), return BatchingProxy
     # The overloads ensure the return type is T where T is the input type
-    return t.cast(BatchingProxy[T], BatchingProxy(target, batcher))
+    return t.cast(
+        typ=BatchingProxy[T],
+        val=BatchingProxy(
+            wrapped=target,
+            batcher=batcher,
+        ),
+    )

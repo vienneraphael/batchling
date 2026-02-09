@@ -94,7 +94,7 @@ class Batcher:
         self._poll_interval_seconds = 2.0
 
         log.debug(
-            "Initialized Batcher",
+            event="Initialized Batcher",
             batch_size=batch_size,
             batch_window_seconds=batch_window_seconds,
         )
@@ -138,7 +138,7 @@ class Batcher:
         if provider is None:
             raise ValueError(f"No provider registered for URL: {url}")
 
-        custom_id = str(uuid.uuid4())
+        custom_id = str(object=uuid.uuid4())
 
         request = _PendingRequest(
             custom_id=custom_id,
@@ -165,7 +165,7 @@ class Batcher:
             # Start window timer if this is the first request
             if pending_count == 1:
                 log.debug(
-                    "Starting batch window timer",
+                    event="Starting batch window timer",
                     provider=provider_name,
                     batch_window_seconds=self._batch_window_seconds,
                 )
@@ -177,7 +177,7 @@ class Batcher:
             # Check if we've hit the size threshold
             if pending_count >= self._batch_size:
                 log.debug(
-                    "Batch size reached",
+                    event="Batch size reached",
                     provider=provider_name,
                     batch_size=self._batch_size,
                 )
@@ -209,7 +209,7 @@ class Batcher:
                 queue = self._pending_by_provider.get(provider_name, [])
                 if queue:
                     log.debug(
-                        "Batch window elapsed, submitting batch",
+                        event="Batch window elapsed, submitting batch",
                         provider=provider_name,
                     )
                     requests_to_submit = self._drain_provider_queue(
@@ -221,13 +221,13 @@ class Batcher:
                     requests=requests_to_submit,
                 )
         except asyncio.CancelledError:
-            log.debug("Window timer cancelled", provider=provider_name)
+            log.debug(event="Window timer cancelled", provider=provider_name)
             raise
         except Exception as e:
             log.error(
-                "Window timer error",
+                event="Window timer error",
                 provider=provider_name,
-                error=str(e),
+                error=str(object=e),
             )
             await self._fail_pending_provider_requests(
                 provider_name=provider_name,
@@ -255,7 +255,7 @@ class Batcher:
             return
 
         log.info(
-            "Submitting batch",
+            event="Submitting batch",
             provider=provider_name,
             request_count=len(requests),
         )
@@ -350,9 +350,9 @@ class Batcher:
             return body
         if isinstance(body, (bytes, bytearray)):
             try:
-                decoded = body.decode("utf-8")
+                decoded = body.decode(encoding="utf-8")
             except Exception:
-                return body.decode("utf-8", errors="replace")
+                return body.decode(encoding="utf-8", errors="replace")
             return self._maybe_parse_json(value=decoded)
         if isinstance(body, str):
             return self._maybe_parse_json(value=body)
@@ -468,7 +468,7 @@ class Batcher:
         tuple[str, str]
             Base URL and endpoint path.
         """
-        parsed = urlparse(url)
+        parsed = urlparse(url=url)
         if parsed.scheme and parsed.netloc:
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             endpoint = provider.normalize_url(url=url)
@@ -545,7 +545,7 @@ class Batcher:
                 active_batch=active_batch,
             )
         except Exception as e:
-            log.error("Batch submission failed", error=str(e))
+            log.error(event="Batch submission failed", error=str(object=e))
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)
@@ -610,7 +610,9 @@ class Batcher:
         str
             Provider file ID.
         """
-        file_content = "\n".join(json.dumps(obj=line) for line in jsonl_lines).encode("utf-8")
+        file_content = "\n".join(json.dumps(obj=line) for line in jsonl_lines).encode(
+            encoding="utf-8"
+        )
         files = {
             "file": ("batch.jsonl", file_content, "application/jsonl"),
         }
@@ -899,7 +901,7 @@ class Batcher:
 
         for provider_name, requests in pending_batches:
             log.info(
-                "Submitting final batch on close",
+                event="Submitting final batch on close",
                 provider=provider_name,
                 request_count=len(requests),
             )
@@ -908,4 +910,4 @@ class Batcher:
                 requests=requests,
             )
 
-        log.debug("Batcher closed")
+        log.debug(event="Batcher closed")

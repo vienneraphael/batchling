@@ -89,7 +89,7 @@ def _decode_header_value(*, value: bytes | str) -> str:
         Decoded header value.
     """
     if isinstance(value, bytes):
-        return value.decode("latin1")
+        return value.decode(encoding="latin1")
     return str(object=value)
 
 
@@ -100,6 +100,25 @@ def _ensure_response_request(
     url: str,
     headers: dict[str, str] | None = None,
 ) -> httpx.Response:
+    """
+    Ensure the response has an associated request attached.
+
+    Parameters
+    ----------
+    response : httpx.Response
+        Response object to update.
+    method : str
+        HTTP method for the synthetic request.
+    url : str
+        URL for the synthetic request.
+    headers : dict[str, str] | None, optional
+        Headers for the synthetic request.
+
+    Returns
+    -------
+    httpx.Response
+        Response with a request attached.
+    """
     # httpx.Response.request property raises if unset; assign via private attr.
     if getattr(response, "_request", None) is None:
         response._request = httpx.Request(method=method, url=url, headers=headers)
@@ -116,6 +135,26 @@ def _log_httpx_request(
     data: t.Any = None,
     body: t.Any = None,
 ) -> None:
+    """
+    Emit structured logs for an intercepted HTTPX request.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method.
+    url : str
+        Request URL.
+    headers : dict[str, str] | None
+        Request headers.
+    json_data : typing.Any, optional
+        JSON payload.
+    content : typing.Any, optional
+        Raw content payload.
+    data : typing.Any, optional
+        Form data payload.
+    body : typing.Any, optional
+        Generic body payload.
+    """
     log_context: dict[str, t.Any] = {
         "method": method,
         "url": url,
@@ -133,7 +172,7 @@ def _log_httpx_request(
     if body_str:
         log_context["body"] = body_str
 
-    log.info("httpx request intercepted", **log_context)
+    log.info(event="httpx request intercepted", **log_context)
 
 
 def _format_httpx_body(
@@ -243,24 +282,43 @@ def _maybe_route_to_batcher(
     headers: dict[str, str] | None,
     body: t.Any,
 ):
+    """
+    Resolve the active batcher and provider for a request.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method.
+    url : str
+        Request URL.
+    headers : dict[str, str] | None
+        Request headers.
+    body : typing.Any
+        Request body.
+
+    Returns
+    -------
+    tuple[Batcher, BaseProvider, dict[str, typing.Any]] | None
+        Routing data if batching is active, otherwise ``None``.
+    """
     batcher = active_batcher.get()
     provider = get_provider_for_url(url=url)
     if batcher is None or provider is None:
         if batcher is None and provider is None:
             log.debug(
-                "httpx request not routed",
+                event="httpx request not routed",
                 reason="no active batcher and no provider match",
                 url=url,
             )
         elif batcher is None:
             log.debug(
-                "httpx request not routed",
+                event="httpx request not routed",
                 reason="no active batcher",
                 url=url,
             )
         else:
             log.debug(
-                "httpx request not routed",
+                event="httpx request not routed",
                 reason="provider not matched",
                 url=url,
             )
@@ -280,6 +338,23 @@ def _maybe_route_to_batcher(
 
 
 async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) -> httpx.Response:
+    """
+    Intercept ``httpx.AsyncClient.send`` to route requests into the batcher.
+
+    Parameters
+    ----------
+    self : httpx.AsyncClient
+        HTTPX client instance.
+    request : httpx.Request
+        Request to send.
+    **kwargs : typing.Any
+        Extra parameters forwarded to the original send method.
+
+    Returns
+    -------
+    httpx.Response
+        Response from the batcher or underlying HTTPX transport.
+    """
     url_str = str(object=request.url)
     headers, body = _extract_body_and_headers_from_request(request=request)
     request_headers = _normalize_httpx_headers(headers=request.headers)
@@ -309,7 +384,7 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
         response = await batcher.submit(**submit_kwargs)
         if isinstance(response, httpx.Response):
             return _ensure_response_request(
-                response,
+                response=response,
                 method=request.method,
                 url=url_str,
                 headers=headers,
@@ -327,8 +402,11 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
 
 def install_hooks():
     """
-    Idempotent function to install global hooks on supported libraries.
-    Currently supports: httpx
+    Install global hooks for supported libraries.
+
+    Notes
+    -----
+    This function is idempotent and currently supports ``httpx``.
     """
     global _original_httpx_async_send
     global _hooks_installed
@@ -346,10 +424,10 @@ def install_hooks():
         _original_httpx_async_send = _BASE_HTTPX_ASYNC_SEND
     else:
         _original_httpx_async_send = t.cast(
-            t.Callable[..., t.Awaitable[httpx.Response]],
-            httpx.AsyncClient.send,
+            typ=t.Callable[..., t.Awaitable[httpx.Response]],
+            val=httpx.AsyncClient.send,
         )
     # Patch httpx clients with our hooks
-    httpx.AsyncClient.send = t.cast(t.Any, _httpx_async_send_hook)
+    httpx.AsyncClient.send = t.cast(typ=t.Any, val=_httpx_async_send_hook)
 
     _hooks_installed = True

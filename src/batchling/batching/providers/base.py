@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import typing as t
 from abc import ABC, abstractmethod
-from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -21,8 +21,20 @@ class BaseProvider(ABC):
     path_prefixes: tuple[str, ...] = ()
 
     def matches_url(self, url: str) -> bool:
-        """Return True if the URL belongs to this provider."""
-        parsed = urlparse(url)
+        """
+        Check whether a URL belongs to this provider.
+
+        Parameters
+        ----------
+        url : str
+            Candidate request URL.
+
+        Returns
+        -------
+        bool
+            ``True`` if the URL matches this provider.
+        """
+        parsed = urlparse(url=url)
         hostname = (parsed.hostname or "").lower()
         path = parsed.path or ""
 
@@ -37,12 +49,34 @@ class BaseProvider(ABC):
         return host_ok and path_ok
 
     @abstractmethod
-    def from_batch_result(self, result_item: dict[str, Any]) -> httpx.Response:
-        """Convert provider's Batch result JSON back to httpx.Response."""
+    def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
+        """
+        Convert a batch result JSON item into an ``httpx.Response``.
+
+        Parameters
+        ----------
+        result_item : dict[str, typing.Any]
+            Provider-specific JSONL result line.
+
+        Returns
+        -------
+        httpx.Response
+            Parsed HTTP response.
+        """
 
     def normalize_url(self, url: str) -> str:
         """
         Normalize a request URL into the format expected by the provider's
         batch API. The default is the full URL string. Providers can override.
+
+        Parameters
+        ----------
+        url : str
+            Original request URL.
+
+        Returns
+        -------
+        str
+            Normalized URL string.
         """
         return url

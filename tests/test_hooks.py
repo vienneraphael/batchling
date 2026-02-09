@@ -170,7 +170,7 @@ async def test_hook_logs_request_details(restore_hooks):
         # Verify that log.info was called
         assert mock_info.called
         call_args = mock_info.call_args
-        assert "httpx request intercepted" in call_args[0][0]
+        assert call_args[1]["event"] == "httpx request intercepted"
         assert call_args[1]["method"] == "GET"
         assert call_args[1]["url"] == "https://example.com/test"
         logged_headers = call_args[1]["headers"]

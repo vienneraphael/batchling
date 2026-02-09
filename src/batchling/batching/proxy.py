@@ -17,7 +17,7 @@ import wrapt
 from batchling.batching.hooks import active_batcher
 
 # Type variable for the wrapped object type
-T = t.TypeVar("T")
+T = t.TypeVar(name="T")
 
 
 if t.TYPE_CHECKING:
@@ -45,23 +45,114 @@ if t.TYPE_CHECKING:
         _self_batcher: Batcher
         __wrapped__: T
 
-        def __new__(cls, wrapped: T, batcher: Batcher) -> T: ...
-        def __init__(self, wrapped: T, batcher: Batcher) -> None: ...
-        def __class_getitem__(cls, item: type) -> type: ...
-        def __enter__(self) -> T: ...
+        def __new__(cls, wrapped: T, batcher: Batcher) -> T:
+            """
+            Create a proxy instance with the wrapped object type.
+
+            Parameters
+            ----------
+            wrapped : T
+                Target object to wrap.
+            batcher : Batcher
+                Batcher instance used by the proxy.
+
+            Returns
+            -------
+            T
+                Proxy instance typed as the wrapped object.
+            """
+            ...
+
+        def __init__(self, wrapped: T, batcher: Batcher) -> None:
+            """
+            Initialize the proxy with the wrapped object and batcher.
+
+            Parameters
+            ----------
+            wrapped : T
+                Target object to wrap.
+            batcher : Batcher
+                Batcher instance used by the proxy.
+            """
+            ...
+
+        def __class_getitem__(cls, item: type) -> type:
+            """
+            Support ``BatchingProxy[T]`` type subscripting.
+
+            Parameters
+            ----------
+            item : type
+                Type parameter.
+
+            Returns
+            -------
+            type
+                The ``BatchingProxy`` class.
+            """
+            ...
+
+        def __enter__(self) -> T:
+            """
+            Enter the synchronous context manager.
+
+            Returns
+            -------
+            T
+                The proxy instance.
+            """
+            ...
+
         def __exit__(
             self,
             exc_type: type[BaseException] | None,
             exc_val: BaseException | None,
             exc_tb: t.Any,
-        ) -> None: ...
-        async def __aenter__(self) -> T: ...
+        ) -> None:
+            """
+            Exit the synchronous context manager.
+
+            Parameters
+            ----------
+            exc_type : type[BaseException] | None
+                Exception type, if any.
+            exc_val : BaseException | None
+                Exception value, if any.
+            exc_tb : typing.Any
+                Exception traceback, if any.
+            """
+            ...
+
+        async def __aenter__(self) -> T:
+            """
+            Enter the async context manager.
+
+            Returns
+            -------
+            T
+                The proxy instance.
+            """
+            ...
+
         async def __aexit__(
             self,
             exc_type: type[BaseException] | None,
             exc_val: BaseException | None,
             exc_tb: t.Any,
-        ) -> None: ...
+        ) -> None:
+            """
+            Exit the async context manager.
+
+            Parameters
+            ----------
+            exc_type : type[BaseException] | None
+                Exception type, if any.
+            exc_val : BaseException | None
+                Exception value, if any.
+            exc_tb : typing.Any
+                Exception traceback, if any.
+            """
+            ...
 
 
 class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
@@ -82,16 +173,51 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
     """
 
     def __init__(self, wrapped, batcher):
+        """
+        Initialize the proxy with a wrapped object and batcher.
+
+        Parameters
+        ----------
+        wrapped : typing.Any
+            Target object to wrap.
+        batcher : Batcher
+            Batcher instance to activate during method calls.
+        """
         super().__init__(wrapped)
         # We store batcher on self, but be careful not to conflict with wrapped attrs
         self._self_batcher = batcher
         self._self_context_token: t.Any | None = None
 
     def __class_getitem__(cls, item):
-        """Make BatchingProxy subscriptable for type hints: BatchingProxy[Client]"""
+        """
+        Make ``BatchingProxy`` subscriptable for type hints.
+
+        Parameters
+        ----------
+        item : type
+            Type parameter.
+
+        Returns
+        -------
+        type
+            The ``BatchingProxy`` class.
+        """
         return cls
 
     def __getattr__(self, name):
+        """
+        Resolve attributes from the wrapped object and apply proxy behavior.
+
+        Parameters
+        ----------
+        name : str
+            Attribute name to resolve.
+
+        Returns
+        -------
+        typing.Any
+            Resolved attribute, possibly wrapped for batching.
+        """
         # 1. Get the attribute from the wrapped object
         # (super().__getattr__ doesn't exist in wrapt, we access the wrapped obj directly)
         original_attr = getattr(self.__wrapped__, name)
@@ -104,12 +230,27 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
         # 3. If it's a method/function, we wrap it to Activate Context
         if callable(original_attr):
             # Check if the method is async
-            is_async = inspect.iscoroutinefunction(original_attr)
+            is_async = inspect.iscoroutinefunction(obj=original_attr)
 
             if is_async:
 
-                @functools.wraps(original_attr)
+                @functools.wraps(wrapped=original_attr)
                 async def wrapper(*args, **kwargs):
+                    """
+                    Invoke the wrapped coroutine under the batcher context.
+
+                    Parameters
+                    ----------
+                    *args : typing.Any
+                        Positional arguments forwarded to the method.
+                    **kwargs : typing.Any
+                        Keyword arguments forwarded to the method.
+
+                    Returns
+                    -------
+                    typing.Any
+                        Method return value.
+                    """
                     token = active_batcher.set(self._self_batcher)
                     try:
                         return await original_attr(*args, **kwargs)
@@ -117,8 +258,23 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
                         active_batcher.reset(token)
             else:
 
-                @functools.wraps(original_attr)
+                @functools.wraps(wrapped=original_attr)
                 def wrapper(*args, **kwargs):
+                    """
+                    Invoke the wrapped method under the batcher context.
+
+                    Parameters
+                    ----------
+                    *args : typing.Any
+                        Positional arguments forwarded to the method.
+                    **kwargs : typing.Any
+                        Keyword arguments forwarded to the method.
+
+                    Returns
+                    -------
+                    typing.Any
+                        Method return value.
+                    """
                     token = active_batcher.set(self._self_batcher)
                     try:
                         return original_attr(*args, **kwargs)
@@ -129,11 +285,19 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
 
         # 4. If it's an object (like 'chat' or 'completions'), RECURSE!
         # This keeps the chain alive.
-        return BatchingProxy(original_attr, self._self_batcher)
+        return BatchingProxy(wrapped=original_attr, batcher=self._self_batcher)
 
     def __enter__(self) -> T:
+        """
+        Enter the synchronous context manager and activate the batcher.
+
+        Returns
+        -------
+        T
+            The proxy instance.
+        """
         self._self_context_token = active_batcher.set(self._self_batcher)
-        return t.cast(T, self)
+        return t.cast(typ=T, val=self)
 
     def __exit__(
         self,
@@ -141,6 +305,18 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
         exc_val: BaseException | None,
         exc_tb: t.Any,
     ) -> None:
+        """
+        Exit the synchronous context manager and reset the batcher.
+
+        Parameters
+        ----------
+        exc_type : type[BaseException] | None
+            Exception type, if any.
+        exc_val : BaseException | None
+            Exception value, if any.
+        exc_tb : typing.Any
+            Exception traceback, if any.
+        """
         if self._self_context_token is not None:
             active_batcher.reset(self._self_context_token)
             self._self_context_token = None
@@ -149,20 +325,30 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
         try:
             loop = asyncio.get_running_loop()
             # Schedule the close for later execution
-            loop.create_task(self._self_batcher.close())
+            loop.create_task(coro=self._self_batcher.close())
         except RuntimeError:
             # No event loop running - warn the user
             warnings.warn(
-                "BatchingProxy used with sync context manager. "
-                "Use 'async with' for proper cleanup, or manually call await proxy._self_batcher.close()",
-                UserWarning,
+                message=(
+                    "BatchingProxy used with sync context manager. "
+                    "Use 'async with' for proper cleanup, or manually call await proxy._self_batcher.close()"
+                ),
+                category=UserWarning,
                 stacklevel=2,
             )
 
     # Async context manager support
     async def __aenter__(self) -> T:
+        """
+        Enter the async context manager and activate the batcher.
+
+        Returns
+        -------
+        T
+            The proxy instance.
+        """
         self._self_context_token = active_batcher.set(self._self_batcher)
-        return t.cast(T, self)
+        return t.cast(typ=T, val=self)
 
     async def __aexit__(
         self,
@@ -170,6 +356,18 @@ class BatchingProxy(wrapt.ObjectProxy, t.Generic[T]):
         exc_val: BaseException | None,
         exc_tb: t.Any,
     ) -> None:
+        """
+        Exit the async context manager, reset the batcher, and flush pending work.
+
+        Parameters
+        ----------
+        exc_type : type[BaseException] | None
+            Exception type, if any.
+        exc_val : BaseException | None
+            Exception value, if any.
+        exc_tb : typing.Any
+            Exception traceback, if any.
+        """
         if self._self_context_token is not None:
             active_batcher.reset(self._self_context_token)
             self._self_context_token = None
