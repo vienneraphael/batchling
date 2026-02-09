@@ -65,8 +65,9 @@ class Batcher:
 
     def __init__(
         self,
-        batch_size: int = 10,
+        batch_size: int = 50,
         batch_window_seconds: float = 2.0,
+        batch_poll_interval_seconds: float = 10.0,
     ):
         """
         Initialize the batcher.
@@ -77,6 +78,8 @@ class Batcher:
             Submit a batch when this many requests are queued for a provider.
         batch_window_seconds : float
             Submit a provider batch after this many seconds, even if size not reached.
+        batch_poll_interval_seconds : float
+            Poll active batches every this many seconds.
         """
         self._batch_size = batch_size
         self._batch_window_seconds = batch_window_seconds
@@ -91,12 +94,13 @@ class Batcher:
         self._client_factory: t.Callable[[], httpx.AsyncClient] = lambda: httpx.AsyncClient(
             timeout=30.0
         )
-        self._poll_interval_seconds = 2.0
+        self._poll_interval_seconds = batch_poll_interval_seconds
 
         log.debug(
             event="Initialized Batcher",
             batch_size=batch_size,
             batch_window_seconds=batch_window_seconds,
+            batch_poll_interval_seconds=batch_poll_interval_seconds,
         )
 
     async def submit(

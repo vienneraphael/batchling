@@ -97,10 +97,15 @@ def _pending_count_for_provider(batcher: Batcher, provider_name: str) -> int:
 @pytest.mark.asyncio
 async def test_batcher_initialization():
     """Test that Batcher initializes with correct parameters."""
-    batcher = Batcher(batch_size=10, batch_window_seconds=2.0)
+    batcher = Batcher(
+        batch_size=10,
+        batch_window_seconds=2.0,
+        batch_poll_interval_seconds=5.0,
+    )
 
     assert batcher._batch_size == 10
     assert batcher._batch_window_seconds == 2.0
+    assert batcher._poll_interval_seconds == 5.0
     assert _pending_count(batcher=batcher) == 0
     assert len(batcher._active_batches) == 0
     assert batcher._window_tasks == {}

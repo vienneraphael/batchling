@@ -21,7 +21,12 @@ T = t.TypeVar(name="T")
 
 
 @t.overload
-def batchify(target: t.Callable[P, R], **kwargs: t.Any) -> t.Callable[P, R]:
+def batchify(
+    target: t.Callable[P, R],
+    batch_size: int = 50,
+    batch_window_seconds: float = 2.0,
+    batch_poll_interval_seconds: float = 10.0,
+) -> t.Callable[P, R]:
     """
     Wrap a callable target while preserving its signature.
 
@@ -29,8 +34,12 @@ def batchify(target: t.Callable[P, R], **kwargs: t.Any) -> t.Callable[P, R]:
     ----------
     target : typing.Callable[P, R]
         Callable to wrap.
-    **kwargs : typing.Any
-        Batcher configuration (``batch_size``, ``batch_window_seconds``, etc.).
+    batch_size : int, optional
+        Submit a batch when this many requests are queued for a provider.
+    batch_window_seconds : float, optional
+        Submit a provider batch after this many seconds, even if size not reached.
+    batch_poll_interval_seconds : float, optional
+        Poll active batches every this many seconds.
 
     Returns
     -------
@@ -41,7 +50,12 @@ def batchify(target: t.Callable[P, R], **kwargs: t.Any) -> t.Callable[P, R]:
 
 
 @t.overload
-def batchify(target: T, **kwargs: t.Any) -> BatchingProxy[T]:
+def batchify(
+    target: T,
+    batch_size: int = 50,
+    batch_window_seconds: float = 2.0,
+    batch_poll_interval_seconds: float = 10.0,
+) -> BatchingProxy[T]:
     """
     Wrap an object instance while preserving its type.
 
@@ -49,8 +63,12 @@ def batchify(target: T, **kwargs: t.Any) -> BatchingProxy[T]:
     ----------
     target : T
         Instance to wrap.
-    **kwargs : typing.Any
-        Batcher configuration (``batch_size``, ``batch_window_seconds``, etc.).
+    batch_size : int, optional
+        Submit a batch when this many requests are queued for a provider.
+    batch_window_seconds : float, optional
+        Submit a provider batch after this many seconds, even if size not reached.
+    batch_poll_interval_seconds : float, optional
+        Poll active batches every this many seconds.
 
     Returns
     -------
@@ -61,7 +79,10 @@ def batchify(target: T, **kwargs: t.Any) -> BatchingProxy[T]:
 
 
 def batchify(
-    target: t.Callable[..., t.Any] | t.Any, **kwargs: t.Any
+    target: t.Callable[..., t.Any] | t.Any,
+    batch_size: int = 50,
+    batch_window_seconds: float = 2.0,
+    batch_poll_interval_seconds: float = 10.0,
 ) -> BatchingProxy[t.Any] | t.Callable[..., t.Any]:
     """
     Universal adapter.
@@ -70,8 +91,12 @@ def batchify(
     ----------
     target : typing.Callable[..., typing.Any] | typing.Any
         Function or object instance (client, agent, etc.).
-    **kwargs : typing.Any
-        Batcher configuration (``batch_size``, ``batch_window_seconds``, etc.).
+    batch_size : int, optional
+        Submit a batch when this many requests are queued for a provider.
+    batch_window_seconds : float, optional
+        Submit a provider batch after this many seconds, even if size not reached.
+    batch_poll_interval_seconds : float, optional
+        Poll active batches every this many seconds.
 
     Returns
     -------
@@ -91,7 +116,11 @@ def batchify(
     install_hooks()
 
     # 2. Create Batcher instance with provided configuration
-    batcher = Batcher(**kwargs)
+    batcher = Batcher(
+        batch_size=batch_size,
+        batch_window_seconds=batch_window_seconds,
+        batch_poll_interval_seconds=batch_poll_interval_seconds,
+    )
 
     # 3. If target is callable (function), return decorated function
     if callable(target) and not isinstance(target, type):
