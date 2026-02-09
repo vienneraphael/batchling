@@ -157,10 +157,24 @@ class Batcher:
         provider_name = provider.name
         requests_to_submit: list[_PendingRequest] = []
 
+        log.debug(
+            event="Queued request for batch",
+            provider=provider_name,
+            custom_id=custom_id,
+            client_type=client_type,
+            method=method,
+            url=url,
+        )
+
         async with self._pending_lock:
             queue = self._pending_by_provider.setdefault(provider_name, [])
             queue.append(request)
             pending_count = len(queue)
+            log.debug(
+                event="Pending queue updated",
+                provider=provider_name,
+                pending_count=pending_count,
+            )
 
             # Start window timer if this is the first request
             if pending_count == 1:
@@ -203,6 +217,11 @@ class Batcher:
             Provider key for the pending queue.
         """
         try:
+            log.debug(
+                event="Window timer started",
+                provider=provider_name,
+                batch_window_seconds=self._batch_window_seconds,
+            )
             await asyncio.sleep(delay=self._batch_window_seconds)
             requests_to_submit: list[_PendingRequest] = []
             async with self._pending_lock:
@@ -214,6 +233,11 @@ class Batcher:
                     )
                     requests_to_submit = self._drain_provider_queue(
                         provider_name=provider_name,
+                    )
+                else:
+                    log.debug(
+                        event="Batch window elapsed with empty queue",
+                        provider=provider_name,
                     )
             if requests_to_submit:
                 await self._submit_requests(
@@ -285,6 +309,11 @@ class Batcher:
         self._window_tasks.pop(provider_name, None)
 
         requests = self._pending_by_provider.pop(provider_name, [])
+        log.debug(
+            event="Drained provider queue",
+            provider=provider_name,
+            drained_count=len(requests),
+        )
         return requests
 
     async def _fail_pending_provider_requests(
@@ -501,9 +530,20 @@ class Batcher:
             return
 
         try:
+            log.info(
+                event="Processing batch",
+                provider=provider.name,
+                request_count=len(requests),
+            )
             base_url, endpoint = self._extract_base_and_endpoint(
                 provider=provider,
                 url=requests[0].params["url"],
+            )
+            log.debug(
+                event="Resolved batch target",
+                provider=provider.name,
+                base_url=base_url,
+                endpoint=endpoint,
             )
             api_headers = self._build_api_headers(
                 provider=provider,
@@ -517,16 +557,33 @@ class Batcher:
                 provider=provider,
                 requests=requests,
             )
+            log.debug(
+                event="Built JSONL lines",
+                provider=provider.name,
+                request_count=len(jsonl_lines),
+            )
             file_id = await self._upload_batch_file(
                 base_url=base_url,
                 api_headers=api_headers,
                 jsonl_lines=jsonl_lines,
+            )
+            log.info(
+                event="Uploaded batch file",
+                provider=provider.name,
+                file_id=file_id,
+                request_count=len(jsonl_lines),
             )
             batch_id = await self._create_batch_job(
                 base_url=base_url,
                 api_headers=api_headers,
                 file_id=file_id,
                 endpoint=endpoint,
+            )
+            log.info(
+                event="Created batch job",
+                provider=provider.name,
+                batch_id=batch_id,
+                file_id=file_id,
             )
 
             active_batch = _ActiveBatch(
@@ -537,6 +594,12 @@ class Batcher:
                 created_at=time.time(),
             )
             self._active_batches.append(active_batch)
+            log.debug(
+                event="Tracking active batch",
+                provider=provider.name,
+                batch_id=batch_id,
+                active_batch_count=len(self._active_batches),
+            )
 
             await self._poll_batch(
                 base_url=base_url,
@@ -617,6 +680,12 @@ class Batcher:
             "file": ("batch.jsonl", file_content, "application/jsonl"),
         }
 
+        log.debug(
+            event="Uploading batch file",
+            base_url=base_url,
+            line_count=len(jsonl_lines),
+            bytes=len(file_content),
+        )
         async with self._client_factory() as client:
             response = await client.post(
                 url=f"{base_url}/v1/files",
@@ -668,6 +737,12 @@ class Batcher:
             )
             response.raise_for_status()
             payload = response.json()
+        log.debug(
+            event="Batch job created",
+            base_url=base_url,
+            batch_id=payload.get("id"),
+            input_file_id=file_id,
+        )
         return payload["id"]
 
     async def _poll_batch(
@@ -693,6 +768,12 @@ class Batcher:
             Active batch metadata.
         """
         terminal_states = {"completed", "failed", "cancelled", "expired"}
+        log.info(
+            event="Polling batch",
+            provider=provider.name,
+            batch_id=active_batch.batch_id,
+            poll_interval_seconds=self._poll_interval_seconds,
+        )
         while True:
             async with self._client_factory() as client:
                 response = await client.get(
@@ -705,8 +786,22 @@ class Batcher:
             status = payload.get("status", "created")
             active_batch.output_file_id = payload.get("output_file_id") or ""
             active_batch.error_file_id = payload.get("error_file_id") or ""
+            log.debug(
+                event="Batch poll tick",
+                provider=provider.name,
+                batch_id=active_batch.batch_id,
+                status=status,
+                has_output_file=bool(active_batch.output_file_id),
+                has_error_file=bool(active_batch.error_file_id),
+            )
 
             if status in terminal_states:
+                log.info(
+                    event="Batch reached terminal state",
+                    provider=provider.name,
+                    batch_id=active_batch.batch_id,
+                    status=status,
+                )
                 await self._resolve_batch_results(
                     base_url=base_url,
                     api_headers=api_headers,
@@ -741,8 +836,19 @@ class Batcher:
         """
         file_id = self._resolve_batch_file_id(active_batch=active_batch)
         if file_id is None:
+            log.error(
+                event="Batch resolved without output file",
+                provider=provider.name,
+                batch_id=active_batch.batch_id,
+            )
             return
 
+        log.info(
+            event="Downloading batch results",
+            provider=provider.name,
+            batch_id=active_batch.batch_id,
+            file_id=file_id,
+        )
         content = await self._download_batch_content(
             base_url=base_url,
             api_headers=api_headers,
@@ -752,6 +858,13 @@ class Batcher:
             provider=provider,
             active_batch=active_batch,
             content=content,
+        )
+        log.info(
+            event="Applied batch results",
+            provider=provider.name,
+            batch_id=active_batch.batch_id,
+            resolved_count=len(seen),
+            request_count=len(active_batch.requests),
         )
         self._fail_missing_results(active_batch=active_batch, seen=seen)
 
@@ -808,6 +921,11 @@ class Batcher:
                 headers=api_headers,
             )
             response.raise_for_status()
+            log.debug(
+                event="Downloaded batch content",
+                file_id=file_id,
+                status_code=response.status_code,
+            )
             return response.text
 
     def _apply_batch_results(
@@ -841,6 +959,11 @@ class Batcher:
             result_item = json.loads(s=line)
             custom_id = result_item.get("custom_id")
             if custom_id is None:
+                log.debug(
+                    event="Batch result missing custom_id",
+                    provider=provider.name,
+                    batch_id=active_batch.batch_id,
+                )
                 continue
             seen.add(custom_id)
             pending = active_batch.requests.get(custom_id)
@@ -869,6 +992,11 @@ class Batcher:
         missing = set(active_batch.requests.keys()) - seen
         if not missing:
             return
+        log.error(
+            event="Missing batch results",
+            batch_id=active_batch.batch_id,
+            missing_count=len(missing),
+        )
         error = RuntimeError(f"Missing results for {len(missing)} request(s)")
         for custom_id in missing:
             pending = active_batch.requests.get(custom_id)
