@@ -2,7 +2,8 @@
 
 `batchify` is the public entry point that activates batching for either a callable or an
 object instance. It installs global hooks, creates a `Batcher`, and then returns either a
-decorated function or a `BatchingProxy` for instances.
+decorated function or a `BatchingProxy` for instances. Import it from `batchling` or
+`batchling.batching`.
 
 ## Responsibilities
 
