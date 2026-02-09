@@ -29,7 +29,8 @@ resolves futures back to callers.
 ## Extension notes
 
 - Add new provider adapters by implementing batch submission + polling in `Batcher`.
-- Implement `_worker_loop()` to stream partial results when providers support it.
+- `_process_batch()` currently supports OpenAI only; other providers must add a submission
+  path (or return a clear error if unsupported).
 
 ## Code reference
 

@@ -19,7 +19,9 @@ introspection and `isinstance` behavior while supporting recursive attribute acc
 3. Callable attributes are wrapped with a context-setting wrapper.
 4. Non-primitive attributes are wrapped recursively in another `BatchingProxy`.
 5. `__enter__`/`__aenter__` set the active batcher for the entire context block.
-6. `__exit__`/`__aexit__` reset the context and trigger `batcher.close()`.
+6. `__exit__` resets the context and schedules `batcher.close()` if an event loop is
+   running (otherwise it warns).
+7. `__aexit__` resets the context and awaits `batcher.close()` to flush pending work.
 
 ## Code reference
 

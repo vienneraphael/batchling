@@ -16,9 +16,12 @@ expand to other clients.
 
 1. `install_hooks()` stores the original method and patches `httpx.AsyncClient.send`.
 2. `_httpx_async_send_hook()` logs request details and checks `active_batcher`.
-3. If a provider supports the URL and a batcher is active, the request is enqueued via
-   `batcher.submit()` and an `httpx.Response` is returned later.
-4. Otherwise, the original request is invoked.
+3. If the request is marked as internal (`x-batchling-internal: 1`), the hook bypasses
+   batching to avoid recursion.
+4. If a provider supports the URL and a batcher is active, the request is enqueued via
+   `batcher.submit()` and the resolved response is returned (often an `httpx.Response`,
+   but providers can return other shapes).
+5. Otherwise, the original request is invoked.
 
 ## Extension notes
 
