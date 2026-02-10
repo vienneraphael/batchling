@@ -8,7 +8,7 @@
 
 
 
-        <link rel="canonical" href="https://vienneraphael.github.io/batchling/architecture/proxy/">
+        <link rel="canonical" href="https://vienneraphael.github.io/batchling/architecture/context/">
 
 
         <link rel="prev" href="../hooks/">
@@ -635,7 +635,7 @@
 
 
 
-<h1 id="proxy-wrapper-batchingproxy">Proxy wrapper: <code>BatchingProxy</code></h1>
+<h1 id="proxy-wrapper-batchingproxy">Context manager: <code>BatchingProxy</code></h1>
 <p><code>BatchingProxy</code> wraps an object instance and ensures every method call runs with the
 active <code>Batcher</code> set in a context variable. It uses <code>wrapt.ObjectProxy</code> to preserve
 introspection and <code>isinstance</code> behavior while supporting recursive attribute access.</p>

@@ -16,7 +16,7 @@ Batchling is a Python library to run large-scale GenAI batch experiments across 
 - API surface: architecture/api.md
 - Core engine: architecture/core.md
 - Hooks: architecture/hooks.md
-- Proxy wrapper: architecture/proxy.md
+- Context manager: architecture/context.md
 - Providers: architecture/providers.md
 
 ## Repository
