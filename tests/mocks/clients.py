@@ -1,5 +1,5 @@
 """
-Mock client classes for testing batchify and BatchingProxy.
+Mock client classes for testing batchify and BatchingContext.
 """
 
 import asyncio
@@ -19,7 +19,7 @@ class MockClient:
 
     async def async_method(self, x):
         """Asynchronous method."""
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(delay=0.01)
         return x * 3
 
     @property
@@ -49,7 +49,7 @@ class MockNested:
 
     async def async_nested(self, x):
         """Nested asynchronous method."""
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(delay=0.01)
         return x + 20
 
 
@@ -60,5 +60,5 @@ def sync_function(x):
 
 async def async_function(x):
     """Test asynchronous function."""
-    await asyncio.sleep(0.01)
+    await asyncio.sleep(delay=0.01)
     return x * 3

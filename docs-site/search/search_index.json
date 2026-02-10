@@ -183,7 +183,7 @@
     {
       "location": "architecture/proxy/#code-reference",
       "title": "Code reference",
-      "text": "<ul> <li><code>src/batchling/batching/proxy.py</code></li> </ul>"
+      "text": "<ul> <li><code>src/batchling/batching/context.py</code></li> </ul>"
     }
   ]
 }

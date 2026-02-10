@@ -2,7 +2,7 @@
 
 `batchify` is the public entry point that activates batching for either a callable or an
 object instance. It installs global hooks, creates a `Batcher`, and then returns either a
-decorated function or a `BatchingProxy` for instances. Import it from `batchling` or
+decorated function or a `BatchingContext` for instances. Import it from `batchling` or
 `batchling.batching`.
 
 ## Responsibilities
@@ -11,17 +11,19 @@ decorated function or a `BatchingProxy` for instances. Import it from `batchling
 - Construct a `Batcher` with configuration such as `batch_size`,
   `batch_window_seconds`, and `batch_poll_interval_seconds`.
 - Wrap callables with a decorator that sets the active batcher in a context variable.
-- Wrap objects with `BatchingProxy` so all method calls inherit the batching context.
+- Return a `BatchingContext` for instances to scope batching to a context manager.
 
 ## Inputs and outputs
 
-- **Inputs**: a callable or instance plus batcher configuration arguments.
-- **Outputs**: a decorated callable or `BatchingProxy[T]` instance that preserves the wrapped type.
+- **Inputs**: a callable, instance, or `None` plus batcher configuration arguments.
+- **Outputs**: a decorated callable or `BatchingContext[T]` instance that yields the target (or
+  `None` when no target is supplied).
 
 ## Extension notes
 
 - Any new hook types should be installed by `install_hooks()` so the behavior stays centralized.
 - Configuration changes to `Batcher` should be surfaced through arguments on `batchify`.
+- `batchify` raises a `TypeError` when passed a bound method. Use a context manager instead.
 
 ## Code reference
 

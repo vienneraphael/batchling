@@ -8,7 +8,7 @@ flowchart TB
     end
 
     subgraph Runtime[Runtime Context]
-        proxy[BatchingProxy]
+        proxy[BatchingContext]
         ctx[ContextVar: active Batcher]
     end
 
@@ -30,9 +30,9 @@ flowchart TB
     end
 
     app -->|calls wrapped function or client| batchify
-    batchify -->|returns wrapper or proxy| app
+    batchify -->|returns wrapper or context| app
 
-    batchify -->|wraps client with| proxy
+    batchify -->|returns context for| proxy
     batchify -->|installs hooks and seeds| ctx
     proxy -->|activates| ctx
 
@@ -50,7 +50,7 @@ flowchart TB
 ## Notes
 
 1. `batchify` wraps a function or client instance and installs hooks.
-2. `BatchingProxy` activates the context variable that holds the active `Batcher`.
+2. `BatchingContext` activates the context variable that holds the active `Batcher`.
 3. HTTP hooks capture supported requests and enqueue them into the `Batcher`.
 4. The `Batcher` batches pending requests, submits them, and resolves per-request futures.
 5. Provider adapters normalize URLs and decode batch results into responses.
