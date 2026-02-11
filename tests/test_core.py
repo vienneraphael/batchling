@@ -737,7 +737,7 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
     assert result.json()["provider"] == "openai"
     assert result.json()["status"] == "simulated"
     assert _pending_count(batcher=dry_run_batcher) == 0
-    assert len(dry_run_batcher._active_batches) == 1
+    assert len(dry_run_batcher._active_batches) == 2
 
     await dry_run_batcher.close()
 

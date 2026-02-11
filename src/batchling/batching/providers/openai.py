@@ -82,7 +82,8 @@ class OpenAIProvider(BaseProvider):
         if not requests:
             raise ValueError("Cannot process an empty request batch")
 
-        base_url, endpoint = requests[0].params["url"], requests[0].params["endpoint"]
+        base_url = self._normalize_base_url(url=requests[0].params["url"])
+        endpoint = requests[0].params["endpoint"]
         log.debug(
             event="Resolved batch submission target",
             provider=self.name,

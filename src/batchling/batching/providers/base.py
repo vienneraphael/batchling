@@ -4,6 +4,7 @@ import json
 import typing as t
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 import httpx
 import structlog
@@ -60,6 +61,30 @@ class BaseProvider(ABC):
     hostnames: tuple[str, ...] = ()
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
+
+    def _normalize_base_url(self, *, url: str) -> str:
+        """
+        Normalize provider base URL into an absolute HTTPS URL.
+
+        Parameters
+        ----------
+        url : str
+            Base URL or hostname from pending request params.
+
+        Returns
+        -------
+        str
+            Absolute base URL without trailing slash.
+        """
+        stripped = url.strip().rstrip("/")
+        if not stripped:
+            raise ValueError("OpenAI base URL cannot be empty")
+
+        parsed = urlparse(url=stripped)
+        if parsed.scheme:
+            return stripped
+
+        return f"https://{stripped}"
 
     def _summarize_value(self, *, value: t.Any) -> str:
         """
@@ -375,7 +400,7 @@ class BaseProvider(ABC):
                 provider=self.name,
                 custom_id=request.custom_id,
                 method=request.params["method"],
-                endpoint=line["endpoint"],
+                endpoint=line["url"],
                 body_summary=self._summarize_value(value=body),
             )
         log.debug(

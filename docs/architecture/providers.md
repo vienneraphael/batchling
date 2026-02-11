@@ -26,6 +26,7 @@ The OpenAI provider implements:
 
 - `build_api_headers()` for auth + provider-specific passthrough headers.
 - `process_batch()` to upload JSONL input and create `/v1/batches` jobs.
+  It normalizes host-only values (for example, `api.openai.com`) to `https://` URLs.
 - `from_batch_result()` to decode batch output lines.
 
 Common helpers now live on `BaseProvider` and can be reused by all providers:
