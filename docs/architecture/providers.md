@@ -17,8 +17,6 @@ batch results.
 
 - Providers are auto-discovered from `batchling/batching/providers/*.py` files
   (excluding `__init__.py` and `base.py`).
-- `get_provider_for_url()` indexes providers by hostname for efficient ownership
-  lookup, with a fallback match if indices do not produce a candidate.
 - `get_provider_for_batch_request()` resolves a provider only when the request's
   `POST + path` is explicitly batchable for that provider.
 

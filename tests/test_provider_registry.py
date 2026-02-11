@@ -6,7 +6,6 @@ import batchling.batching.providers as providers_module
 from batchling.batching.providers import (
     BaseProvider,
     get_provider_for_batch_request,
-    get_provider_for_url,
 )
 
 
@@ -57,7 +56,10 @@ def test_provider_lookup_still_resolves_openai() -> None:
     None
         This test asserts URL-to-provider mapping.
     """
-    provider = get_provider_for_url(url="https://api.openai.com/v1/chat/completions")
+    provider = get_provider_for_batch_request(
+        url="https://api.openai.com/v1/chat/completions",
+        method="POST",
+    )
     assert provider is not None
     assert provider.name == "openai"
 

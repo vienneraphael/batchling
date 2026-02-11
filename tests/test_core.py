@@ -8,14 +8,22 @@ import httpx
 import pytest
 
 from batchling.batching.core import Batcher
-from batchling.batching.providers import get_provider_for_url
+from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
 
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 @pytest.fixture
-def mock_openai_api_transport():
+def provider() -> OpenAIProvider:
+    """
+    Create an OpenAI provider instance.
+    """
+    return OpenAIProvider()
+
+
+@pytest.fixture
+def mock_openai_api_transport() -> httpx.MockTransport:
     """
     Create a mock OpenAI batch transport.
 
@@ -28,7 +36,7 @@ def mock_openai_api_transport():
 
 
 @pytest.fixture
-def batcher(mock_openai_api_transport):
+def batcher(mock_openai_api_transport: httpx.MockTransport) -> Batcher:
     """
     Create a Batcher instance for testing.
 
@@ -44,7 +52,7 @@ def batcher(mock_openai_api_transport):
 
 
 @pytest.fixture
-def fast_batcher(mock_openai_api_transport):
+def fast_batcher(mock_openai_api_transport: httpx.MockTransport) -> Batcher:
     """
     Create a Batcher with a very short window for fast tests.
 
@@ -113,12 +121,13 @@ async def test_batcher_initialization():
 
 
 @pytest.mark.asyncio
-async def test_submit_single_request(batcher):
+async def test_submit_single_request(batcher: Batcher, provider: OpenAIProvider):
     """Test submitting a single request."""
     result = await batcher.submit(
         client_type="httpx",
         method="GET",
         url=f"{OPENAI_BASE_URL}/test",
+        provider=provider,
     )
 
     assert isinstance(result, httpx.Response)
@@ -128,7 +137,7 @@ async def test_submit_single_request(batcher):
 
 
 @pytest.mark.asyncio
-async def test_submit_multiple_requests_queued(batcher):
+async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenAIProvider):
     """Test that multiple requests are queued before batch size is reached."""
     # Submit 2 requests (less than batch_size=3)
     task1 = asyncio.create_task(
@@ -136,6 +145,7 @@ async def test_submit_multiple_requests_queued(batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
     task2 = asyncio.create_task(
@@ -143,6 +153,7 @@ async def test_submit_multiple_requests_queued(batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/2",
+            provider=provider,
         )
     )
 
@@ -159,12 +170,18 @@ async def test_submit_multiple_requests_queued(batcher):
 
 
 @pytest.mark.asyncio
-async def test_batch_size_threshold_triggers_submission(batcher):
+async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provider: OpenAIProvider):
     """Test that batch submission is triggered when batch_size is reached."""
     results = await asyncio.gather(
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1"),
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2"),
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3"),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+        ),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+        ),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+        ),
     )
 
     # All requests should complete
@@ -181,7 +198,7 @@ async def test_batch_size_threshold_triggers_submission(batcher):
 
 
 @pytest.mark.asyncio
-async def test_window_time_triggers_submission(fast_batcher):
+async def test_window_time_triggers_submission(fast_batcher: Batcher, provider: OpenAIProvider):
     """Test that batch submission is triggered after window time elapses."""
     # Submit 1 request (less than batch_size=2)
     task = asyncio.create_task(
@@ -189,6 +206,7 @@ async def test_window_time_triggers_submission(fast_batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
 
@@ -208,7 +226,7 @@ async def test_window_time_triggers_submission(fast_batcher):
 
 
 @pytest.mark.asyncio
-async def test_window_timer_cancelled_on_size_threshold(batcher):
+async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provider: OpenAIProvider):
     """Test that window timer is cancelled when batch size threshold is reached."""
     # Submit 2 requests to start the timer
     task1 = asyncio.create_task(
@@ -216,6 +234,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
     task2 = asyncio.create_task(
@@ -223,6 +242,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/2",
+            provider=provider,
         )
     )
 
@@ -238,6 +258,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/3",
+            provider=provider,
         )
     )
 
@@ -248,18 +269,26 @@ async def test_window_timer_cancelled_on_size_threshold(batcher):
 
 
 @pytest.mark.asyncio
-async def test_multiple_batches_submitted(fast_batcher):
+async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenAIProvider):
     """Test that multiple batches can be submitted sequentially."""
     # Submit first batch (size threshold)
     await asyncio.gather(
-        fast_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1"),
-        fast_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2"),
+        fast_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+        ),
+        fast_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+        ),
     )
 
     # Submit second batch (size threshold)
     await asyncio.gather(
-        fast_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3"),
-        fast_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/4"),
+        fast_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+        ),
+        fast_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/4", provider=provider
+        ),
     )
 
     # Should have 2 active batches
@@ -268,7 +297,7 @@ async def test_multiple_batches_submitted(fast_batcher):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_requests(batcher):
+async def test_concurrent_requests(batcher: Batcher, provider: OpenAIProvider):
     """Test handling of concurrent requests."""
     # Submit 5 requests concurrently (will create 2 batches)
     tasks = [
@@ -277,6 +306,7 @@ async def test_concurrent_requests(batcher):
                 client_type="httpx",
                 method="GET",
                 url=f"{OPENAI_BASE_URL}/{i}",
+                provider=provider,
             )
         )
         for i in range(5)
@@ -293,7 +323,7 @@ async def test_concurrent_requests(batcher):
 
 
 @pytest.mark.asyncio
-async def test_submit_with_kwargs(batcher):
+async def test_submit_with_kwargs(batcher: Batcher, provider: OpenAIProvider):
     """Test that submit accepts and stores kwargs."""
     result = await batcher.submit(
         client_type="httpx",
@@ -301,6 +331,7 @@ async def test_submit_with_kwargs(batcher):
         url=f"{OPENAI_BASE_URL}/api",
         json={"key": "value"},
         headers={"Authorization": "Bearer token"},
+        provider=provider,
     )
 
     assert isinstance(result, httpx.Response)
@@ -319,7 +350,7 @@ async def test_submit_with_kwargs(batcher):
 
 
 @pytest.mark.asyncio
-async def test_close_submits_remaining_requests(fast_batcher):
+async def test_close_submits_remaining_requests(fast_batcher: Batcher, provider: OpenAIProvider):
     """Test that close() submits any remaining pending requests."""
     # Submit 1 request (less than batch_size)
     task = asyncio.create_task(
@@ -327,6 +358,7 @@ async def test_close_submits_remaining_requests(fast_batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
 
@@ -346,7 +378,7 @@ async def test_close_submits_remaining_requests(fast_batcher):
 
 
 @pytest.mark.asyncio
-async def test_close_cancels_window_timer(fast_batcher):
+async def test_close_cancels_window_timer(fast_batcher: Batcher, provider: OpenAIProvider):
     """Test that close() cancels the window timer."""
     # Submit 1 request to start timer
     task = asyncio.create_task(
@@ -354,6 +386,7 @@ async def test_close_cancels_window_timer(fast_batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
 
@@ -374,10 +407,10 @@ async def test_close_cancels_window_timer(fast_batcher):
 
 
 @pytest.mark.asyncio
-async def test_batch_submission_error_handling(batcher, monkeypatch):
+async def test_batch_submission_error_handling(
+    batcher: Batcher, provider: OpenAIProvider, monkeypatch
+):
     """Test that errors during batch submission fail all pending futures."""
-    provider = get_provider_for_url(url=f"{OPENAI_BASE_URL}/1")
-    assert provider is not None
 
     async def failing_process_batch(*_args, **_kwargs):
         raise Exception("Batch submission failed")
@@ -394,6 +427,7 @@ async def test_batch_submission_error_handling(batcher, monkeypatch):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
     task2 = asyncio.create_task(
@@ -401,6 +435,7 @@ async def test_batch_submission_error_handling(batcher, monkeypatch):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/2",
+            provider=provider,
         )
     )
     task3 = asyncio.create_task(
@@ -408,6 +443,7 @@ async def test_batch_submission_error_handling(batcher, monkeypatch):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/3",
+            provider=provider,
         )
     )
 
@@ -417,10 +453,10 @@ async def test_batch_submission_error_handling(batcher, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_window_timer_error_handling(fast_batcher, monkeypatch):
+async def test_window_timer_error_handling(
+    provider: OpenAIProvider, fast_batcher: Batcher, monkeypatch
+):
     """Test that errors during window-triggered submission fail futures."""
-    provider = get_provider_for_url(url=f"{OPENAI_BASE_URL}/1")
-    assert provider is not None
 
     async def failing_process_batch(*_args, **_kwargs):
         raise Exception("Timer error during batch submission")
@@ -437,6 +473,7 @@ async def test_window_timer_error_handling(fast_batcher, monkeypatch):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
 
@@ -451,9 +488,9 @@ async def test_window_timer_error_handling(fast_batcher, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_empty_batch_not_submitted(batcher):
+async def test_empty_batch_not_submitted(batcher: Batcher, provider: OpenAIProvider):
     """Test that submitting an empty batch does nothing."""
-    await batcher._submit_requests(provider_name="openai", requests=[])
+    await batcher._submit_requests(provider_name=provider.name, requests=[])
 
     # Should have no active batches
     assert len(batcher._active_batches) == 0
@@ -461,13 +498,19 @@ async def test_empty_batch_not_submitted(batcher):
 
 @pytest.mark.asyncio
 @pytest.mark.asyncio
-async def test_custom_id_uniqueness(batcher):
+async def test_custom_id_uniqueness(batcher: Batcher, provider: OpenAIProvider):
     """Test that each request gets a unique custom_id."""
     # Submit multiple requests
     await asyncio.gather(
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1"),
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2"),
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3"),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+        ),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+        ),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+        ),
     )
 
     # Get all custom_ids from the batch
@@ -480,13 +523,19 @@ async def test_custom_id_uniqueness(batcher):
 
 
 @pytest.mark.asyncio
-async def test_active_batch_tracking(batcher):
+async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider):
     """Test that active batches are properly tracked."""
     # Submit a batch
     await asyncio.gather(
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1"),
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2"),
-        batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3"),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+        ),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+        ),
+        batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+        ),
     )
 
     # Check batch properties
@@ -500,7 +549,7 @@ async def test_active_batch_tracking(batcher):
 
 
 @pytest.mark.asyncio
-async def test_multiple_windows_sequential(fast_batcher):
+async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: OpenAIProvider):
     """Test that multiple windows work sequentially."""
     # First window: submit 1 request, wait for window
     task1 = asyncio.create_task(
@@ -508,6 +557,7 @@ async def test_multiple_windows_sequential(fast_batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
     await asyncio.sleep(delay=0.15)
@@ -519,6 +569,7 @@ async def test_multiple_windows_sequential(fast_batcher):
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/2",
+            provider=provider,
         )
     )
     await asyncio.sleep(delay=0.15)
@@ -529,7 +580,9 @@ async def test_multiple_windows_sequential(fast_batcher):
 
 
 @pytest.mark.asyncio
-async def test_large_batch_size(mock_openai_api_transport):
+async def test_large_batch_size(
+    mock_openai_api_transport: httpx.MockTransport, provider: OpenAIProvider
+):
     """Test with a larger batch size."""
     large_batcher = Batcher(batch_size=10, batch_window_seconds=0.1)
     large_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
@@ -542,6 +595,7 @@ async def test_large_batch_size(mock_openai_api_transport):
                 client_type="httpx",
                 method="GET",
                 url=f"{OPENAI_BASE_URL}/{i}",
+                provider=provider,
             )
         )
         for i in range(10)
@@ -554,7 +608,7 @@ async def test_large_batch_size(mock_openai_api_transport):
 
 
 @pytest.mark.asyncio
-async def test_close_idempotent(batcher):
+async def test_close_idempotent(batcher: Batcher, provider: OpenAIProvider):
     """Test that close() can be called multiple times safely."""
     await batcher.close()
     await batcher.close()
@@ -565,7 +619,7 @@ async def test_close_idempotent(batcher):
 
 
 @pytest.mark.asyncio
-async def test_submit_after_close(batcher):
+async def test_submit_after_close(batcher: Batcher, provider: OpenAIProvider):
     """Test behavior when submitting after close."""
     await batcher.close()
 
@@ -575,13 +629,14 @@ async def test_submit_after_close(batcher):
         client_type="httpx",
         method="GET",
         url=f"{OPENAI_BASE_URL}/1",
+        provider=provider,
     )
     assert isinstance(result, httpx.Response)
     assert result.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_dry_run_returns_simulated_response():
+async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
     """Test dry-run returns a simulated response without provider I/O."""
     dry_run_batcher = Batcher(
         batch_size=3,
@@ -593,6 +648,7 @@ async def test_dry_run_returns_simulated_response():
         client_type="httpx",
         method="GET",
         url=f"{OPENAI_BASE_URL}/test",
+        provider=provider,
     )
 
     assert isinstance(result, httpx.Response)
@@ -608,16 +664,13 @@ async def test_dry_run_returns_simulated_response():
 
 
 @pytest.mark.asyncio
-async def test_dry_run_does_not_call_provider_process_batch(monkeypatch):
+async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProvider, monkeypatch):
     """Test dry-run bypasses provider batch submission."""
     dry_run_batcher = Batcher(
         batch_size=1,
         batch_window_seconds=1.0,
         dry_run=True,
     )
-
-    provider = get_provider_for_url(url=f"{OPENAI_BASE_URL}/1")
-    assert provider is not None
 
     call_count = 0
 
@@ -636,6 +689,7 @@ async def test_dry_run_does_not_call_provider_process_batch(monkeypatch):
         client_type="httpx",
         method="GET",
         url=f"{OPENAI_BASE_URL}/1",
+        provider=provider,
     )
 
     assert result.status_code == 200
@@ -645,7 +699,7 @@ async def test_dry_run_does_not_call_provider_process_batch(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_dry_run_still_batches_by_size():
+async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
     """Test dry-run keeps size-threshold batching behavior."""
     dry_run_batcher = Batcher(
         batch_size=3,
@@ -654,9 +708,15 @@ async def test_dry_run_still_batches_by_size():
     )
 
     results = await asyncio.gather(
-        dry_run_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1"),
-        dry_run_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2"),
-        dry_run_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3"),
+        dry_run_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+        ),
+        dry_run_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+        ),
+        dry_run_batcher.submit(
+            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+        ),
     )
 
     assert all(isinstance(r, httpx.Response) and r.status_code == 200 for r in results)
@@ -667,7 +727,7 @@ async def test_dry_run_still_batches_by_size():
 
 
 @pytest.mark.asyncio
-async def test_dry_run_close_flushes_pending_requests():
+async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
     """Test close() flushes pending requests in dry-run mode."""
     dry_run_batcher = Batcher(
         batch_size=5,
@@ -680,6 +740,7 @@ async def test_dry_run_close_flushes_pending_requests():
             client_type="httpx",
             method="GET",
             url=f"{OPENAI_BASE_URL}/1",
+            provider=provider,
         )
     )
 

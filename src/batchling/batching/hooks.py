@@ -13,7 +13,9 @@ import typing as t
 import httpx
 import structlog
 
+from batchling.batching.core import Batcher
 from batchling.batching.providers import get_provider_for_batch_request
+from batchling.batching.providers.base import BaseProvider
 
 log = structlog.get_logger(__name__)
 
@@ -281,7 +283,7 @@ def _maybe_route_to_batcher(
     url: str,
     headers: dict[str, str] | None,
     body: t.Any,
-):
+) -> tuple[Batcher, BaseProvider, dict[str, t.Any]] | None:
     """
     Resolve the active batcher and provider for a request.
 

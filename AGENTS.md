@@ -4,6 +4,7 @@
 
 - Document public utilities in `docs/` when you change behavior.
 - Whenever you import typing, use: `import typing as t`
+- Use as much typing as possible on your function definitions
 - Use python native type hinting whenever possible, e.g. `list[dict]`
 - Always use named-arguments when calling functions or methods.
 - Document function and methods using numpy-style docs.

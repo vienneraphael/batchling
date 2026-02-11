@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import httpx
 import structlog
 
-from batchling.batching.providers import BaseProvider, get_provider_for_url
+from batchling.batching.providers import BaseProvider
 
 log = structlog.get_logger(__name__)
 
@@ -111,7 +111,7 @@ class Batcher:
         client_type: str,
         method: str,
         url: str,
-        provider: BaseProvider | None = None,
+        provider: BaseProvider,
         headers: dict[str, str] | None = None,
         body: t.Any = None,
         **kwargs: t.Any,
@@ -127,9 +127,8 @@ class Batcher:
             HTTP method (e.g., ``"GET"`` or ``"POST"``).
         url : str
             Request URL.
-        provider : BaseProvider | None, optional
-            Pre-resolved provider for this request. If omitted, the provider
-            is resolved from ``url``.
+        provider : BaseProvider
+            Provider for this request.
         headers : dict[str, str] | None, optional
             HTTP headers for the request.
         body : typing.Any, optional
@@ -145,12 +144,6 @@ class Batcher:
         loop = asyncio.get_running_loop()
         future: asyncio.Future[t.Any] = loop.create_future()
 
-        resolved_provider = provider
-        if resolved_provider is None:
-            resolved_provider = get_provider_for_url(url=url)
-        if resolved_provider is None:
-            raise ValueError(f"No provider registered for URL: {url}")
-
         custom_id = str(object=uuid.uuid4())
 
         request = _PendingRequest(
@@ -163,11 +156,11 @@ class Batcher:
                 "body": body,
                 **kwargs,
             },
-            provider=resolved_provider,
+            provider=provider,
             future=future,
         )
 
-        provider_name = resolved_provider.name
+        provider_name = provider.name
         requests_to_submit: list[_PendingRequest] = []
 
         log.debug(
