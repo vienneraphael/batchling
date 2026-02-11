@@ -12,13 +12,11 @@ import time
 import typing as t
 import uuid
 from dataclasses import dataclass
-from urllib.parse import urlparse
 
 import httpx
 import structlog
 
 from batchling.batching.providers import BaseProvider, get_provider_for_url
-from batchling.utils.api import get_default_api_key_from_provider
 
 log = structlog.get_logger(__name__)
 
@@ -342,181 +340,9 @@ class Batcher:
                 if not req.future.done():
                     req.future.set_exception(error)
 
-    def _extract_body(self, *, params: dict[str, t.Any]) -> t.Any:
-        """
-        Extract a request body from hook parameters.
-
-        Parameters
-        ----------
-        params : dict[str, typing.Any]
-            Hook parameters captured from the HTTP request.
-
-        Returns
-        -------
-        typing.Any
-            Extracted body value, if any.
-        """
-        if params.get("json") is not None:
-            return params["json"]
-        for key in ("body", "content", "data"):
-            if params.get(key) is not None:
-                return params[key]
-        return None
-
-    def _normalize_body(self, *, body: t.Any) -> t.Any:
-        """
-        Normalize a request body for JSONL serialization.
-
-        Parameters
-        ----------
-        body : typing.Any
-            Raw request body.
-
-        Returns
-        -------
-        typing.Any
-            Normalized request body.
-        """
-        if body is None:
-            return None
-        if isinstance(body, (dict, list)):
-            return body
-        if isinstance(body, (bytes, bytearray)):
-            try:
-                decoded = body.decode(encoding="utf-8")
-            except Exception:
-                return body.decode(encoding="utf-8", errors="replace")
-            return self._maybe_parse_json(value=decoded)
-        if isinstance(body, str):
-            return self._maybe_parse_json(value=body)
-        return body
-
-    def _maybe_parse_json(self, *, value: str) -> t.Any:
-        """
-        Parse a JSON string if possible.
-
-        Parameters
-        ----------
-        value : str
-            String payload.
-
-        Returns
-        -------
-        typing.Any
-            Parsed JSON or original string.
-        """
-        try:
-            return json.loads(s=value)
-        except Exception:
-            return value
-
-    def _normalize_headers(
-        self,
-        *,
-        headers: dict[str, str] | None,
-    ) -> dict[str, str]:
-        """
-        Normalize headers into a mutable mapping.
-
-        Parameters
-        ----------
-        headers : dict[str, str] | None
-            Input headers.
-
-        Returns
-        -------
-        dict[str, str]
-            Normalized headers.
-        """
-        return dict(headers) if headers else {}
-
-    def _build_api_headers(
-        self,
-        *,
-        provider: BaseProvider,
-        headers: dict[str, str],
-    ) -> dict[str, str]:
-        """
-        Build API headers for provider batch requests.
-
-        Parameters
-        ----------
-        provider : BaseProvider
-            Provider adapter.
-        headers : dict[str, str]
-            Original request headers.
-
-        Returns
-        -------
-        dict[str, str]
-            Headers to use for provider API calls.
-        """
-        api_headers: dict[str, str] = {}
-        for key, value in headers.items():
-            lower_key = key.lower()
-            if lower_key == "authorization":
-                api_headers["Authorization"] = value
-            elif lower_key.startswith("openai-"):
-                api_headers[key] = value
-
-        if "Authorization" not in api_headers:
-            api_key = get_default_api_key_from_provider(provider=provider.name)
-            api_headers["Authorization"] = f"Bearer {api_key}"
-        return api_headers
-
-    def _build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
-        """
-        Add internal bypass headers for provider API calls.
-
-        Parameters
-        ----------
-        headers : dict[str, str]
-            Base headers.
-
-        Returns
-        -------
-        dict[str, str]
-            Headers with internal bypass marker.
-        """
-        return {**headers, "x-batchling-internal": "1"}
-
-    def _extract_base_and_endpoint(
-        self,
-        *,
-        provider: BaseProvider,
-        url: str,
-    ) -> tuple[str, str]:
-        """
-        Extract base URL and endpoint path for a provider request.
-
-        Parameters
-        ----------
-        provider : BaseProvider
-            Provider adapter.
-        url : str
-            Original request URL.
-
-        Returns
-        -------
-        tuple[str, str]
-            Base URL and endpoint path.
-        """
-        parsed = urlparse(url=url)
-        if parsed.scheme and parsed.netloc:
-            base_url = f"{parsed.scheme}://{parsed.netloc}"
-            endpoint = provider.normalize_url(url=url)
-            return base_url, endpoint
-
-        if provider.hostnames:
-            base_url = f"https://{provider.hostnames[0]}"
-            endpoint = provider.normalize_url(url=url)
-            return base_url, endpoint
-
-        raise ValueError(f"Unable to determine base URL for request: {url}")
-
     async def _process_batch(self, *, requests: list[_PendingRequest]) -> None:
         """
-        Upload, create, and poll a provider batch for results.
+        Submit a provider batch and start polling lifecycle.
 
         Parameters
         ----------
@@ -524,74 +350,25 @@ class Batcher:
             Requests to submit in the batch.
         """
         provider = requests[0].provider
-        if provider.name != "openai":
-            error = NotImplementedError(
-                f"Batch submission not implemented for provider: {provider.name}"
-            )
-            for req in requests:
-                if not req.future.done():
-                    req.future.set_exception(error)
-            return
-
         try:
             log.info(
                 event="Processing batch",
                 provider=provider.name,
                 request_count=len(requests),
             )
-            base_url, endpoint = self._extract_base_and_endpoint(
-                provider=provider,
-                url=requests[0].params["url"],
-            )
-            log.debug(
-                event="Resolved batch target",
-                provider=provider.name,
-                base_url=base_url,
-                endpoint=endpoint,
-            )
-            api_headers = self._build_api_headers(
-                provider=provider,
-                headers=self._normalize_headers(
-                    headers=requests[0].params.get("headers"),
-                ),
-            )
-            api_headers = self._build_internal_headers(headers=api_headers)
-
-            jsonl_lines = self._build_jsonl_lines(
-                provider=provider,
+            batch_submission = await provider.process_batch(
                 requests=requests,
+                client_factory=self._client_factory,
             )
             log.debug(
-                event="Built JSONL lines",
+                event="Provider batch submitted",
                 provider=provider.name,
-                request_count=len(jsonl_lines),
-            )
-            file_id = await self._upload_batch_file(
-                base_url=base_url,
-                api_headers=api_headers,
-                jsonl_lines=jsonl_lines,
-            )
-            log.info(
-                event="Uploaded batch file",
-                provider=provider.name,
-                file_id=file_id,
-                request_count=len(jsonl_lines),
-            )
-            batch_id = await self._create_batch_job(
-                base_url=base_url,
-                api_headers=api_headers,
-                file_id=file_id,
-                endpoint=endpoint,
-            )
-            log.info(
-                event="Created batch job",
-                provider=provider.name,
-                batch_id=batch_id,
-                file_id=file_id,
+                batch_id=batch_submission.batch_id,
+                base_url=batch_submission.base_url,
             )
 
             active_batch = _ActiveBatch(
-                batch_id=batch_id,
+                batch_id=batch_submission.batch_id,
                 output_file_id="",
                 error_file_id="",
                 requests={req.custom_id: req for req in requests},
@@ -601,13 +378,13 @@ class Batcher:
             log.debug(
                 event="Tracking active batch",
                 provider=provider.name,
-                batch_id=batch_id,
+                batch_id=batch_submission.batch_id,
                 active_batch_count=len(self._active_batches),
             )
 
             await self._poll_batch(
-                base_url=base_url,
-                api_headers=api_headers,
+                base_url=batch_submission.base_url,
+                api_headers=batch_submission.api_headers,
                 provider=provider,
                 active_batch=active_batch,
             )
@@ -616,138 +393,6 @@ class Batcher:
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)
-
-    def _build_jsonl_lines(
-        self,
-        *,
-        provider: BaseProvider,
-        requests: list[_PendingRequest],
-    ) -> list[dict[str, t.Any]]:
-        """
-        Build JSONL request lines for a provider batch.
-
-        Parameters
-        ----------
-        provider : BaseProvider
-            Provider adapter.
-        requests : list[_PendingRequest]
-            Pending requests to serialize.
-
-        Returns
-        -------
-        list[dict[str, typing.Any]]
-            JSONL-ready line objects.
-        """
-        jsonl_lines: list[dict[str, t.Any]] = []
-        for req in requests:
-            body = self._normalize_body(
-                body=self._extract_body(params=req.params),
-            )
-            line: dict[str, t.Any] = {
-                "custom_id": req.custom_id,
-                "method": req.params["method"],
-                "url": provider.normalize_url(url=req.params["url"]),
-            }
-            if body is not None:
-                line["body"] = body
-            jsonl_lines.append(line)
-        return jsonl_lines
-
-    async def _upload_batch_file(
-        self,
-        *,
-        base_url: str,
-        api_headers: dict[str, str],
-        jsonl_lines: list[dict[str, t.Any]],
-    ) -> str:
-        """
-        Upload a JSONL batch input file.
-
-        Parameters
-        ----------
-        base_url : str
-            Provider base URL.
-        api_headers : dict[str, str]
-            Provider API headers.
-        jsonl_lines : list[dict[str, typing.Any]]
-            JSONL line payloads.
-
-        Returns
-        -------
-        str
-            Provider file ID.
-        """
-        file_content = "\n".join(json.dumps(obj=line) for line in jsonl_lines).encode(
-            encoding="utf-8"
-        )
-        files = {
-            "file": ("batch.jsonl", file_content, "application/jsonl"),
-        }
-
-        log.debug(
-            event="Uploading batch file",
-            base_url=base_url,
-            line_count=len(jsonl_lines),
-            bytes=len(file_content),
-        )
-        async with self._client_factory() as client:
-            response = await client.post(
-                url=f"{base_url}/v1/files",
-                headers=api_headers,
-                files=files,
-                data={"purpose": "batch"},
-            )
-            response.raise_for_status()
-            payload = response.json()
-        return payload["id"]
-
-    async def _create_batch_job(
-        self,
-        *,
-        base_url: str,
-        api_headers: dict[str, str],
-        file_id: str,
-        endpoint: str,
-    ) -> str:
-        """
-        Create a provider batch job.
-
-        Parameters
-        ----------
-        base_url : str
-            Provider base URL.
-        api_headers : dict[str, str]
-            Provider API headers.
-        file_id : str
-            Uploaded batch file ID.
-        endpoint : str
-            Provider endpoint path.
-
-        Returns
-        -------
-        str
-            Provider batch ID.
-        """
-        async with self._client_factory() as client:
-            response = await client.post(
-                url=f"{base_url}/v1/batches",
-                headers=api_headers,
-                json={
-                    "input_file_id": file_id,
-                    "endpoint": endpoint,
-                    "completion_window": "24h",
-                    "metadata": {"description": "batchling runtime batch"},
-                },
-            )
-            response.raise_for_status()
-            payload = response.json()
-        log.debug(
-            event="Batch job created",
-            base_url=base_url,
-            batch_id=payload.get("id"),
-            input_file_id=file_id,
-        )
-        return payload["id"]
 
     async def _poll_batch(
         self,

@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from batchling.batching.core import Batcher
+from batchling.batching.providers import get_provider_for_url
 from tests.mocks.batching import make_openai_batch_transport
 
 OPENAI_BASE_URL = "https://api.openai.com/v1"
@@ -373,54 +374,62 @@ async def test_close_cancels_window_timer(fast_batcher):
 
 
 @pytest.mark.asyncio
-async def test_batch_submission_error_handling(batcher):
+async def test_batch_submission_error_handling(batcher, monkeypatch):
     """Test that errors during batch submission fail all pending futures."""
-    original_upload = batcher._upload_batch_file
+    provider = get_provider_for_url(url=f"{OPENAI_BASE_URL}/1")
+    assert provider is not None
 
-    async def failing_upload(*_args, **_kwargs):
+    async def failing_process_batch(*_args, **_kwargs):
         raise Exception("Batch submission failed")
 
-    batcher._upload_batch_file = failing_upload
-    try:
-        # Submit requests
-        task1 = asyncio.create_task(
-            batcher.submit(
-                client_type="httpx",
-                method="GET",
-                url=f"{OPENAI_BASE_URL}/1",
-            )
-        )
-        task2 = asyncio.create_task(
-            batcher.submit(
-                client_type="httpx",
-                method="GET",
-                url=f"{OPENAI_BASE_URL}/2",
-            )
-        )
-        task3 = asyncio.create_task(
-            batcher.submit(
-                client_type="httpx",
-                method="GET",
-                url=f"{OPENAI_BASE_URL}/3",
-            )
-        )
+    monkeypatch.setattr(
+        provider,
+        "process_batch",
+        failing_process_batch,
+    )
 
-        # All should fail with the error
-        with pytest.raises(Exception, match="Batch submission failed"):
-            await asyncio.gather(task1, task2, task3, return_exceptions=False)
-    finally:
-        batcher._upload_batch_file = original_upload
+    # Submit requests
+    task1 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="GET",
+            url=f"{OPENAI_BASE_URL}/1",
+        )
+    )
+    task2 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="GET",
+            url=f"{OPENAI_BASE_URL}/2",
+        )
+    )
+    task3 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="GET",
+            url=f"{OPENAI_BASE_URL}/3",
+        )
+    )
+
+    # All should fail with the error
+    with pytest.raises(Exception, match="Batch submission failed"):
+        await asyncio.gather(task1, task2, task3, return_exceptions=False)
 
 
 @pytest.mark.asyncio
-async def test_window_timer_error_handling(fast_batcher):
+async def test_window_timer_error_handling(fast_batcher, monkeypatch):
     """Test that errors during window-triggered submission fail futures."""
-    original_upload = fast_batcher._upload_batch_file
+    provider = get_provider_for_url(url=f"{OPENAI_BASE_URL}/1")
+    assert provider is not None
 
-    async def failing_upload(*_args, **_kwargs):
+    async def failing_process_batch(*_args, **_kwargs):
         raise Exception("Timer error during batch submission")
 
-    fast_batcher._upload_batch_file = failing_upload
+    monkeypatch.setattr(
+        provider,
+        "process_batch",
+        failing_process_batch,
+    )
 
     # Submit a request - the window timer will trigger and call _submit_batch
     task = asyncio.create_task(
@@ -439,7 +448,6 @@ async def test_window_timer_error_handling(fast_batcher):
 
     # Verify the task completed (even though it failed)
     assert task.done()
-    fast_batcher._upload_batch_file = original_upload
 
 
 @pytest.mark.asyncio

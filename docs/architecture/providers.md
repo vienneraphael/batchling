@@ -8,7 +8,8 @@ batch results.
 
 - Declare supported hostnames and path prefixes.
 - Identify whether a URL belongs to a provider.
-- Normalize request URLs if required by the provider's batch API.
+- Submit provider batches via `process_batch()` (upload/create job as needed).
+- Normalize request URLs for provider batch endpoints.
 - Convert JSONL batch result lines into `httpx.Response` objects for callers.
 
 ## Registry and lookup
@@ -19,17 +20,26 @@ batch results.
 
 ## OpenAI provider
 
-The OpenAI provider implements `from_batch_result()` to:
+The OpenAI provider implements:
 
-- Extract success or error payloads from a batch result line.
-- Convert payloads into raw bytes.
-- Return an `httpx.Response` with appropriate headers.
+- `build_api_headers()` for auth + provider-specific passthrough headers.
+- `process_batch()` to upload JSONL input and create `/v1/batches` jobs.
+- `from_batch_result()` to decode batch output lines.
+
+Common helpers now live on `BaseProvider` and can be reused by all providers:
+
+- `matches_url()`
+- `normalize_url()`
+- `extract_base_and_endpoint()`
+- `build_jsonl_lines()`
+- `encode_body()`
 
 ## Extension notes
 
 - Add new provider classes by subclassing `BaseProvider` and registering them in
   `PROVIDERS`.
-- Keep `matches_url()` conservative to avoid batch-routing unsupported URLs.
+- Implement `process_batch()`, `build_api_headers()`, and `from_batch_result()`.
+- Keep `matches_url()` conservative if you override it.
 
 ## Code reference
 

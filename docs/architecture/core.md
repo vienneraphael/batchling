@@ -9,6 +9,7 @@ resolves futures back to callers.
 - Maintain per-provider pending queues protected by an async lock.
 - Start a per-provider window timer when the first request arrives and submit when it elapses.
 - Submit immediately when a provider queue reaches `batch_size`.
+- Delegate provider-specific batch submission to `provider.process_batch()`.
 - Track active batches and resolve per-request futures with provider-parsed responses.
 - Provide cleanup via `close()` to flush remaining work.
 
@@ -21,16 +22,16 @@ resolves futures back to callers.
 
 1. `submit()` builds a `_PendingRequest` and queues it in the provider’s pending list.
 2. When thresholds are hit, `_submit_requests()` starts a provider-specific batch submission task.
-3. For OpenAI, the batcher uploads JSONL input to `/v1/files`, creates a `/v1/batches`
-   job, then polls until results are ready.
-4. Provider adapters convert batch results back into HTTP responses for each request.
-5. `close()` flushes remaining requests and cancels timers.
+3. The provider submits the batch job and returns poll metadata (`base_url`, headers,
+   batch ID).
+4. The batcher creates `_ActiveBatch`, polls for completion, and resolves futures.
+5. Provider adapters convert batch results back into HTTP responses for each request.
+6. `close()` flushes remaining requests and cancels timers.
 
 ## Extension notes
 
-- Add new provider adapters by implementing batch submission + polling in `Batcher`.
-- `_process_batch()` currently supports OpenAI only; other providers must add a submission
-  path (or return a clear error if unsupported).
+- Add new provider adapters by implementing `process_batch()` in the provider class.
+- Keep polling/result resolution behavior in `Batcher` unless provider APIs diverge.
 
 ## Code reference
 
