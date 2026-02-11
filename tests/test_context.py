@@ -12,7 +12,6 @@ import pytest
 from batchling.batching.context import BatchingContext
 from batchling.batching.core import Batcher
 from batchling.batching.hooks import active_batcher
-from tests.mocks.clients import MockClient
 
 
 @pytest.fixture
@@ -23,24 +22,21 @@ def batcher() -> Batcher:
 
 def test_batching_context_initialization(batcher: Batcher) -> None:
     """Test that BatchingContext initializes correctly."""
-    client = MockClient()
-    context = BatchingContext(target=client, batcher=batcher)
+    context = BatchingContext(batcher=batcher)
 
-    assert context._self_target is client
     assert context._self_batcher is batcher
 
 
 def test_batching_context_enters_and_exits_sync(batcher: Batcher, reset_context: None) -> None:
     """Test that BatchingContext activates the batcher in a sync scope."""
-    client = MockClient()
-    context = BatchingContext(target=client, batcher=batcher)
+    context = BatchingContext(batcher=batcher)
 
     assert active_batcher.get() is None
 
     with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
         with context as active_client:
             assert active_batcher.get() is batcher
-            assert active_client is client
+            assert active_client is None
         assert active_batcher.get() is None
 
 
@@ -49,8 +45,7 @@ def test_batching_context_sync_warns_without_loop(
     reset_context: None,
 ) -> None:
     """Test that sync context manager warns when no event loop is running."""
-    client = MockClient()
-    context = BatchingContext(target=client, batcher=batcher)
+    context = BatchingContext(batcher=batcher)
 
     try:
         _ = asyncio.get_running_loop()
@@ -63,7 +58,7 @@ def test_batching_context_sync_warns_without_loop(
         warnings.simplefilter(action="always")
         with context as active_client:
             assert active_batcher.get() is batcher
-            assert active_client is client
+            assert active_client is None
 
         assert len(warnings_list) > 0
         assert any(
@@ -78,8 +73,7 @@ async def test_batching_context_async_closes_batcher(
     reset_context: None,
 ) -> None:
     """Test that async context manager closes the batcher."""
-    client = MockClient()
-    context = BatchingContext(target=client, batcher=batcher)
+    context = BatchingContext(batcher=batcher)
 
     with patch.object(
         target=batcher,
@@ -88,7 +82,7 @@ async def test_batching_context_async_closes_batcher(
     ) as mock_close:
         async with context as active_client:
             assert active_batcher.get() is batcher
-            assert active_client is client
+            assert active_client is None
         assert active_batcher.get() is None
 
         mock_close.assert_called_once()
@@ -96,8 +90,8 @@ async def test_batching_context_async_closes_batcher(
 
 @pytest.mark.asyncio
 async def test_batching_context_without_target(batcher: Batcher, reset_context: None) -> None:
-    """Test that BatchingContext yields None when no target is supplied."""
-    context = BatchingContext(target=None, batcher=batcher)
+    """Test that BatchingContext yields None."""
+    context = BatchingContext(batcher=batcher)
 
     async with context as active_target:
         assert active_batcher.get() is batcher

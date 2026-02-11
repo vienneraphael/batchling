@@ -1,5 +1,5 @@
 """
-Context manager returned by ``batchify`` for object instances.
+Context manager returned by ``batchify``.
 """
 
 import asyncio
@@ -8,51 +8,43 @@ import warnings
 
 from batchling.batching.hooks import active_batcher
 
-T = t.TypeVar(name="T")
-
-
 if t.TYPE_CHECKING:
     from batchling.batching.core import Batcher
 
 
-class BatchingContext(t.Generic[T]):
+class BatchingContext:
     """
-    Context manager that activates a batcher for a target instance.
+    Context manager that activates a batcher for a scoped block.
 
     Parameters
     ----------
-    target : T | None
-        Instance that will be returned by the context manager.
     batcher : Batcher
         Batcher instance used for the scope of the context manager.
     """
 
-    def __init__(self, target: T | None, batcher: "Batcher") -> None:
+    def __init__(self, *, batcher: "Batcher") -> None:
         """
         Initialize the context manager.
 
         Parameters
         ----------
-        target : T | None
-            Instance that will be returned by the context manager.
         batcher : Batcher
             Batcher instance used for the scope of the context manager.
         """
-        self._self_target = target
         self._self_batcher = batcher
         self._self_context_token: t.Any | None = None
 
-    def __enter__(self) -> T | None:
+    def __enter__(self) -> None:
         """
         Enter the synchronous context manager and activate the batcher.
 
         Returns
         -------
-        T | None
-            The target instance, if any.
+        None
+            ``None`` for scoped activation.
         """
         self._self_context_token = active_batcher.set(self._self_batcher)
-        return self._self_target
+        return None
 
     def __exit__(
         self,
@@ -89,17 +81,17 @@ class BatchingContext(t.Generic[T]):
                 stacklevel=2,
             )
 
-    async def __aenter__(self) -> T | None:
+    async def __aenter__(self) -> None:
         """
         Enter the async context manager and activate the batcher.
 
         Returns
         -------
-        T | None
-            The target instance, if any.
+        None
+            ``None`` for scoped activation.
         """
         self._self_context_token = active_batcher.set(self._self_batcher)
-        return self._self_target
+        return None
 
     async def __aexit__(
         self,

@@ -1,13 +1,13 @@
 # Context manager: `BatchingContext`
 
 `BatchingContext` is a lightweight context manager that activates an active `Batcher`
-for a scoped block. It yields the original instance (if provided), while all HTTP hooks
-read the active batcher from a context variable.
+for a scoped block. It yields `None`, while all HTTP hooks read the active batcher from
+a context variable.
 
 ## Responsibilities
 
 - Activate the `active_batcher` context for the duration of a context block.
-- Yield the original target instance (if provided).
+- Yield `None` for scope-only lifecycle control.
 - Support sync and async context manager patterns for cleanup and context scoping.
 
 ## Flow summary
