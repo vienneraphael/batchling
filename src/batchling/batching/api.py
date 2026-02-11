@@ -56,84 +56,19 @@ def batchify(
 
 @t.overload
 def batchify(
-    target: T,
+    target: T | None = None,
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
     dry_run: bool = False,
-) -> BatchingContext[T]:
+) -> BatchingContext[T | None]:
     """
     Wrap an object instance while preserving its type.
 
     Parameters
     ----------
-    target : T
-        Instance to wrap.
-    batch_size : int, optional
-        Submit a batch when this many requests are queued for a provider.
-    batch_window_seconds : float, optional
-        Submit a provider batch after this many seconds, even if size not reached.
-    batch_poll_interval_seconds : float, optional
-        Poll active batches every this many seconds.
-    dry_run : bool, optional
-        If ``True``, intercept and batch requests without sending provider batches.
-        Batched requests resolve to synthetic responses.
-
-    Returns
-    -------
-    BatchingContext[T]
-        Context manager that yields the target.
-    """
-    ...
-
-
-@t.overload
-def batchify(
-    target: type[T],
-    batch_size: int = 50,
-    batch_window_seconds: float = 2.0,
-    batch_poll_interval_seconds: float = 10.0,
-    dry_run: bool = False,
-) -> BatchingContext[type[T]]:
-    """
-    Wrap a class object in a batching context manager.
-
-    Parameters
-    ----------
-    target : type[T]
-        Class object to yield from the context manager.
-    batch_size : int, optional
-        Submit a batch when this many requests are queued for a provider.
-    batch_window_seconds : float, optional
-        Submit a provider batch after this many seconds, even if size not reached.
-    batch_poll_interval_seconds : float, optional
-        Poll active batches every this many seconds.
-    dry_run : bool, optional
-        If ``True``, intercept and batch requests without sending provider batches.
-        Batched requests resolve to synthetic responses.
-
-    Returns
-    -------
-    BatchingContext[type[T]]
-        Context manager that yields the class object.
-    """
-    ...
-
-
-@t.overload
-def batchify(
-    target: None = None,
-    batch_size: int = 50,
-    batch_window_seconds: float = 2.0,
-    batch_poll_interval_seconds: float = 10.0,
-    dry_run: bool = False,
-) -> BatchingContext[None]:
-    """
-    Create a batching context manager without binding to a specific instance.
-
-    Parameters
-    ----------
-    target : None, optional
+    target : T | None, optional
+        Instance (or class object) to yield from the context manager.
         When omitted, the context manager yields ``None``.
     batch_size : int, optional
         Submit a batch when this many requests are queued for a provider.
@@ -147,8 +82,8 @@ def batchify(
 
     Returns
     -------
-    BatchingContext[None]
-        Context manager that yields ``None``.
+    BatchingContext[T | None]
+        Context manager that yields the target value.
     """
     ...
 
