@@ -75,3 +75,33 @@ async def test_hook_falls_back_for_unsupported_url(reset_hooks, reset_context):
 
     assert response.status_code == 204
     assert mocked_original.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_hook_falls_back_for_non_batchable_openai_endpoint(reset_hooks, reset_context):
+    """
+    Ensure non-batchable OpenAI endpoints fall back to the original client.
+
+    Parameters
+    ----------
+    reset_hooks : None
+        Fixture to reset hook state.
+    reset_context : None
+        Fixture to reset context variables.
+    """
+    install_hooks()
+
+    mocked_original = AsyncMock(return_value=httpx.Response(status_code=204))
+    hooks_module._original_httpx_async_send = mocked_original
+
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    token = active_batcher.set(batcher)
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url="https://api.openai.com/v1/files")
+    finally:
+        active_batcher.reset(token)
+        await batcher.close()
+
+    assert response.status_code == 204
+    assert mocked_original.await_count == 1

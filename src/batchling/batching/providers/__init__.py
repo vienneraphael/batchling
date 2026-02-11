@@ -11,6 +11,7 @@ PROVIDERS: list[BaseProvider] = [OpenAIProvider()]
 __all__ = [
     "BaseProvider",
     "PROVIDERS",
+    "get_provider_for_batch_request",
     "get_provider_for_url",
 ]
 
@@ -65,6 +66,30 @@ def get_provider_for_url(url: str) -> BaseProvider | None:
         return None
 
     return _fallback_match(url=url, providers=PROVIDERS)
+
+
+def get_provider_for_batch_request(*, method: str, url: str) -> BaseProvider | None:
+    """
+    Resolve a provider only when the request is explicitly batchable.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method.
+    url : str
+        Request URL to match.
+
+    Returns
+    -------
+    BaseProvider | None
+        Provider instance if this request is batchable, otherwise ``None``.
+    """
+    provider = get_provider_for_url(url=url)
+    if provider is None:
+        return None
+    if not provider.is_batchable_request(method=method, url=url):
+        return None
+    return provider
 
 
 def _fallback_match(

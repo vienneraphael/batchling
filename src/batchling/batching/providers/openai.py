@@ -22,6 +22,7 @@ class OpenAIProvider(BaseProvider):
     name = "openai"
     hostnames = ("api.openai.com",)
     path_prefixes = ("/v1/",)
+    batchable_endpoints = (("POST", "/v1/chat/completions"),)
 
     def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """

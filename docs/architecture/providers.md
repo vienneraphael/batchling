@@ -7,6 +7,7 @@ batch results.
 ## Responsibilities
 
 - Declare supported hostnames and path prefixes.
+- Declare explicit batchable HTTP endpoints (`method + path`) for hook routing.
 - Identify whether a URL belongs to a provider.
 - Submit provider batches via `process_batch()` (upload/create job as needed).
 - Normalize request URLs for provider batch endpoints.
@@ -16,7 +17,9 @@ batch results.
 
 - Providers are registered in `batchling.batching.providers`.
 - `get_provider_for_url()` indexes providers by hostname and path prefix for efficient
-  lookup, with a fallback match if indices do not produce a candidate.
+  ownership lookup, with a fallback match if indices do not produce a candidate.
+- `get_provider_for_batch_request()` resolves a provider only when the request's
+  `method + path` is explicitly batchable for that provider.
 
 ## OpenAI provider
 
@@ -29,6 +32,7 @@ The OpenAI provider implements:
 Common helpers now live on `BaseProvider` and can be reused by all providers:
 
 - `matches_url()`
+- `is_batchable_request()`
 - `normalize_url()`
 - `extract_base_and_endpoint()`
 - `build_jsonl_lines()`

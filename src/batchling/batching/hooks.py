@@ -13,7 +13,7 @@ import typing as t
 import httpx
 import structlog
 
-from batchling.batching.providers import get_provider_for_url
+from batchling.batching.providers import get_provider_for_batch_request
 
 log = structlog.get_logger(__name__)
 
@@ -302,7 +302,7 @@ def _maybe_route_to_batcher(
         Routing data if batching is active, otherwise ``None``.
     """
     batcher = active_batcher.get()
-    provider = get_provider_for_url(url=url)
+    provider = get_provider_for_batch_request(method=method, url=url)
     if batcher is None or provider is None:
         if batcher is None and provider is None:
             log.debug(

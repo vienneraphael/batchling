@@ -57,6 +57,7 @@ class BaseProvider(ABC):
     name: str = "base"
     hostnames: tuple[str, ...] = ()
     path_prefixes: tuple[str, ...] = ()
+    batchable_endpoints: tuple[tuple[str, str], ...] = ()
 
     def matches_url(self, url: str) -> bool:
         """
@@ -85,6 +86,34 @@ class BaseProvider(ABC):
             path_ok = path.startswith(self.path_prefixes)
 
         return host_ok and path_ok
+
+    def is_batchable_request(self, *, method: str, url: str) -> bool:
+        """
+        Check whether an HTTP request should be routed into batching.
+
+        Parameters
+        ----------
+        method : str
+            HTTP method for the request.
+        url : str
+            Candidate request URL.
+
+        Returns
+        -------
+        bool
+            ``True`` if this request is explicitly batchable for the provider.
+        """
+        if not self.matches_url(url=url):
+            return False
+
+        parsed = urlparse(url=url)
+        path = parsed.path or "/"
+        normalized_method = method.upper()
+
+        return any(
+            endpoint_method == normalized_method and endpoint_path == path
+            for endpoint_method, endpoint_path in self.batchable_endpoints
+        )
 
     def normalize_url(self, url: str) -> str:
         """
