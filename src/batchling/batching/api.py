@@ -1,60 +1,19 @@
 """
 Main endpoint for users.
-Exposes a `batchify` function that maps a target object (function or instance)
-to a BatchingContext object that activates a specific Batcher context
-for the duration of a context manager.
+Exposes a `batchify` function that maps a target object to a BatchingContext
+that activates a specific Batcher context for the duration of a context manager.
 """
 
-import functools
-import inspect
-import types
 import typing as t
 
 from batchling.batching.context import BatchingContext
 from batchling.batching.core import Batcher
-from batchling.batching.hooks import active_batcher, install_hooks
-
-P = t.ParamSpec(name="P")
-R = t.TypeVar(name="R")
+from batchling.batching.hooks import install_hooks
 
 # Type variable for the wrapped object type
 T = t.TypeVar(name="T")
 
 
-@t.overload
-def batchify(
-    target: t.Callable[P, R],
-    batch_size: int = 50,
-    batch_window_seconds: float = 2.0,
-    batch_poll_interval_seconds: float = 10.0,
-    dry_run: bool = False,
-) -> t.Callable[P, R]:
-    """
-    Wrap a callable target while preserving its signature.
-
-    Parameters
-    ----------
-    target : typing.Callable[P, R]
-        Callable to wrap.
-    batch_size : int, optional
-        Submit a batch when this many requests are queued for a provider.
-    batch_window_seconds : float, optional
-        Submit a provider batch after this many seconds, even if size not reached.
-    batch_poll_interval_seconds : float, optional
-        Poll active batches every this many seconds.
-    dry_run : bool, optional
-        If ``True``, intercept and batch requests without sending provider batches.
-        Batched requests resolve to synthetic responses.
-
-    Returns
-    -------
-    typing.Callable[P, R]
-        Wrapped callable.
-    """
-    ...
-
-
-@t.overload
 def batchify(
     target: T | None = None,
     batch_size: int = 50,
@@ -63,13 +22,12 @@ def batchify(
     dry_run: bool = False,
 ) -> BatchingContext[T | None]:
     """
-    Wrap an object instance while preserving its type.
+    Context manager adapter.
 
     Parameters
     ----------
-    target : T | None, optional
-        Instance (or class object) to yield from the context manager.
-        When omitted, the context manager yields ``None``.
+    target : typing.Any | None
+        Object instance (client, agent, etc.), or ``None``.
     batch_size : int, optional
         Submit a batch when this many requests are queued for a provider.
     batch_window_seconds : float, optional
@@ -82,40 +40,8 @@ def batchify(
 
     Returns
     -------
-    BatchingContext[T | None]
-        Context manager that yields the target value.
-    """
-    ...
-
-
-def batchify(
-    target: t.Callable[..., t.Any] | t.Any | None = None,
-    batch_size: int = 50,
-    batch_window_seconds: float = 2.0,
-    batch_poll_interval_seconds: float = 10.0,
-    dry_run: bool = False,
-) -> BatchingContext[t.Any] | t.Callable[..., t.Any]:
-    """
-    Universal adapter.
-
-    Parameters
-    ----------
-    target : typing.Callable[..., typing.Any] | typing.Any | None
-        Function, object instance (client, agent, etc.), or ``None``.
-    batch_size : int, optional
-        Submit a batch when this many requests are queued for a provider.
-    batch_window_seconds : float, optional
-        Submit a provider batch after this many seconds, even if size not reached.
-    batch_poll_interval_seconds : float, optional
-        Poll active batches every this many seconds.
-    dry_run : bool, optional
-        If ``True``, intercept and batch requests without sending provider batches.
-        Batched requests resolve to synthetic responses.
-
-    Returns
-    -------
-    BatchingContext[typing.Any] | typing.Callable[..., typing.Any]
-        Context manager (if target is not callable) or decorated function.
+    BatchingContext[typing.Any]
+        Context manager that yields the provided target value.
 
     Notes
     -----
@@ -137,75 +63,16 @@ def batchify(
         dry_run=dry_run,
     )
 
-    # 3. If target is a bound method, reject it to prevent misuse.
-    if target is not None and isinstance(target, types.MethodType) and target.__self__ is not None:
+    # 3. Reject callables to keep a single lifecycle model (context manager only).
+    if target is not None and callable(target):
         raise TypeError(
-            "batchify should only be called on functions. "
-            "Use a context manager for client methods instead."
+            "batchify no longer supports callable targets. "
+            "Pass an instance (or None) and use it as a context manager."
         )
 
-    # 4. If target is callable (function), return decorated function
-    if target is not None and callable(target) and not isinstance(target, type):
-        # Check if it's a class (type) - we don't want to wrap classes, only instances
-        # For functions, create a decorator that sets the batcher context
-
-        # Check if the function is a coroutine function
-        is_async = inspect.iscoroutinefunction(obj=target)
-
-        if is_async:
-
-            @functools.wraps(wrapped=target)
-            async def decorated_function(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
-                """
-                Execute the wrapped coroutine under the active batcher context.
-
-                Parameters
-                ----------
-                *args : typing.Any
-                    Positional arguments forwarded to the target.
-                **func_kwargs : typing.Any
-                    Keyword arguments forwarded to the target.
-
-                Returns
-                -------
-                typing.Any
-                    Target return value.
-                """
-                token = active_batcher.set(batcher)
-                try:
-                    return await target(*args, **func_kwargs)
-                finally:
-                    active_batcher.reset(token)
-        else:
-
-            @functools.wraps(wrapped=target)
-            def decorated_function(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
-                """
-                Execute the wrapped function under the active batcher context.
-
-                Parameters
-                ----------
-                *args : typing.Any
-                    Positional arguments forwarded to the target.
-                **func_kwargs : typing.Any
-                    Keyword arguments forwarded to the target.
-
-                Returns
-                -------
-                typing.Any
-                    Target return value.
-                """
-                token = active_batcher.set(batcher)
-                try:
-                    return target(*args, **func_kwargs)
-                finally:
-                    active_batcher.reset(token)
-
-        return decorated_function
-
-    # 5. If target is an object (or None), return BatchingContext
+    # 4. If target is an object (or None), return BatchingContext.
     return t.cast(
-        typ=BatchingContext[T],
+        typ=BatchingContext[T | None],
         val=BatchingContext(
             target=target,
             batcher=batcher,
