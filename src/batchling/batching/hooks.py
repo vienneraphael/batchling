@@ -380,8 +380,8 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
         body=body,
     )
     if routed is not None:
-        batcher, _provider, submit_kwargs = routed
-        response = await batcher.submit(**submit_kwargs)
+        batcher, provider, submit_kwargs = routed
+        response = await batcher.submit(provider=provider, **submit_kwargs)
         if isinstance(response, httpx.Response):
             return _ensure_response_request(
                 response=response,

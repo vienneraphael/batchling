@@ -141,12 +141,21 @@ def get_provider_for_batch_request(*, method: str, url: str) -> BaseProvider | N
     BaseProvider | None
         Provider instance if this request is batchable, otherwise ``None``.
     """
-    provider = get_provider_for_url(url=url)
-    if provider is None:
+    parsed = urlparse(url=url)
+    hostname = (parsed.hostname or "").lower()
+    candidates = _HOSTNAME_INDEX.get(hostname, []) if hostname else []
+
+    if candidates:
+        for provider in candidates:
+            if provider.is_batchable_request(method=method, url=url):
+                return provider
         return None
-    if not provider.is_batchable_request(method=method, url=url):
-        return None
-    return provider
+
+    return _fallback_batchable_match(
+        method=method,
+        url=url,
+        providers=PROVIDERS,
+    )
 
 
 def _fallback_match(
@@ -170,5 +179,34 @@ def _fallback_match(
     """
     for provider in providers:
         if provider.matches_url(url=url):
+            return provider
+    return None
+
+
+def _fallback_batchable_match(
+    *,
+    method: str,
+    url: str,
+    providers: t.Iterable[BaseProvider],
+) -> BaseProvider | None:
+    """
+    Check providers in order for batchable requests when indexes miss.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method.
+    url : str
+        Request URL to match.
+    providers : typing.Iterable[BaseProvider]
+        Provider candidates.
+
+    Returns
+    -------
+    BaseProvider | None
+        Provider instance if the request is batchable, otherwise ``None``.
+    """
+    for provider in providers:
+        if provider.is_batchable_request(method=method, url=url):
             return provider
     return None
