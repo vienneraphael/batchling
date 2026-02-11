@@ -15,7 +15,8 @@ batch results.
 
 ## Registry and lookup
 
-- Providers are registered in `batchling.batching.providers`.
+- Providers are auto-discovered from `batchling/batching/providers/*.py` files
+  (excluding `__init__.py` and `base.py`).
 - `get_provider_for_url()` indexes providers by hostname and path prefix for efficient
   ownership lookup, with a fallback match if indices do not produce a candidate.
 - `get_provider_for_batch_request()` resolves a provider only when the request's
@@ -40,8 +41,8 @@ Common helpers now live on `BaseProvider` and can be reused by all providers:
 
 ## Extension notes
 
-- Add new provider classes by subclassing `BaseProvider` and registering them in
-  `PROVIDERS`.
+- Add new provider classes by subclassing `BaseProvider` in a new module under
+  `src/batchling/batching/providers/`.
 - Implement `process_batch()`, `build_api_headers()`, and `from_batch_result()`.
 - Keep `matches_url()` conservative if you override it.
 

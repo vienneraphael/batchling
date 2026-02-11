@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import importlib
+import inspect
 import typing as t
+from pathlib import Path
 from urllib.parse import urlparse
 
 from batchling.batching.providers.base import BaseProvider
-from batchling.batching.providers.openai import OpenAIProvider
-
-PROVIDERS: list[BaseProvider] = [OpenAIProvider()]
 
 __all__ = [
     "BaseProvider",
@@ -15,14 +15,90 @@ __all__ = [
     "get_provider_for_url",
 ]
 
-_HOSTNAME_INDEX: dict[str, list[BaseProvider]] = {}
-_PATH_PREFIX_INDEX: dict[str, list[BaseProvider]] = {}
 
-for provider in PROVIDERS:
-    for hostname in provider.hostnames:
-        _HOSTNAME_INDEX.setdefault(hostname.lower(), []).append(provider)
-    for prefix in provider.path_prefixes:
-        _PATH_PREFIX_INDEX.setdefault(prefix, []).append(provider)
+def _discover_provider_module_names() -> list[str]:
+    """
+    Discover provider module names from files in this package.
+
+    Returns
+    -------
+    list[str]
+        Sorted module names excluding package and base modules.
+    """
+    package_dir = Path(__file__).resolve().parent
+    module_names = [
+        file_path.stem
+        for file_path in package_dir.glob("*.py")
+        if file_path.name not in {"__init__.py", "base.py"}
+    ]
+    return sorted(module_names)
+
+
+def _discover_provider_classes() -> list[type[BaseProvider]]:
+    """
+    Discover provider adapter classes from provider modules.
+
+    Returns
+    -------
+    list[type[BaseProvider]]
+        Concrete ``BaseProvider`` subclasses found in provider modules.
+    """
+    provider_classes: list[type[BaseProvider]] = []
+    for module_name in _discover_provider_module_names():
+        module = importlib.import_module(name=f"{__name__}.{module_name}")
+        for attr in vars(module).values():
+            if not inspect.isclass(attr):
+                continue
+            if not issubclass(attr, BaseProvider) or attr is BaseProvider:
+                continue
+            if inspect.isabstract(attr):
+                continue
+            if attr.__module__ != module.__name__:
+                continue
+            provider_classes.append(attr)
+    return provider_classes
+
+
+def _load_providers() -> list[BaseProvider]:
+    """
+    Instantiate providers discovered in this package.
+
+    Returns
+    -------
+    list[BaseProvider]
+        Provider instances in deterministic module order.
+    """
+    return [provider_cls() for provider_cls in _discover_provider_classes()]
+
+
+def _build_provider_indexes(
+    *, providers: t.Sequence[BaseProvider]
+) -> tuple[dict[str, list[BaseProvider]], dict[str, list[BaseProvider]]]:
+    """
+    Build hostname/path indexes for fast provider lookup.
+
+    Parameters
+    ----------
+    providers : typing.Sequence[BaseProvider]
+        Provider instances to index.
+
+    Returns
+    -------
+    tuple[dict[str, list[BaseProvider]], dict[str, list[BaseProvider]]]
+        Hostname and path-prefix indexes.
+    """
+    hostname_index: dict[str, list[BaseProvider]] = {}
+    path_prefix_index: dict[str, list[BaseProvider]] = {}
+    for provider in providers:
+        for hostname in provider.hostnames:
+            hostname_index.setdefault(hostname.lower(), []).append(provider)
+        for prefix in provider.path_prefixes:
+            path_prefix_index.setdefault(prefix, []).append(provider)
+    return hostname_index, path_prefix_index
+
+
+PROVIDERS: list[BaseProvider] = _load_providers()
+_HOSTNAME_INDEX, _PATH_PREFIX_INDEX = _build_provider_indexes(providers=PROVIDERS)
 
 
 def get_provider_for_url(url: str) -> BaseProvider | None:
