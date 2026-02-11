@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 
 import httpx
+import structlog
+
+log = structlog.get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,32 @@ class BaseProvider(ABC):
     path_prefixes: tuple[str, ...] = ()
     batchable_endpoints: tuple[tuple[str, str], ...] = ()
 
+    def _summarize_value(self, *, value: t.Any) -> str:
+        """
+        Build a compact debug summary for arbitrary payload values.
+
+        Parameters
+        ----------
+        value : typing.Any
+            Value to summarize.
+
+        Returns
+        -------
+        str
+            Type/shape summary suitable for logs.
+        """
+        if value is None:
+            return "none"
+        if isinstance(value, dict):
+            return f"dict(keys={list(value.keys())[:8]},len={len(value)})"
+        if isinstance(value, list):
+            return f"list(len={len(value)})"
+        if isinstance(value, (bytes, bytearray)):
+            return f"{type(value).__name__}(len={len(value)})"
+        if isinstance(value, str):
+            return f"str(len={len(value)})"
+        return type(value).__name__
+
     def matches_url(self, url: str) -> bool:
         """
         Check whether a URL belongs to this provider.
@@ -85,7 +114,18 @@ class BaseProvider(ABC):
         if self.path_prefixes:
             path_ok = path.startswith(self.path_prefixes)
 
-        return host_ok and path_ok
+        is_match = host_ok and path_ok
+        log.debug(
+            event="Provider URL match evaluated",
+            provider=self.name,
+            input_url=url,
+            parsed_hostname=hostname,
+            parsed_path=path,
+            host_ok=host_ok,
+            path_ok=path_ok,
+            matched=is_match,
+        )
+        return is_match
 
     def is_batchable_request(self, *, method: str, url: str) -> bool:
         """
@@ -110,10 +150,19 @@ class BaseProvider(ABC):
         path = parsed.path or "/"
         normalized_method = method.upper()
 
-        return any(
+        is_batchable = any(
             endpoint_method == normalized_method and endpoint_path == path
             for endpoint_method, endpoint_path in self.batchable_endpoints
         )
+        log.debug(
+            event="Provider batchable endpoint evaluated",
+            provider=self.name,
+            method=normalized_method,
+            path=path,
+            matched=is_batchable,
+            configured_endpoints=self.batchable_endpoints,
+        )
+        return is_batchable
 
     def normalize_url(self, url: str) -> str:
         """
@@ -134,8 +183,27 @@ class BaseProvider(ABC):
         if parsed.scheme and parsed.netloc:
             normalized_path = parsed.path or "/"
             if parsed.query:
-                return f"{normalized_path}?{parsed.query}"
+                normalized_url = f"{normalized_path}?{parsed.query}"
+                log.debug(
+                    event="Normalized absolute URL",
+                    provider=self.name,
+                    input_url=url,
+                    output_url=normalized_url,
+                )
+                return normalized_url
+            log.debug(
+                event="Normalized absolute URL",
+                provider=self.name,
+                input_url=url,
+                output_url=normalized_path,
+            )
             return normalized_path
+        log.debug(
+            event="Kept relative URL",
+            provider=self.name,
+            input_url=url,
+            output_url=url,
+        )
         return url
 
     def extract_base_and_endpoint(self, *, url: str) -> tuple[str, str]:
@@ -154,10 +222,28 @@ class BaseProvider(ABC):
         """
         parsed = urlparse(url=url)
         if parsed.scheme and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}", self.normalize_url(url=url)
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            endpoint = self.normalize_url(url=url)
+            log.debug(
+                event="Extracted provider base/endpoint",
+                provider=self.name,
+                input_url=url,
+                base_url=base_url,
+                endpoint=endpoint,
+            )
+            return base_url, endpoint
 
         if self.hostnames:
-            return f"https://{self.hostnames[0]}", self.normalize_url(url=url)
+            base_url = f"https://{self.hostnames[0]}"
+            endpoint = self.normalize_url(url=url)
+            log.debug(
+                event="Extracted fallback base/endpoint",
+                provider=self.name,
+                input_url=url,
+                base_url=base_url,
+                endpoint=endpoint,
+            )
+            return base_url, endpoint
 
         raise ValueError(f"Unable to determine base URL for request: {url}")
 
@@ -176,10 +262,30 @@ class BaseProvider(ABC):
             Request body value, if any.
         """
         if params.get("json") is not None:
-            return params["json"]
+            extracted = params["json"]
+            log.debug(
+                event="Extracted request body",
+                provider=self.name,
+                source_key="json",
+                output_summary=self._summarize_value(value=extracted),
+            )
+            return extracted
         for key in ("body", "content", "data"):
             if params.get(key) is not None:
-                return params[key]
+                extracted = params[key]
+                log.debug(
+                    event="Extracted request body",
+                    provider=self.name,
+                    source_key=key,
+                    output_summary=self._summarize_value(value=extracted),
+                )
+                return extracted
+        log.debug(
+            event="Extracted request body",
+            provider=self.name,
+            source_key=None,
+            output_summary="none",
+        )
         return None
 
     def normalize_body(self, *, body: t.Any) -> t.Any:
@@ -197,17 +303,56 @@ class BaseProvider(ABC):
             Normalized body.
         """
         if body is None:
+            log.debug(
+                event="Normalized request body",
+                provider=self.name,
+                input_summary="none",
+                output_summary="none",
+            )
             return None
         if isinstance(body, (dict, list)):
+            log.debug(
+                event="Normalized request body",
+                provider=self.name,
+                input_summary=self._summarize_value(value=body),
+                output_summary=self._summarize_value(value=body),
+            )
             return body
         if isinstance(body, (bytes, bytearray)):
             try:
                 decoded = body.decode(encoding="utf-8")
             except Exception:
-                return body.decode(encoding="utf-8", errors="replace")
-            return self.maybe_parse_json(value=decoded)
+                normalized = body.decode(encoding="utf-8", errors="replace")
+                log.debug(
+                    event="Normalized request body",
+                    provider=self.name,
+                    input_summary=self._summarize_value(value=body),
+                    output_summary=self._summarize_value(value=normalized),
+                )
+                return normalized
+            normalized = self.maybe_parse_json(value=decoded)
+            log.debug(
+                event="Normalized request body",
+                provider=self.name,
+                input_summary=self._summarize_value(value=body),
+                output_summary=self._summarize_value(value=normalized),
+            )
+            return normalized
         if isinstance(body, str):
-            return self.maybe_parse_json(value=body)
+            normalized = self.maybe_parse_json(value=body)
+            log.debug(
+                event="Normalized request body",
+                provider=self.name,
+                input_summary=self._summarize_value(value=body),
+                output_summary=self._summarize_value(value=normalized),
+            )
+            return normalized
+        log.debug(
+            event="Normalized request body",
+            provider=self.name,
+            input_summary=self._summarize_value(value=body),
+            output_summary=self._summarize_value(value=body),
+        )
         return body
 
     def maybe_parse_json(self, *, value: str) -> t.Any:
@@ -225,8 +370,20 @@ class BaseProvider(ABC):
             Parsed JSON data, or the original string if parsing fails.
         """
         try:
-            return json.loads(s=value)
+            parsed = json.loads(s=value)
+            log.debug(
+                event="Parsed JSON body value",
+                provider=self.name,
+                input_summary=self._summarize_value(value=value),
+                output_summary=self._summarize_value(value=parsed),
+            )
+            return parsed
         except Exception:
+            log.debug(
+                event="Preserved non-JSON body value",
+                provider=self.name,
+                input_summary=self._summarize_value(value=value),
+            )
             return value
 
     def normalize_headers(
@@ -247,7 +404,15 @@ class BaseProvider(ABC):
         dict[str, str]
             Mutable header mapping.
         """
-        return dict(headers) if headers else {}
+        normalized_headers = dict(headers) if headers else {}
+        log.debug(
+            event="Normalized request headers",
+            provider=self.name,
+            input_header_count=len(headers) if headers else 0,
+            output_header_count=len(normalized_headers),
+            output_header_keys=list(normalized_headers.keys()),
+        )
+        return normalized_headers
 
     def build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
@@ -263,7 +428,15 @@ class BaseProvider(ABC):
         dict[str, str]
             Headers including internal bypass marker.
         """
-        return {**headers, "x-batchling-internal": "1"}
+        internal_headers = {**headers, "x-batchling-internal": "1"}
+        log.debug(
+            event="Built internal provider headers",
+            provider=self.name,
+            input_header_count=len(headers),
+            output_header_count=len(internal_headers),
+            output_header_keys=list(internal_headers.keys()),
+        )
+        return internal_headers
 
     def build_jsonl_lines(
         self,
@@ -296,6 +469,21 @@ class BaseProvider(ABC):
             if body is not None:
                 line["body"] = body
             jsonl_lines.append(line)
+            log.debug(
+                event="Built provider JSONL line",
+                provider=self.name,
+                custom_id=request.custom_id,
+                method=request.params["method"],
+                input_url=request.params["url"],
+                output_url=line["url"],
+                body_summary=self._summarize_value(value=body),
+            )
+        log.debug(
+            event="Built provider JSONL payload",
+            provider=self.name,
+            request_count=len(requests),
+            line_count=len(jsonl_lines),
+        )
         return jsonl_lines
 
     def encode_body(self, *, body: t.Any) -> tuple[bytes, dict[str, str]]:
@@ -313,16 +501,53 @@ class BaseProvider(ABC):
             Encoded bytes and any content-type headers.
         """
         if body is None:
+            log.debug(
+                event="Encoded response body",
+                provider=self.name,
+                input_summary="none",
+                output_bytes=0,
+                content_type=None,
+            )
             return b"", {}
         if isinstance(body, (dict, list)):
-            return json.dumps(obj=body).encode(encoding="utf-8"), {
-                "content-type": "application/json"
-            }
+            encoded = json.dumps(obj=body).encode(encoding="utf-8")
+            log.debug(
+                event="Encoded response body",
+                provider=self.name,
+                input_summary=self._summarize_value(value=body),
+                output_bytes=len(encoded),
+                content_type="application/json",
+            )
+            return encoded, {"content-type": "application/json"}
         if isinstance(body, str):
-            return body.encode(encoding="utf-8"), {"content-type": "text/plain"}
+            encoded = body.encode(encoding="utf-8")
+            log.debug(
+                event="Encoded response body",
+                provider=self.name,
+                input_summary=self._summarize_value(value=body),
+                output_bytes=len(encoded),
+                content_type="text/plain",
+            )
+            return encoded, {"content-type": "text/plain"}
         if isinstance(body, (bytes, bytearray)):
-            return bytes(body), {}
-        return json.dumps(obj=body).encode(encoding="utf-8"), {"content-type": "application/json"}
+            encoded = bytes(body)
+            log.debug(
+                event="Encoded response body",
+                provider=self.name,
+                input_summary=self._summarize_value(value=body),
+                output_bytes=len(encoded),
+                content_type=None,
+            )
+            return encoded, {}
+        encoded = json.dumps(obj=body).encode(encoding="utf-8")
+        log.debug(
+            event="Encoded response body",
+            provider=self.name,
+            input_summary=self._summarize_value(value=body),
+            output_bytes=len(encoded),
+            content_type="application/json",
+        )
+        return encoded, {"content-type": "application/json"}
 
     @abstractmethod
     def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:

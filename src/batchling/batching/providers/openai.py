@@ -50,6 +50,13 @@ class OpenAIProvider(BaseProvider):
         if "Authorization" not in api_headers:
             api_key = get_default_api_key_from_provider(provider=self.name)
             api_headers["Authorization"] = f"Bearer {api_key}"
+        log.debug(
+            event="Built provider API headers",
+            provider=self.name,
+            input_header_keys=list(headers.keys()),
+            output_header_keys=list(api_headers.keys()),
+            has_authorization="Authorization" in api_headers,
+        )
         return api_headers
 
     async def process_batch(
@@ -78,6 +85,14 @@ class OpenAIProvider(BaseProvider):
 
         base_url, endpoint = self.extract_base_and_endpoint(
             url=requests[0].params["url"],
+        )
+        log.debug(
+            event="Resolved batch submission target",
+            provider=self.name,
+            input_url=requests[0].params["url"],
+            base_url=base_url,
+            endpoint=endpoint,
+            request_count=len(requests),
         )
         api_headers = self.build_api_headers(
             headers=self.normalize_headers(
@@ -166,6 +181,7 @@ class OpenAIProvider(BaseProvider):
             base_url=base_url,
             line_count=len(jsonl_lines),
             bytes=len(file_content),
+            first_custom_id=jsonl_lines[0]["custom_id"] if jsonl_lines else None,
         )
 
         async with client_factory() as client:
@@ -223,6 +239,13 @@ class OpenAIProvider(BaseProvider):
             response.raise_for_status()
             payload = response.json()
         log.debug(
+            event="Received batch job response",
+            provider=self.name,
+            base_url=base_url,
+            response_keys=list(payload.keys()),
+            batch_id=payload.get("id"),
+        )
+        log.debug(
             event="Batch job created",
             provider=self.name,
             base_url=base_url,
@@ -247,6 +270,15 @@ class OpenAIProvider(BaseProvider):
         """
         response = result_item.get("response")
         error = result_item.get("error")
+        custom_id = result_item.get("custom_id")
+        log.debug(
+            event="Decoding batch result item",
+            provider=self.name,
+            custom_id=custom_id,
+            has_response=bool(response),
+            has_error=bool(error),
+            top_level_keys=list(result_item.keys()),
+        )
 
         if response:
             status_code = int(response.get("status_code", 200))
@@ -259,6 +291,15 @@ class OpenAIProvider(BaseProvider):
 
         content, content_headers = self.encode_body(body=body)
         headers.update(content_headers)
+        log.debug(
+            event="Built response from batch result",
+            provider=self.name,
+            custom_id=custom_id,
+            status_code=status_code,
+            header_keys=list(headers.keys()),
+            body_type=type(body).__name__,
+            content_bytes=len(content),
+        )
 
         return httpx.Response(
             status_code=status_code,
