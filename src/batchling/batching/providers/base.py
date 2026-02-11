@@ -173,34 +173,6 @@ class BaseProvider(ABC):
         )
         return is_batchable
 
-    def normalize_headers(
-        self,
-        *,
-        headers: dict[str, str] | None,
-    ) -> dict[str, str]:
-        """
-        Normalize request headers to a mutable dictionary.
-
-        Parameters
-        ----------
-        headers : dict[str, str] | None
-            Raw request headers.
-
-        Returns
-        -------
-        dict[str, str]
-            Mutable header mapping.
-        """
-        normalized_headers = dict(headers) if headers else {}
-        log.debug(
-            event="Normalized request headers",
-            provider=self.name,
-            input_header_count=len(headers) if headers else 0,
-            output_header_count=len(normalized_headers),
-            output_header_keys=list(normalized_headers.keys()),
-        )
-        return normalized_headers
-
     def build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
         Add internal bypass headers to provider API requests.
@@ -243,34 +215,17 @@ class BaseProvider(ABC):
         list[dict[str, typing.Any]]
             JSONL-ready request lines.
         """
-        jsonl_lines: list[dict[str, t.Any]] = []
-        for request in requests:
-            body = json.loads(
-                s=request.params["body"].decode(encoding="utf-8"),
-            )
-            line: dict[str, t.Any] = {
+        return [
+            {
                 "custom_id": request.custom_id,
                 "method": request.params["method"],
                 "url": request.params["endpoint"],
+                "body": json.loads(
+                    s=request.params["body"].decode(encoding="utf-8"),
+                ),
             }
-            if body is not None:
-                line["body"] = body
-            jsonl_lines.append(line)
-            log.debug(
-                event="Built provider JSONL line",
-                provider=self.name,
-                custom_id=request.custom_id,
-                method=request.params["method"],
-                endpoint=line["url"],
-                body_summary=self._summarize_value(value=body),
-            )
-        log.debug(
-            event="Built provider JSONL payload",
-            provider=self.name,
-            request_count=len(requests),
-            line_count=len(jsonl_lines),
-        )
-        return jsonl_lines
+            for request in requests
+        ]
 
     def encode_body(self, *, body: t.Any) -> tuple[bytes, dict[str, str]]:
         """

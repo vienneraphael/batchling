@@ -91,9 +91,7 @@ class OpenAIProvider(BaseProvider):
             request_count=len(requests),
         )
         api_headers = self.build_api_headers(
-            headers=self.normalize_headers(
-                headers=requests[0].params.get("headers"),
-            ),
+            headers=requests[0].params.get("headers") or dict(),
         )
         api_headers = self.build_internal_headers(headers=api_headers)
 

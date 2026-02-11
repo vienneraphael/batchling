@@ -128,6 +128,7 @@ async def test_submit_single_request(batcher: Batcher, provider: OpenAIProvider)
         endpoint="/v1/test",
         provider=provider,
         body=b'{"key": "value"}',
+        headers={"Authorization": "Bearer token"},
     )
 
     assert isinstance(result, httpx.Response)
@@ -148,6 +149,7 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
     task2 = asyncio.create_task(
@@ -158,6 +160,7 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -184,6 +187,7 @@ async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provid
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
@@ -192,6 +196,7 @@ async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provid
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
@@ -200,6 +205,7 @@ async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provid
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
     )
 
@@ -228,6 +234,7 @@ async def test_window_time_triggers_submission(fast_batcher: Batcher, provider: 
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -258,6 +265,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
     task2 = asyncio.create_task(
@@ -268,6 +276,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -286,6 +295,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -307,6 +317,7 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         fast_batcher.submit(
             client_type="httpx",
@@ -315,6 +326,7 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
     )
 
@@ -327,6 +339,7 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         fast_batcher.submit(
             client_type="httpx",
@@ -335,6 +348,7 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
             endpoint="/v1/4",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
     )
 
@@ -356,6 +370,7 @@ async def test_concurrent_requests(batcher: Batcher, provider: OpenAIProvider):
                 endpoint=f"/v1/{i}",
                 provider=provider,
                 body=b'{"key": "value"}',
+                headers={"Authorization": "Bearer token"},
             )
         )
         for i in range(5)
@@ -413,6 +428,7 @@ async def test_close_submits_remaining_requests(fast_batcher: Batcher, provider:
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -443,6 +459,7 @@ async def test_close_cancels_window_timer(fast_batcher: Batcher, provider: OpenA
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -486,6 +503,7 @@ async def test_batch_submission_error_handling(
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
     task2 = asyncio.create_task(
@@ -496,6 +514,7 @@ async def test_batch_submission_error_handling(
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
     task3 = asyncio.create_task(
@@ -506,6 +525,7 @@ async def test_batch_submission_error_handling(
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -538,6 +558,7 @@ async def test_window_timer_error_handling(
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
 
@@ -573,6 +594,7 @@ async def test_custom_id_uniqueness(batcher: Batcher, provider: OpenAIProvider):
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
@@ -581,6 +603,7 @@ async def test_custom_id_uniqueness(batcher: Batcher, provider: OpenAIProvider):
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
@@ -589,6 +612,7 @@ async def test_custom_id_uniqueness(batcher: Batcher, provider: OpenAIProvider):
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
     )
 
@@ -613,6 +637,7 @@ async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider)
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
@@ -621,6 +646,7 @@ async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider)
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
@@ -629,6 +655,7 @@ async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider)
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
     )
 
@@ -654,6 +681,7 @@ async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: Open
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
     await asyncio.sleep(delay=0.15)
@@ -668,6 +696,7 @@ async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: Open
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         )
     )
     await asyncio.sleep(delay=0.15)
@@ -696,6 +725,7 @@ async def test_large_batch_size(
                 endpoint=f"/v1/{i}",
                 provider=provider,
                 body=b'{"key": "value"}',
+                headers={"Authorization": "Bearer token"},
             )
         )
         for i in range(10)
@@ -732,6 +762,7 @@ async def test_submit_after_close(batcher: Batcher, provider: OpenAIProvider):
         endpoint="/v1/1",
         provider=provider,
         body=b'{"key": "value"}',
+        headers={"Authorization": "Bearer token"},
     )
     assert isinstance(result, httpx.Response)
     assert result.status_code == 200
@@ -753,6 +784,7 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
         endpoint="/v1/1",
         provider=provider,
         body=b'{"key": "value"}',
+        headers={"Authorization": "Bearer token"},
     )
 
     result = await dry_run_batcher.submit(
@@ -762,6 +794,7 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
         endpoint="/v1/test",
         provider=provider,
         body=b'{"key": "value"}',
+        headers={"Authorization": "Bearer token"},
     )
 
     assert isinstance(result, httpx.Response)
@@ -805,6 +838,7 @@ async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProv
         endpoint="/v1/1",
         provider=provider,
         body=b'{"key": "value"}',
+        headers={"Authorization": "Bearer token"},
     )
 
     assert result.status_code == 200
@@ -830,6 +864,7 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
             endpoint="/v1/1",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         dry_run_batcher.submit(
             client_type="httpx",
@@ -838,6 +873,7 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
             endpoint="/v1/2",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
         dry_run_batcher.submit(
             client_type="httpx",
@@ -846,6 +882,7 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
             endpoint="/v1/3",
             provider=provider,
             body=b'{"key": "value"}',
+            headers={"Authorization": "Bearer token"},
         ),
     )
 
