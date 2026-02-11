@@ -25,7 +25,6 @@ class OpenAIProvider(BaseProvider):
 
     def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
-        FIXME: verify if we need to actually change headers.
         Build OpenAI API headers for batch endpoints.
 
         Parameters

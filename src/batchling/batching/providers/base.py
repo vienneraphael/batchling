@@ -173,145 +173,6 @@ class BaseProvider(ABC):
         )
         return is_batchable
 
-    def extract_body(self, *, params: dict[str, t.Any]) -> t.Any:
-        """
-        Extract request body from captured hook params.
-
-        Parameters
-        ----------
-        params : dict[str, typing.Any]
-            Hook parameters captured from HTTP clients.
-
-        Returns
-        -------
-        typing.Any
-            Request body value, if any.
-        """
-        if params.get("json") is not None:
-            extracted = params["json"]
-            log.debug(
-                event="Extracted request body",
-                provider=self.name,
-                source_key="json",
-                output_summary=self._summarize_value(value=extracted),
-            )
-            return extracted
-        for key in ("body", "content", "data"):
-            if params.get(key) is not None:
-                extracted = params[key]
-                log.debug(
-                    event="Extracted request body",
-                    provider=self.name,
-                    source_key=key,
-                    output_summary=self._summarize_value(value=extracted),
-                )
-                return extracted
-        log.debug(
-            event="Extracted request body",
-            provider=self.name,
-            source_key=None,
-            output_summary="none",
-        )
-        return None
-
-    def normalize_body(self, *, body: t.Any) -> t.Any:
-        """
-        Normalize request bodies for JSONL serialization.
-
-        Parameters
-        ----------
-        body : typing.Any
-            Original request body.
-
-        Returns
-        -------
-        typing.Any
-            Normalized body.
-        """
-        if body is None:
-            log.debug(
-                event="Normalized request body",
-                provider=self.name,
-                input_summary="none",
-                output_summary="none",
-            )
-            return None
-        if isinstance(body, (dict, list)):
-            log.debug(
-                event="Normalized request body",
-                provider=self.name,
-                input_summary=self._summarize_value(value=body),
-                output_summary=self._summarize_value(value=body),
-            )
-            return body
-        if isinstance(body, (bytes, bytearray)):
-            try:
-                decoded = body.decode(encoding="utf-8")
-            except Exception:
-                normalized = body.decode(encoding="utf-8", errors="replace")
-                log.debug(
-                    event="Normalized request body",
-                    provider=self.name,
-                    input_summary=self._summarize_value(value=body),
-                    output_summary=self._summarize_value(value=normalized),
-                )
-                return normalized
-            normalized = self.maybe_parse_json(value=decoded)
-            log.debug(
-                event="Normalized request body",
-                provider=self.name,
-                input_summary=self._summarize_value(value=body),
-                output_summary=self._summarize_value(value=normalized),
-            )
-            return normalized
-        if isinstance(body, str):
-            normalized = self.maybe_parse_json(value=body)
-            log.debug(
-                event="Normalized request body",
-                provider=self.name,
-                input_summary=self._summarize_value(value=body),
-                output_summary=self._summarize_value(value=normalized),
-            )
-            return normalized
-        log.debug(
-            event="Normalized request body",
-            provider=self.name,
-            input_summary=self._summarize_value(value=body),
-            output_summary=self._summarize_value(value=body),
-        )
-        return body
-
-    def maybe_parse_json(self, *, value: str) -> t.Any:
-        """
-        Parse JSON strings when possible.
-
-        Parameters
-        ----------
-        value : str
-            Candidate JSON string.
-
-        Returns
-        -------
-        typing.Any
-            Parsed JSON data, or the original string if parsing fails.
-        """
-        try:
-            parsed = json.loads(s=value)
-            log.debug(
-                event="Parsed JSON body value",
-                provider=self.name,
-                input_summary=self._summarize_value(value=value),
-                output_summary=self._summarize_value(value=parsed),
-            )
-            return parsed
-        except Exception:
-            log.debug(
-                event="Preserved non-JSON body value",
-                provider=self.name,
-                input_summary=self._summarize_value(value=value),
-            )
-            return value
-
     def normalize_headers(
         self,
         *,
@@ -384,8 +245,8 @@ class BaseProvider(ABC):
         """
         jsonl_lines: list[dict[str, t.Any]] = []
         for request in requests:
-            body = self.normalize_body(
-                body=self.extract_body(params=request.params),
+            body = json.loads(
+                s=request.params["body"].decode(encoding="utf-8"),
             )
             line: dict[str, t.Any] = {
                 "custom_id": request.custom_id,
