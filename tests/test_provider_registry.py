@@ -3,7 +3,11 @@
 from pathlib import Path
 
 import batchling.batching.providers as providers_module
-from batchling.batching.providers import BaseProvider, get_provider_for_url
+from batchling.batching.providers import (
+    BaseProvider,
+    get_provider_for_batch_request,
+    get_provider_for_url,
+)
 
 
 def test_provider_registry_auto_discovers_modules() -> None:
@@ -56,3 +60,42 @@ def test_provider_lookup_still_resolves_openai() -> None:
     provider = get_provider_for_url(url="https://api.openai.com/v1/chat/completions")
     assert provider is not None
     assert provider.name == "openai"
+
+
+def test_batchable_lookup_requires_post_method() -> None:
+    """
+    Ensure batchable lookup only routes POST requests.
+
+    Returns
+    -------
+    None
+        This test asserts method gating for batchable requests.
+    """
+    post_provider = get_provider_for_batch_request(
+        method="POST",
+        url="https://api.openai.com/v1/chat/completions",
+    )
+    assert post_provider is not None
+    assert post_provider.name == "openai"
+
+    get_provider = get_provider_for_batch_request(
+        method="GET",
+        url="https://api.openai.com/v1/chat/completions",
+    )
+    assert get_provider is None
+
+
+def test_batchable_lookup_requires_configured_endpoint() -> None:
+    """
+    Ensure batchable lookup only routes configured endpoints.
+
+    Returns
+    -------
+    None
+        This test asserts endpoint gating for batchable requests.
+    """
+    provider = get_provider_for_batch_request(
+        method="POST",
+        url="https://api.openai.com/v1/responses",
+    )
+    assert provider is None

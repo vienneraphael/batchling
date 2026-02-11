@@ -6,8 +6,8 @@ batch results.
 
 ## Responsibilities
 
-- Declare supported hostnames and path prefixes.
-- Declare explicit batchable HTTP endpoints (`method + path`) for hook routing.
+- Declare supported hostnames.
+- Declare explicit batchable HTTP endpoints (`path`) for hook routing.
 - Identify whether a URL belongs to a provider.
 - Submit provider batches via `process_batch()` (upload/create job as needed).
 - Normalize request URLs for provider batch endpoints.
@@ -17,10 +17,10 @@ batch results.
 
 - Providers are auto-discovered from `batchling/batching/providers/*.py` files
   (excluding `__init__.py` and `base.py`).
-- `get_provider_for_url()` indexes providers by hostname and path prefix for efficient
-  ownership lookup, with a fallback match if indices do not produce a candidate.
+- `get_provider_for_url()` indexes providers by hostname for efficient ownership
+  lookup, with a fallback match if indices do not produce a candidate.
 - `get_provider_for_batch_request()` resolves a provider only when the request's
-  `method + path` is explicitly batchable for that provider.
+  `POST + path` is explicitly batchable for that provider.
 
 ## OpenAI provider
 

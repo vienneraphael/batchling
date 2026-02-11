@@ -59,8 +59,8 @@ class BaseProvider(ABC):
 
     name: str = "base"
     hostnames: tuple[str, ...] = ()
-    path_prefixes: tuple[str, ...] = ()
-    batchable_endpoints: tuple[tuple[str, str], ...] = ()
+    batch_method: str = "POST"
+    batchable_endpoints: tuple[str, ...] = ()
 
     def _summarize_value(self, *, value: t.Any) -> str:
         """
@@ -90,7 +90,7 @@ class BaseProvider(ABC):
 
     def matches_url(self, url: str) -> bool:
         """
-        Check whether a URL belongs to this provider.
+        Check whether a URL belongs to this provider by hostname.
 
         Parameters
         ----------
@@ -104,25 +104,12 @@ class BaseProvider(ABC):
         """
         parsed = urlparse(url=url)
         hostname = (parsed.hostname or "").lower()
-        path = parsed.path or ""
-
-        host_ok = True
-        if self.hostnames:
-            host_ok = hostname.endswith(self.hostnames) if hostname else bool(self.path_prefixes)
-
-        path_ok = True
-        if self.path_prefixes:
-            path_ok = path.startswith(self.path_prefixes)
-
-        is_match = host_ok and path_ok
+        is_match = bool(hostname) and hostname.endswith(self.hostnames)
         log.debug(
             event="Provider URL match evaluated",
             provider=self.name,
             input_url=url,
             parsed_hostname=hostname,
-            parsed_path=path,
-            host_ok=host_ok,
-            path_ok=path_ok,
             matched=is_match,
         )
         return is_match
@@ -150,15 +137,17 @@ class BaseProvider(ABC):
         path = parsed.path or "/"
         normalized_method = method.upper()
 
-        is_batchable = any(
-            endpoint_method == normalized_method and endpoint_path == path
-            for endpoint_method, endpoint_path in self.batchable_endpoints
-        )
+        method_ok = normalized_method == self.batch_method
+        endpoint_ok = path in self.batchable_endpoints
+        is_batchable = method_ok and endpoint_ok
         log.debug(
             event="Provider batchable endpoint evaluated",
             provider=self.name,
             method=normalized_method,
             path=path,
+            expected_method=self.batch_method,
+            method_ok=method_ok,
+            endpoint_ok=endpoint_ok,
             matched=is_batchable,
             configured_endpoints=self.batchable_endpoints,
         )

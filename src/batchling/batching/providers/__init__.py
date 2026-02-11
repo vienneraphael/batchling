@@ -73,9 +73,9 @@ def _load_providers() -> list[BaseProvider]:
 
 def _build_provider_indexes(
     *, providers: t.Sequence[BaseProvider]
-) -> tuple[dict[str, list[BaseProvider]], dict[str, list[BaseProvider]]]:
+) -> dict[str, list[BaseProvider]]:
     """
-    Build hostname/path indexes for fast provider lookup.
+    Build a hostname index for fast provider lookup.
 
     Parameters
     ----------
@@ -84,21 +84,18 @@ def _build_provider_indexes(
 
     Returns
     -------
-    tuple[dict[str, list[BaseProvider]], dict[str, list[BaseProvider]]]
-        Hostname and path-prefix indexes.
+    dict[str, list[BaseProvider]]
+        Hostname index.
     """
     hostname_index: dict[str, list[BaseProvider]] = {}
-    path_prefix_index: dict[str, list[BaseProvider]] = {}
     for provider in providers:
         for hostname in provider.hostnames:
             hostname_index.setdefault(hostname.lower(), []).append(provider)
-        for prefix in provider.path_prefixes:
-            path_prefix_index.setdefault(prefix, []).append(provider)
-    return hostname_index, path_prefix_index
+    return hostname_index
 
 
 PROVIDERS: list[BaseProvider] = _load_providers()
-_HOSTNAME_INDEX, _PATH_PREFIX_INDEX = _build_provider_indexes(providers=PROVIDERS)
+_HOSTNAME_INDEX = _build_provider_indexes(providers=PROVIDERS)
 
 
 def get_provider_for_url(url: str) -> BaseProvider | None:
@@ -117,26 +114,10 @@ def get_provider_for_url(url: str) -> BaseProvider | None:
     """
     parsed = urlparse(url=url)
     hostname = (parsed.hostname or "").lower()
-    path = parsed.path or ""
-
-    candidates: list[BaseProvider] = []
-    if hostname:
-        candidates.extend(_HOSTNAME_INDEX.get(hostname, []))
-    for prefix, providers in _PATH_PREFIX_INDEX.items():
-        if path.startswith(prefix):
-            candidates.extend(providers)
+    candidates = _HOSTNAME_INDEX.get(hostname, []) if hostname else []
 
     if candidates:
-        # De-duplicate while preserving order
-        seen: set[int] = set()
-        unique: list[BaseProvider] = []
         for provider in candidates:
-            provider_id = id(provider)
-            if provider_id in seen:
-                continue
-            seen.add(provider_id)
-            unique.append(provider)
-        for provider in unique:
             if provider.matches_url(url=url):
                 return provider
         return None
