@@ -4,7 +4,6 @@ import importlib
 import inspect
 import typing as t
 from pathlib import Path
-from urllib.parse import urlparse
 
 from batchling.batching.providers.base import BaseProvider
 
@@ -97,7 +96,7 @@ PROVIDERS: list[BaseProvider] = _load_providers()
 _HOSTNAME_INDEX = _build_provider_indexes(providers=PROVIDERS)
 
 
-def get_provider_for_batch_request(*, method: str, url: str) -> BaseProvider | None:
+def get_provider_for_batch_request(*, method: str, hostname: str, path: str) -> BaseProvider | None:
     """
     Resolve a provider only when the request is explicitly batchable.
 
@@ -105,7 +104,9 @@ def get_provider_for_batch_request(*, method: str, url: str) -> BaseProvider | N
     ----------
     method : str
         HTTP method.
-    url : str
+    hostname : str
+        Request hostname to match.
+    path : str
         Request URL to match.
 
     Returns
@@ -113,12 +114,10 @@ def get_provider_for_batch_request(*, method: str, url: str) -> BaseProvider | N
     BaseProvider | None
         Provider instance if this request is batchable, otherwise ``None``.
     """
-    parsed = urlparse(url=url)
-    hostname = (parsed.hostname or "").lower()
     candidates = _HOSTNAME_INDEX.get(hostname, []) if hostname else []
 
     if candidates:
         for provider in candidates:
-            if provider.is_batchable_request(method=method, url=url):
+            if provider.is_batchable_request(method=method, hostname=hostname, path=path):
                 return provider
         return None

@@ -11,8 +11,6 @@ from batchling.batching.core import Batcher
 from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
 
-OPENAI_BASE_URL = "https://api.openai.com/v1"
-
 
 @pytest.fixture
 def provider() -> OpenAIProvider:
@@ -126,7 +124,8 @@ async def test_submit_single_request(batcher: Batcher, provider: OpenAIProvider)
     result = await batcher.submit(
         client_type="httpx",
         method="GET",
-        url=f"{OPENAI_BASE_URL}/test",
+        url="api.openai.com",
+        endpoint="/v1/test",
         provider=provider,
     )
 
@@ -144,7 +143,8 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -152,7 +152,8 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/2",
+            url="api.openai.com",
+            endpoint="/v1/2",
             provider=provider,
         )
     )
@@ -174,13 +175,25 @@ async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provid
     """Test that batch submission is triggered when batch_size is reached."""
     results = await asyncio.gather(
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/1",
+            provider=provider,
         ),
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/2",
+            provider=provider,
         ),
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/3",
+            provider=provider,
         ),
     )
 
@@ -205,7 +218,8 @@ async def test_window_time_triggers_submission(fast_batcher: Batcher, provider: 
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -233,7 +247,8 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -241,7 +256,8 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/2",
+            url="api.openai.com",
+            endpoint="/v1/2",
             provider=provider,
         )
     )
@@ -257,7 +273,8 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/3",
+            url="api.openai.com",
+            endpoint="/v1/3",
             provider=provider,
         )
     )
@@ -274,20 +291,36 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
     # Submit first batch (size threshold)
     await asyncio.gather(
         fast_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/1",
+            provider=provider,
         ),
         fast_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/2",
+            provider=provider,
         ),
     )
 
     # Submit second batch (size threshold)
     await asyncio.gather(
         fast_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/3",
+            provider=provider,
         ),
         fast_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/4", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/4",
+            provider=provider,
         ),
     )
 
@@ -305,7 +338,8 @@ async def test_concurrent_requests(batcher: Batcher, provider: OpenAIProvider):
             batcher.submit(
                 client_type="httpx",
                 method="GET",
-                url=f"{OPENAI_BASE_URL}/{i}",
+                url="api.openai.com",
+                endpoint=f"/v1/{i}",
                 provider=provider,
             )
         )
@@ -328,7 +362,8 @@ async def test_submit_with_kwargs(batcher: Batcher, provider: OpenAIProvider):
     result = await batcher.submit(
         client_type="httpx",
         method="POST",
-        url=f"{OPENAI_BASE_URL}/api",
+        url="api.openai.com",
+        endpoint="/v1/api",
         json={"key": "value"},
         headers={"Authorization": "Bearer token"},
         provider=provider,
@@ -344,7 +379,8 @@ async def test_submit_with_kwargs(batcher: Batcher, provider: OpenAIProvider):
 
     request = list(batch.requests.values())[0]
     assert request.params["method"] == "POST"
-    assert request.params["url"] == f"{OPENAI_BASE_URL}/api"
+    assert request.params["url"] == "api.openai.com"
+    assert request.params["endpoint"] == "/v1/api"
     assert request.params["json"] == {"key": "value"}
     assert request.params["headers"] == {"Authorization": "Bearer token"}
 
@@ -357,7 +393,8 @@ async def test_close_submits_remaining_requests(fast_batcher: Batcher, provider:
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -385,7 +422,8 @@ async def test_close_cancels_window_timer(fast_batcher: Batcher, provider: OpenA
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -426,7 +464,8 @@ async def test_batch_submission_error_handling(
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -434,7 +473,8 @@ async def test_batch_submission_error_handling(
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/2",
+            url="api.openai.com",
+            endpoint="/v1/2",
             provider=provider,
         )
     )
@@ -442,7 +482,8 @@ async def test_batch_submission_error_handling(
         batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/3",
+            url="api.openai.com",
+            endpoint="/v1/3",
             provider=provider,
         )
     )
@@ -472,7 +513,8 @@ async def test_window_timer_error_handling(
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -503,13 +545,25 @@ async def test_custom_id_uniqueness(batcher: Batcher, provider: OpenAIProvider):
     # Submit multiple requests
     await asyncio.gather(
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/1",
+            provider=provider,
         ),
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/2",
+            provider=provider,
         ),
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/3",
+            provider=provider,
         ),
     )
 
@@ -528,13 +582,25 @@ async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider)
     # Submit a batch
     await asyncio.gather(
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/1",
+            provider=provider,
         ),
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/2",
+            provider=provider,
         ),
         batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/3",
+            provider=provider,
         ),
     )
 
@@ -556,7 +622,8 @@ async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: Open
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )
@@ -568,7 +635,8 @@ async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: Open
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/2",
+            url="api.openai.com",
+            endpoint="/v1/2",
             provider=provider,
         )
     )
@@ -594,7 +662,8 @@ async def test_large_batch_size(
             large_batcher.submit(
                 client_type="httpx",
                 method="GET",
-                url=f"{OPENAI_BASE_URL}/{i}",
+                url="api.openai.com",
+                endpoint=f"/v1/{i}",
                 provider=provider,
             )
         )
@@ -628,7 +697,8 @@ async def test_submit_after_close(batcher: Batcher, provider: OpenAIProvider):
     result = await batcher.submit(
         client_type="httpx",
         method="GET",
-        url=f"{OPENAI_BASE_URL}/1",
+        url="api.openai.com",
+        endpoint="/v1/1",
         provider=provider,
     )
     assert isinstance(result, httpx.Response)
@@ -647,7 +717,16 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
     result = await dry_run_batcher.submit(
         client_type="httpx",
         method="GET",
-        url=f"{OPENAI_BASE_URL}/test",
+        url="api.openai.com",
+        endpoint="/v1/1",
+        provider=provider,
+    )
+
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="GET",
+        url="api.openai.com",
+        endpoint="/v1/test",
         provider=provider,
     )
 
@@ -688,7 +767,8 @@ async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProv
     result = await dry_run_batcher.submit(
         client_type="httpx",
         method="GET",
-        url=f"{OPENAI_BASE_URL}/1",
+        url="api.openai.com",
+        endpoint="/v1/1",
         provider=provider,
     )
 
@@ -709,13 +789,25 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
 
     results = await asyncio.gather(
         dry_run_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/1",
+            provider=provider,
         ),
         dry_run_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/2",
+            provider=provider,
         ),
         dry_run_batcher.submit(
-            client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3", provider=provider
+            client_type="httpx",
+            method="GET",
+            url="api.openai.com",
+            endpoint="/v1/3",
+            provider=provider,
         ),
     )
 
@@ -739,7 +831,8 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
         dry_run_batcher.submit(
             client_type="httpx",
             method="GET",
-            url=f"{OPENAI_BASE_URL}/1",
+            url="api.openai.com",
+            endpoint="/v1/1",
             provider=provider,
         )
     )

@@ -49,15 +49,16 @@ def test_provider_registry_contains_only_concrete_provider_instances() -> None:
 
 def test_provider_lookup_still_resolves_openai() -> None:
     """
-    Ensure URL lookup still resolves the OpenAI provider adapter.
+    Ensure hostname lookup still resolves the OpenAI provider adapter.
 
     Returns
     -------
     None
-        This test asserts URL-to-provider mapping.
+        This test asserts hostname-to-provider mapping.
     """
     provider = get_provider_for_batch_request(
-        url="https://api.openai.com/v1/chat/completions",
+        hostname="api.openai.com",
+        path="/v1/chat/completions",
         method="POST",
     )
     assert provider is not None
@@ -75,14 +76,16 @@ def test_batchable_lookup_requires_post_method() -> None:
     """
     post_provider = get_provider_for_batch_request(
         method="POST",
-        url="https://api.openai.com/v1/chat/completions",
+        hostname="api.openai.com",
+        path="/v1/chat/completions",
     )
     assert post_provider is not None
     assert post_provider.name == "openai"
 
     get_provider = get_provider_for_batch_request(
         method="GET",
-        url="https://api.openai.com/v1/chat/completions",
+        hostname="api.openai.com",
+        path="/v1/chat/completions",
     )
     assert get_provider is None
 
@@ -98,6 +101,7 @@ def test_batchable_lookup_requires_configured_endpoint() -> None:
     """
     provider = get_provider_for_batch_request(
         method="POST",
-        url="https://api.openai.com/v1/responses",
+        hostname="api.openai.com",
+        path="/v1/responses",
     )
     assert provider is None

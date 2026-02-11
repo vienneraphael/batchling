@@ -111,6 +111,7 @@ class Batcher:
         client_type: str,
         method: str,
         url: str,
+        endpoint: str,
         provider: BaseProvider,
         headers: dict[str, str] | None = None,
         body: t.Any = None,
@@ -127,6 +128,8 @@ class Batcher:
             HTTP method (e.g., ``"GET"`` or ``"POST"``).
         url : str
             Request URL.
+        endpoint : str
+            Request endpoint.
         provider : BaseProvider
             Provider for this request.
         headers : dict[str, str] | None, optional
@@ -152,6 +155,7 @@ class Batcher:
                 "client_type": client_type,
                 "method": method,
                 "url": url,
+                "endpoint": endpoint,
                 "headers": headers,
                 "body": body,
                 **kwargs,
@@ -170,6 +174,7 @@ class Batcher:
             client_type=client_type,
             method=method,
             url=url,
+            endpoint=endpoint,
         )
 
         async with self._pending_lock:

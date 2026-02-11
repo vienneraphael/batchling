@@ -9,6 +9,7 @@ The context var is set by the `batchify` function upon calling.
 import contextvars
 import json
 import typing as t
+from urllib.parse import urlparse
 
 import httpx
 import structlog
@@ -304,35 +305,41 @@ def _maybe_route_to_batcher(
         Routing data if batching is active, otherwise ``None``.
     """
     batcher = active_batcher.get()
-    provider = get_provider_for_batch_request(method=method, url=url)
+    parsed = urlparse(url=url)
+    hostname = (parsed.hostname or "").lower()
+    path = parsed.path or "/"
+    provider = get_provider_for_batch_request(method=method, hostname=hostname, path=path)
     if batcher is None or provider is None:
         if batcher is None and provider is None:
             log.debug(
                 event="httpx request not routed",
                 reason="no active batcher and no provider match",
-                url=url,
+                hostname=hostname,
+                path=path,
             )
         elif batcher is None:
             log.debug(
                 event="httpx request not routed",
                 reason="no active batcher",
-                url=url,
+                hostname=hostname,
+                path=path,
             )
         else:
             log.debug(
                 event="httpx request not routed",
                 reason="provider not matched",
-                url=url,
+                hostname=hostname,
+                path=path,
             )
         return None
-
     return (
         batcher,
         provider,
         {
             "client_type": "httpx",
             "method": method,
-            "url": url,
+            "url": hostname,
+            "endpoint": path,
             "headers": headers,
             "body": body,
         },

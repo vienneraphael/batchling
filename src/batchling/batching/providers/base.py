@@ -4,7 +4,6 @@ import json
 import typing as t
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from urllib.parse import urlparse
 
 import httpx
 import structlog
@@ -88,33 +87,31 @@ class BaseProvider(ABC):
             return f"str(len={len(value)})"
         return type(value).__name__
 
-    def matches_url(self, url: str) -> bool:
+    def matches_url(self, hostname: str) -> bool:
         """
         Check whether a URL belongs to this provider by hostname.
 
         Parameters
         ----------
-        url : str
-            Candidate request URL.
+        hostname : str
+            Candidate request hostname.
 
         Returns
         -------
         bool
-            ``True`` if the URL matches this provider.
+            ``True`` if the hostname matches this provider.
         """
-        parsed = urlparse(url=url)
-        hostname = (parsed.hostname or "").lower()
         is_match = bool(hostname) and hostname.endswith(self.hostnames)
         log.debug(
             event="Provider URL match evaluated",
             provider=self.name,
-            input_url=url,
+            input_hostname=hostname,
             parsed_hostname=hostname,
             matched=is_match,
         )
         return is_match
 
-    def is_batchable_request(self, *, method: str, url: str) -> bool:
+    def is_batchable_request(self, *, method: str, hostname: str, path: str) -> bool:
         """
         Check whether an HTTP request should be routed into batching.
 
@@ -122,21 +119,19 @@ class BaseProvider(ABC):
         ----------
         method : str
             HTTP method for the request.
-        url : str
-            Candidate request URL.
+        hostname : str
+            Candidate request hostname.
+        path : str
+            Candidate request path.
 
         Returns
         -------
         bool
             ``True`` if this request is explicitly batchable for the provider.
         """
-        if not self.matches_url(url=url):
-            return False
-
-        parsed = urlparse(url=url)
-        path = parsed.path or "/"
         normalized_method = method.upper()
-
+        if not self.matches_url(hostname=hostname):
+            return False
         method_ok = normalized_method == self.batch_method
         endpoint_ok = path in self.batchable_endpoints
         is_batchable = method_ok and endpoint_ok
@@ -152,89 +147,6 @@ class BaseProvider(ABC):
             configured_endpoints=self.batchable_endpoints,
         )
         return is_batchable
-
-    def normalize_url(self, url: str) -> str:
-        """
-        Normalize request URLs into provider batch endpoint format.
-
-        Parameters
-        ----------
-        url : str
-            Original request URL.
-
-        Returns
-        -------
-        str
-            Path-only URL (including query string) for absolute URLs, or the
-            original value for relative inputs.
-        """
-        parsed = urlparse(url=url)
-        if parsed.scheme and parsed.netloc:
-            normalized_path = parsed.path or "/"
-            if parsed.query:
-                normalized_url = f"{normalized_path}?{parsed.query}"
-                log.debug(
-                    event="Normalized absolute URL",
-                    provider=self.name,
-                    input_url=url,
-                    output_url=normalized_url,
-                )
-                return normalized_url
-            log.debug(
-                event="Normalized absolute URL",
-                provider=self.name,
-                input_url=url,
-                output_url=normalized_path,
-            )
-            return normalized_path
-        log.debug(
-            event="Kept relative URL",
-            provider=self.name,
-            input_url=url,
-            output_url=url,
-        )
-        return url
-
-    def extract_base_and_endpoint(self, *, url: str) -> tuple[str, str]:
-        """
-        Extract provider base URL and normalized endpoint.
-
-        Parameters
-        ----------
-        url : str
-            Original request URL.
-
-        Returns
-        -------
-        tuple[str, str]
-            Provider base URL and normalized endpoint path.
-        """
-        parsed = urlparse(url=url)
-        if parsed.scheme and parsed.netloc:
-            base_url = f"{parsed.scheme}://{parsed.netloc}"
-            endpoint = self.normalize_url(url=url)
-            log.debug(
-                event="Extracted provider base/endpoint",
-                provider=self.name,
-                input_url=url,
-                base_url=base_url,
-                endpoint=endpoint,
-            )
-            return base_url, endpoint
-
-        if self.hostnames:
-            base_url = f"https://{self.hostnames[0]}"
-            endpoint = self.normalize_url(url=url)
-            log.debug(
-                event="Extracted fallback base/endpoint",
-                provider=self.name,
-                input_url=url,
-                base_url=base_url,
-                endpoint=endpoint,
-            )
-            return base_url, endpoint
-
-        raise ValueError(f"Unable to determine base URL for request: {url}")
 
     def extract_body(self, *, params: dict[str, t.Any]) -> t.Any:
         """
@@ -453,7 +365,7 @@ class BaseProvider(ABC):
             line: dict[str, t.Any] = {
                 "custom_id": request.custom_id,
                 "method": request.params["method"],
-                "url": self.normalize_url(url=request.params["url"]),
+                "url": request.params["endpoint"],
             }
             if body is not None:
                 line["body"] = body
@@ -463,8 +375,7 @@ class BaseProvider(ABC):
                 provider=self.name,
                 custom_id=request.custom_id,
                 method=request.params["method"],
-                input_url=request.params["url"],
-                output_url=line["url"],
+                endpoint=line["endpoint"],
                 body_summary=self._summarize_value(value=body),
             )
         log.debug(
