@@ -27,6 +27,7 @@ def batchify(
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
+    dry_run: bool = False,
 ) -> t.Callable[P, R]:
     """
     Wrap a callable target while preserving its signature.
@@ -41,6 +42,9 @@ def batchify(
         Submit a provider batch after this many seconds, even if size not reached.
     batch_poll_interval_seconds : float, optional
         Poll active batches every this many seconds.
+    dry_run : bool, optional
+        If ``True``, intercept and batch requests without sending provider batches.
+        Batched requests resolve to synthetic responses.
 
     Returns
     -------
@@ -56,6 +60,7 @@ def batchify(
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
+    dry_run: bool = False,
 ) -> BatchingContext[T]:
     """
     Wrap an object instance while preserving its type.
@@ -70,6 +75,9 @@ def batchify(
         Submit a provider batch after this many seconds, even if size not reached.
     batch_poll_interval_seconds : float, optional
         Poll active batches every this many seconds.
+    dry_run : bool, optional
+        If ``True``, intercept and batch requests without sending provider batches.
+        Batched requests resolve to synthetic responses.
 
     Returns
     -------
@@ -85,6 +93,7 @@ def batchify(
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
+    dry_run: bool = False,
 ) -> BatchingContext[type[T]]:
     """
     Wrap a class object in a batching context manager.
@@ -99,6 +108,9 @@ def batchify(
         Submit a provider batch after this many seconds, even if size not reached.
     batch_poll_interval_seconds : float, optional
         Poll active batches every this many seconds.
+    dry_run : bool, optional
+        If ``True``, intercept and batch requests without sending provider batches.
+        Batched requests resolve to synthetic responses.
 
     Returns
     -------
@@ -114,6 +126,7 @@ def batchify(
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
+    dry_run: bool = False,
 ) -> BatchingContext[None]:
     """
     Create a batching context manager without binding to a specific instance.
@@ -128,6 +141,9 @@ def batchify(
         Submit a provider batch after this many seconds, even if size not reached.
     batch_poll_interval_seconds : float, optional
         Poll active batches every this many seconds.
+    dry_run : bool, optional
+        If ``True``, intercept and batch requests without sending provider batches.
+        Batched requests resolve to synthetic responses.
 
     Returns
     -------
@@ -142,6 +158,7 @@ def batchify(
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
+    dry_run: bool = False,
 ) -> BatchingContext[t.Any] | t.Callable[..., t.Any]:
     """
     Universal adapter.
@@ -156,6 +173,9 @@ def batchify(
         Submit a provider batch after this many seconds, even if size not reached.
     batch_poll_interval_seconds : float, optional
         Poll active batches every this many seconds.
+    dry_run : bool, optional
+        If ``True``, intercept and batch requests without sending provider batches.
+        Batched requests resolve to synthetic responses.
 
     Returns
     -------
@@ -179,6 +199,7 @@ def batchify(
         batch_size=batch_size,
         batch_window_seconds=batch_window_seconds,
         batch_poll_interval_seconds=batch_poll_interval_seconds,
+        dry_run=dry_run,
     )
 
     # 3. If target is a bound method, reject it to prevent misuse.

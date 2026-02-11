@@ -45,6 +45,20 @@ async def test_batchify_creates_batcher(reset_hooks, reset_context):
 
 
 @pytest.mark.asyncio
+async def test_batchify_creates_dry_run_batcher(reset_hooks, reset_context):
+    """Test that batchify forwards the dry_run flag to Batcher."""
+    wrapped = batchify(
+        target=MockClient(),
+        batch_size=5,
+        batch_window_seconds=1.0,
+        dry_run=True,
+    )
+
+    assert isinstance(wrapped._self_batcher, Batcher)
+    assert wrapped._self_batcher._dry_run is True
+
+
+@pytest.mark.asyncio
 async def test_batchify_wraps_object_instance(reset_hooks, reset_context):
     """Test that batchify wraps an object instance with BatchingContext."""
     client = MockClient()

@@ -28,6 +28,10 @@ resolves futures back to callers.
 5. Provider adapters convert batch results back into HTTP responses for each request.
 6. `close()` flushes remaining requests and cancels timers.
 
+In `dry_run` mode, step 3 and provider polling are bypassed: `_process_batch()` still
+creates `_ActiveBatch` for tracking, then resolves each request immediately with a
+synthetic `httpx.Response` (`200`) marked with `x-batchling-dry-run: 1`.
+
 ## Extension notes
 
 - Add new provider adapters by implementing `process_batch()` in the provider class.

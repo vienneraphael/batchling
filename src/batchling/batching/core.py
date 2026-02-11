@@ -66,6 +66,7 @@ class Batcher:
         batch_size: int = 50,
         batch_window_seconds: float = 2.0,
         batch_poll_interval_seconds: float = 10.0,
+        dry_run: bool = False,
     ):
         """
         Initialize the batcher.
@@ -78,9 +79,12 @@ class Batcher:
             Submit a provider batch after this many seconds, even if size not reached.
         batch_poll_interval_seconds : float
             Poll active batches every this many seconds.
+        dry_run : bool
+            If ``True``, simulate provider batch resolution without provider I/O.
         """
         self._batch_size = batch_size
         self._batch_window_seconds = batch_window_seconds
+        self._dry_run = dry_run
 
         # Request collection
         self._pending_by_provider: dict[str, list[_PendingRequest]] = {}
@@ -99,6 +103,7 @@ class Batcher:
             batch_size=batch_size,
             batch_window_seconds=batch_window_seconds,
             batch_poll_interval_seconds=batch_poll_interval_seconds,
+            dry_run=dry_run,
         )
 
     async def submit(
@@ -351,6 +356,32 @@ class Batcher:
         """
         provider = requests[0].provider
         try:
+            if self._dry_run:
+                dry_run_batch_id = f"dryrun-{uuid.uuid4()}"
+                active_batch = _ActiveBatch(
+                    batch_id=dry_run_batch_id,
+                    output_file_id="",
+                    error_file_id="",
+                    requests={req.custom_id: req for req in requests},
+                    created_at=time.time(),
+                )
+                self._active_batches.append(active_batch)
+                for req in requests:
+                    if not req.future.done():
+                        req.future.set_result(
+                            self._build_dry_run_response(
+                                request=req,
+                                provider_name=provider.name,
+                            )
+                        )
+                log.info(
+                    event="Dry-run batch resolved",
+                    provider=provider.name,
+                    batch_id=dry_run_batch_id,
+                    request_count=len(requests),
+                )
+                return
+
             log.info(
                 event="Processing batch",
                 provider=provider.name,
@@ -393,6 +424,38 @@ class Batcher:
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)
+
+    def _build_dry_run_response(
+        self,
+        *,
+        request: _PendingRequest,
+        provider_name: str,
+    ) -> httpx.Response:
+        """
+        Build a synthetic response for dry-run batch mode.
+
+        Parameters
+        ----------
+        request : _PendingRequest
+            Pending request metadata.
+        provider_name : str
+            Provider name for observability.
+
+        Returns
+        -------
+        httpx.Response
+            Synthetic successful response.
+        """
+        return httpx.Response(
+            status_code=200,
+            headers={"x-batchling-dry-run": "1"},
+            json={
+                "dry_run": True,
+                "custom_id": request.custom_id,
+                "provider": provider_name,
+                "status": "simulated",
+            },
+        )
 
     async def _poll_batch(
         self,

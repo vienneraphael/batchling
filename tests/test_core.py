@@ -578,3 +578,116 @@ async def test_submit_after_close(batcher):
     )
     assert isinstance(result, httpx.Response)
     assert result.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_dry_run_returns_simulated_response():
+    """Test dry-run returns a simulated response without provider I/O."""
+    dry_run_batcher = Batcher(
+        batch_size=3,
+        batch_window_seconds=0.5,
+        dry_run=True,
+    )
+
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="GET",
+        url=f"{OPENAI_BASE_URL}/test",
+    )
+
+    assert isinstance(result, httpx.Response)
+    assert result.status_code == 200
+    assert result.headers.get("x-batchling-dry-run") == "1"
+    assert result.json()["dry_run"] is True
+    assert result.json()["provider"] == "openai"
+    assert result.json()["status"] == "simulated"
+    assert _pending_count(batcher=dry_run_batcher) == 0
+    assert len(dry_run_batcher._active_batches) == 1
+
+    await dry_run_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_dry_run_does_not_call_provider_process_batch(monkeypatch):
+    """Test dry-run bypasses provider batch submission."""
+    dry_run_batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=1.0,
+        dry_run=True,
+    )
+
+    provider = get_provider_for_url(url=f"{OPENAI_BASE_URL}/1")
+    assert provider is not None
+
+    call_count = 0
+
+    async def failing_process_batch(*_args, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        raise AssertionError("process_batch should not be called in dry_run mode")
+
+    monkeypatch.setattr(
+        provider,
+        "process_batch",
+        failing_process_batch,
+    )
+
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="GET",
+        url=f"{OPENAI_BASE_URL}/1",
+    )
+
+    assert result.status_code == 200
+    assert call_count == 0
+
+    await dry_run_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_dry_run_still_batches_by_size():
+    """Test dry-run keeps size-threshold batching behavior."""
+    dry_run_batcher = Batcher(
+        batch_size=3,
+        batch_window_seconds=1.0,
+        dry_run=True,
+    )
+
+    results = await asyncio.gather(
+        dry_run_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/1"),
+        dry_run_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/2"),
+        dry_run_batcher.submit(client_type="httpx", method="GET", url=f"{OPENAI_BASE_URL}/3"),
+    )
+
+    assert all(isinstance(r, httpx.Response) and r.status_code == 200 for r in results)
+    assert len(dry_run_batcher._active_batches) == 1
+    assert _pending_count(batcher=dry_run_batcher) == 0
+
+    await dry_run_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_dry_run_close_flushes_pending_requests():
+    """Test close() flushes pending requests in dry-run mode."""
+    dry_run_batcher = Batcher(
+        batch_size=5,
+        batch_window_seconds=10.0,
+        dry_run=True,
+    )
+
+    task = asyncio.create_task(
+        dry_run_batcher.submit(
+            client_type="httpx",
+            method="GET",
+            url=f"{OPENAI_BASE_URL}/1",
+        )
+    )
+
+    await asyncio.sleep(delay=0.05)
+    await dry_run_batcher.close()
+
+    result = await task
+    assert isinstance(result, httpx.Response)
+    assert result.status_code == 200
+    assert result.headers.get("x-batchling-dry-run") == "1"
+    assert len(dry_run_batcher._active_batches) == 1
