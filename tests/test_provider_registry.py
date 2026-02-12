@@ -120,6 +120,6 @@ def test_batchable_lookup_requires_configured_endpoint() -> None:
     provider = get_provider_for_batch_request(
         method="POST",
         hostname="api.openai.com",
-        path="/v1/responses",
+        path="/v1/doesnotexist",
     )
     assert provider is None
