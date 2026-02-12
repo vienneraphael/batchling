@@ -1,12 +1,16 @@
-from __future__ import annotations
-
-import structlog
+from enum import StrEnum
 
 from batchling.batching.providers.base import (
     BaseProvider,
+    BatchTerminalStatesLike,
 )
 
-log = structlog.get_logger(__name__)
+
+class OpenAIBatchTerminalStates(StrEnum):
+    SUCCESS = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
 
 
 class OpenAIProvider(BaseProvider):
@@ -23,4 +27,6 @@ class OpenAIProvider(BaseProvider):
         "/v1/images/generations",
         "/v1/images/edits",
     )
-    terminal_states = {"completed", "failed", "cancelled", "expired"}
+    file_upload_endpoint = "/v1/files"
+    batch_endpoint = "/v1/batches"
+    batch_terminal_states: type[BatchTerminalStatesLike] = OpenAIBatchTerminalStates

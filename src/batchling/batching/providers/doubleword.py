@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from batchling.batching.providers.openai import OpenAIProvider
 
 

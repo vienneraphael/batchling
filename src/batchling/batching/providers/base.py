@@ -48,6 +48,13 @@ class PendingRequestLike(t.Protocol):
     params: dict[str, t.Any]
 
 
+class BatchTerminalStatesLike(t.Protocol):
+    SUCCESS: str
+    FAILED: str
+    CANCELLED: str
+    EXPIRED: str
+
+
 class BaseProvider(ABC):
     """
     Standard interface for mapping HTTP requests to/from provider Batch APIs.
@@ -61,7 +68,9 @@ class BaseProvider(ABC):
     hostnames: tuple[str, ...] = ()
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
-    terminal_states: set[str] = set[str]()
+    file_upload_endpoint: str
+    batch_endpoint: str
+    batch_terminal_states: type[BatchTerminalStatesLike]
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
@@ -287,7 +296,7 @@ class BaseProvider(ABC):
 
         async with client_factory() as client:
             response = await client.post(
-                url=f"{base_url}/v1/files",
+                url=f"{base_url}{self.file_upload_endpoint}",
                 headers=api_headers,
                 files=files,
                 data={"purpose": "batch"},
@@ -328,7 +337,7 @@ class BaseProvider(ABC):
         """
         async with client_factory() as client:
             response = await client.post(
-                url=f"{base_url}/v1/batches",
+                url=f"{base_url}{self.batch_endpoint}",
                 headers=api_headers,
                 json={
                     "input_file_id": file_id,

@@ -492,7 +492,7 @@ class Batcher:
         while True:
             async with self._client_factory() as client:
                 response = await client.get(
-                    url=f"{base_url}/v1/batches/{active_batch.batch_id}",
+                    url=f"{base_url}{provider.batch_endpoint}/{active_batch.batch_id}",
                     headers=api_headers,
                 )
                 response.raise_for_status()
@@ -510,7 +510,7 @@ class Batcher:
                 has_error_file=bool(active_batch.error_file_id),
             )
 
-            if status in provider.terminal_states:
+            if status in provider.batch_terminal_states:
                 log.info(
                     event="Batch reached terminal state",
                     provider=provider.name,
@@ -565,6 +565,7 @@ class Batcher:
             file_id=file_id,
         )
         content = await self._download_batch_content(
+            provider=provider,
             base_url=base_url,
             api_headers=api_headers,
             file_id=file_id,
@@ -609,6 +610,7 @@ class Batcher:
     async def _download_batch_content(
         self,
         *,
+        provider: BaseProvider,
         base_url: str,
         api_headers: dict[str, str],
         file_id: str,
@@ -618,6 +620,8 @@ class Batcher:
 
         Parameters
         ----------
+        provider : BaseProvider
+            Provider adapter.
         base_url : str
             Provider base URL.
         api_headers : dict[str, str]
@@ -632,7 +636,7 @@ class Batcher:
         """
         async with self._client_factory() as client:
             response = await client.get(
-                url=f"{base_url}/v1/files/{file_id}/content",
+                url=f"{base_url}{provider.file_upload_endpoint}/{file_id}/content",
                 headers=api_headers,
             )
             response.raise_for_status()
