@@ -7,7 +7,6 @@ The context var is set by the `batchify` function upon calling.
 """
 
 import contextvars
-import json
 import typing as t
 from urllib.parse import urlparse
 
@@ -164,118 +163,9 @@ def _log_httpx_request(
     }
 
     if headers:
-        log_context["headers"] = headers
-
-    body_str = _format_httpx_body(
-        json_data=json_data,
-        content=content,
-        data=data,
-        body=body,
-    )
-    if body_str:
-        log_context["body"] = body_str
-
+        log_context["headers"] = {k: "***" for k in headers.keys()}
+    log_context["body"] = body
     log.info(event="httpx request intercepted", **log_context)
-
-
-def _format_httpx_body(
-    *,
-    json_data: t.Any = None,
-    content: t.Any = None,
-    data: t.Any = None,
-    body: t.Any = None,
-) -> str | None:
-    """
-    Format request payload for structured logging.
-
-    Parameters
-    ----------
-    json_data : typing.Any, optional
-        JSON payload.
-    content : typing.Any, optional
-        Raw content payload.
-    data : typing.Any, optional
-        Form data payload.
-    body : typing.Any, optional
-        Generic body payload.
-
-    Returns
-    -------
-    str | None
-        Truncated string representation of the payload.
-    """
-    if json_data is not None:
-        return _safe_json_dump(value=json_data)
-    if content is not None:
-        return _safe_repr(value=content)
-    if data is not None:
-        return _truncate(text=str(object=data))
-    if body is not None:
-        return _safe_repr(value=body)
-    return None
-
-
-def _safe_json_dump(*, value: t.Any) -> str:
-    """
-    Safely serialize JSON payloads for logging.
-
-    Parameters
-    ----------
-    value : typing.Any
-        Value to serialize.
-
-    Returns
-    -------
-    str
-        Serialized payload string.
-    """
-    try:
-        return json.dumps(obj=value, indent=2)
-    except Exception:
-        return str(object=value)
-
-
-def _safe_repr(*, value: t.Any) -> str:
-    """
-    Build a safe string representation of payloads for logging.
-
-    Parameters
-    ----------
-    value : typing.Any
-        Value to represent.
-
-    Returns
-    -------
-    str
-        Truncated string representation.
-    """
-    try:
-        if isinstance(value, (str, bytes)):
-            return _truncate(text=str(object=value))
-        return str(object=value)
-    except Exception:
-        return "<binary or non-serializable content>"
-
-
-def _truncate(*, text: str, limit: int = 200) -> str:
-    """
-    Truncate a string for logging.
-
-    Parameters
-    ----------
-    text : str
-        Input string.
-    limit : int, optional
-        Maximum length.
-
-    Returns
-    -------
-    str
-        Truncated string.
-    """
-    if len(text) > limit:
-        return text[:limit]
-    return text
 
 
 def _maybe_route_to_batcher(

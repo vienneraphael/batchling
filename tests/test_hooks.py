@@ -175,7 +175,7 @@ async def test_hook_logs_request_details(restore_hooks):
         assert call_args[1]["url"] == "https://example.com/test"
         logged_headers = call_args[1]["headers"]
         header_value = logged_headers.get("X-Test") or logged_headers.get("x-test")
-        assert header_value == "header-value"
+        assert header_value == "***"
 
 
 @pytest.mark.asyncio

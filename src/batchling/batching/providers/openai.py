@@ -22,6 +22,7 @@ class OpenAIProvider(BaseProvider):
     name = "openai"
     hostnames = ("api.openai.com",)
     batchable_endpoints = ("/v1/chat/completions",)
+    terminal_states = {"completed", "failed", "cancelled", "expired"}
 
     def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
@@ -122,13 +123,6 @@ class OpenAIProvider(BaseProvider):
             endpoint=endpoint,
             client_factory=client_factory,
         )
-        log.info(
-            event="Created batch job",
-            provider=self.name,
-            batch_id=batch_id,
-            file_id=file_id,
-        )
-
         return BatchSubmission(
             base_url=base_url,
             api_headers=api_headers,
@@ -232,20 +226,6 @@ class OpenAIProvider(BaseProvider):
             )
             response.raise_for_status()
             payload = response.json()
-        log.debug(
-            event="Received batch job response",
-            provider=self.name,
-            base_url=base_url,
-            response_keys=list(payload.keys()),
-            batch_id=payload.get("id"),
-        )
-        log.debug(
-            event="Batch job created",
-            provider=self.name,
-            base_url=base_url,
-            batch_id=payload.get("id"),
-            input_file_id=file_id,
-        )
         return payload["id"]
 
     def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
@@ -264,16 +244,6 @@ class OpenAIProvider(BaseProvider):
         """
         response = result_item.get("response")
         error = result_item.get("error")
-        custom_id = result_item.get("custom_id")
-        log.debug(
-            event="Decoding batch result item",
-            provider=self.name,
-            custom_id=custom_id,
-            has_response=bool(response),
-            has_error=bool(error),
-            top_level_keys=list(result_item.keys()),
-        )
-
         if response:
             status_code = int(response.get("status_code", 200))
             headers = dict(response.get("headers") or {})
@@ -285,15 +255,6 @@ class OpenAIProvider(BaseProvider):
 
         content, content_headers = self.encode_body(body=body)
         headers.update(content_headers)
-        log.debug(
-            event="Built response from batch result",
-            provider=self.name,
-            custom_id=custom_id,
-            status_code=status_code,
-            header_keys=list(headers.keys()),
-            body_type=type(body).__name__,
-            content_bytes=len(content),
-        )
 
         return httpx.Response(
             status_code=status_code,

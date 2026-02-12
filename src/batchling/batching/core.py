@@ -483,7 +483,6 @@ class Batcher:
         active_batch : _ActiveBatch
             Active batch metadata.
         """
-        terminal_states = {"completed", "failed", "cancelled", "expired"}
         log.info(
             event="Polling batch",
             provider=provider.name,
@@ -511,7 +510,7 @@ class Batcher:
                 has_error_file=bool(active_batch.error_file_id),
             )
 
-            if status in terminal_states:
+            if status in provider.terminal_states:
                 log.info(
                     event="Batch reached terminal state",
                     provider=provider.name,
@@ -576,7 +575,7 @@ class Batcher:
             content=content,
         )
         log.info(
-            event="Applied batch results",
+            event="Mapped batch results to output requests",
             provider=provider.name,
             batch_id=active_batch.batch_id,
             resolved_count=len(seen),
@@ -637,11 +636,6 @@ class Batcher:
                 headers=api_headers,
             )
             response.raise_for_status()
-            log.debug(
-                event="Downloaded batch content",
-                file_id=file_id,
-                status_code=response.status_code,
-            )
             return response.text
 
     def _apply_batch_results(

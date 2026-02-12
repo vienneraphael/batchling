@@ -61,6 +61,7 @@ class BaseProvider(ABC):
     hostnames: tuple[str, ...] = ()
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
+    terminal_states: set[str] = set[str]()
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
@@ -85,32 +86,6 @@ class BaseProvider(ABC):
             return stripped
 
         return f"https://{stripped}"
-
-    def _summarize_value(self, *, value: t.Any) -> str:
-        """
-        Build a compact debug summary for arbitrary payload values.
-
-        Parameters
-        ----------
-        value : typing.Any
-            Value to summarize.
-
-        Returns
-        -------
-        str
-            Type/shape summary suitable for logs.
-        """
-        if value is None:
-            return "none"
-        if isinstance(value, dict):
-            return f"dict(keys={list(value.keys())[:8]},len={len(value)})"
-        if isinstance(value, list):
-            return f"list(len={len(value)})"
-        if isinstance(value, (bytes, bytearray)):
-            return f"{type(value).__name__}(len={len(value)})"
-        if isinstance(value, str):
-            return f"str(len={len(value)})"
-        return type(value).__name__
 
     def matches_url(self, hostname: str) -> bool:
         """
@@ -227,13 +202,13 @@ class BaseProvider(ABC):
             for request in requests
         ]
 
-    def encode_body(self, *, body: t.Any) -> tuple[bytes, dict[str, str]]:
+    def encode_body(self, *, body: dict[str, t.Any]) -> tuple[bytes, dict[str, str]]:
         """
         Encode response payloads into bytes and content headers.
 
         Parameters
         ----------
-        body : typing.Any
+        body : dict[str, typing.Any]
             Response payload.
 
         Returns
@@ -241,53 +216,7 @@ class BaseProvider(ABC):
         tuple[bytes, dict[str, str]]
             Encoded bytes and any content-type headers.
         """
-        if body is None:
-            log.debug(
-                event="Encoded response body",
-                provider=self.name,
-                input_summary="none",
-                output_bytes=0,
-                content_type=None,
-            )
-            return b"", {}
-        if isinstance(body, (dict, list)):
-            encoded = json.dumps(obj=body).encode(encoding="utf-8")
-            log.debug(
-                event="Encoded response body",
-                provider=self.name,
-                input_summary=self._summarize_value(value=body),
-                output_bytes=len(encoded),
-                content_type="application/json",
-            )
-            return encoded, {"content-type": "application/json"}
-        if isinstance(body, str):
-            encoded = body.encode(encoding="utf-8")
-            log.debug(
-                event="Encoded response body",
-                provider=self.name,
-                input_summary=self._summarize_value(value=body),
-                output_bytes=len(encoded),
-                content_type="text/plain",
-            )
-            return encoded, {"content-type": "text/plain"}
-        if isinstance(body, (bytes, bytearray)):
-            encoded = bytes(body)
-            log.debug(
-                event="Encoded response body",
-                provider=self.name,
-                input_summary=self._summarize_value(value=body),
-                output_bytes=len(encoded),
-                content_type=None,
-            )
-            return encoded, {}
         encoded = json.dumps(obj=body).encode(encoding="utf-8")
-        log.debug(
-            event="Encoded response body",
-            provider=self.name,
-            input_summary=self._summarize_value(value=body),
-            output_bytes=len(encoded),
-            content_type="application/json",
-        )
         return encoded, {"content-type": "application/json"}
 
     @abstractmethod
