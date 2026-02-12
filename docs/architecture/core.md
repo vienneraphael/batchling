@@ -24,7 +24,8 @@ resolves futures back to callers.
 2. When thresholds are hit, `_submit_requests()` starts a provider-specific batch submission task.
 3. The provider submits the batch job and returns poll metadata (`base_url`, headers,
    batch ID).
-4. The batcher creates `_ActiveBatch`, polls for completion, and resolves futures.
+4. The batcher creates `_ActiveBatch`, polls for completion using
+   `provider.terminal_states`, and resolves futures.
 5. Provider adapters convert batch results back into HTTP responses for each request.
 6. `close()` flushes remaining requests and cancels timers.
 
@@ -35,6 +36,8 @@ synthetic `httpx.Response` (`200`) marked with `x-batchling-dry-run: 1`.
 ## Extension notes
 
 - Add new provider adapters by implementing `process_batch()` in the provider class.
+- Ensure each provider declares `terminal_states` so polling termination is
+  provider-specific.
 - Keep polling/result resolution behavior in `Batcher` unless provider APIs diverge.
 
 ## Code reference

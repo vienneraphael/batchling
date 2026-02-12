@@ -8,6 +8,7 @@ batch results.
 
 - Declare supported hostnames.
 - Declare explicit batchable HTTP endpoints (`path`) for hook routing.
+- Declare provider-specific terminal batch states used by the core poller.
 - Identify whether a URL belongs to a provider.
 - Submit provider batches via `process_batch()` (upload/create job as needed).
 - Normalize request URLs for provider batch endpoints.
@@ -38,11 +39,20 @@ Common helpers now live on `BaseProvider` and can be reused by all providers:
 - `build_jsonl_lines()`
 - `encode_body()`
 
+Provider configuration on `BaseProvider` includes:
+
+- `hostnames`
+- `batch_method`
+- `batchable_endpoints`
+- `terminal_states` (statuses that stop polling and trigger result resolution)
+
 ## Extension notes
 
 - Add new provider classes by subclassing `BaseProvider` in a new module under
   `src/batchling/batching/providers/`.
 - Implement `process_batch()`, `build_api_headers()`, and `from_batch_result()`.
+- Define `terminal_states` for the provider so `Batcher` can stop polling at the
+  correct lifecycle states.
 - Keep `matches_url()` conservative if you override it.
 
 ## Code reference

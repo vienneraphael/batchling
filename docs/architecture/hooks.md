@@ -7,7 +7,8 @@ expand to other clients.
 ## Responsibilities
 
 - Patch supported HTTP client methods once globally (idempotent install).
-- Capture request details for logging and diagnostics.
+- Capture request details for logging and diagnostics (request headers are redacted
+  in logs only).
 - Look up the active `Batcher` context and route supported provider endpoints into batching.
 - Fall back to the original client behavior for unsupported URLs or when no active
   batcher is set.
