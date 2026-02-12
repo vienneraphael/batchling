@@ -65,6 +65,24 @@ def test_provider_lookup_still_resolves_openai() -> None:
     assert provider.name == "openai"
 
 
+def test_provider_lookup_resolves_doubleword() -> None:
+    """
+    Ensure hostname lookup resolves the Doubleword provider adapter.
+
+    Returns
+    -------
+    None
+        This test asserts hostname-to-provider mapping.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="api.doubleword.ai",
+        path="/v1/chat/completions",
+        method="POST",
+    )
+    assert provider is not None
+    assert provider.name == "doubleword"
+
+
 def test_batchable_lookup_requires_post_method() -> None:
     """
     Ensure batchable lookup only routes POST requests.

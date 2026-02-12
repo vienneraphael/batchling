@@ -30,6 +30,15 @@ The OpenAI provider implements:
   It normalizes host-only values (for example, `api.openai.com`) to `https://` URLs.
 - `from_batch_result()` to decode batch output lines.
 
+## Doubleword provider
+
+The Doubleword provider reuses the OpenAI provider implementation and only changes:
+
+- `hostnames = ("api.doubleword.ai",)`
+- `batchable_endpoints = ("/v1/chat/completions",)`
+
+Terminal states are inherited unchanged from the OpenAI provider.
+
 Common helpers now live on `BaseProvider` and can be reused by all providers:
 
 - `matches_url()`
