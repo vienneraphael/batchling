@@ -219,10 +219,9 @@ class BaseProvider(ABC):
         encoded = json.dumps(obj=body).encode(encoding="utf-8")
         return encoded, {"content-type": "application/json"}
 
-    @abstractmethod
     def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
-        Build provider API headers for batch submission/polling.
+        Extract bearer token from request headers.
 
         Parameters
         ----------
@@ -232,8 +231,16 @@ class BaseProvider(ABC):
         Returns
         -------
         dict[str, str]
-            Provider API headers.
+            Request headers with bearer token extracted.
         """
+        api_headers: dict[str, str] = {}
+        for key, value in headers.items():
+            lower_key = key.lower()
+            if lower_key == "authorization":
+                api_headers["Authorization"] = value
+            elif lower_key.startswith(f"{self.name}-"):
+                api_headers[key] = value
+        return api_headers
 
     @abstractmethod
     async def process_batch(

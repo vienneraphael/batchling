@@ -11,7 +11,6 @@ from batchling.batching.providers.base import (
     BatchSubmission,
     PendingRequestLike,
 )
-from batchling.utils.api import get_default_api_key_from_provider
 
 log = structlog.get_logger(__name__)
 
@@ -31,40 +30,6 @@ class OpenAIProvider(BaseProvider):
         "/v1/images/edits",
     )
     terminal_states = {"completed", "failed", "cancelled", "expired"}
-
-    def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
-        """
-        Build OpenAI API headers for batch endpoints.
-
-        Parameters
-        ----------
-        headers : dict[str, str]
-            Original request headers.
-
-        Returns
-        -------
-        dict[str, str]
-            OpenAI API headers.
-        """
-        api_headers: dict[str, str] = {}
-        for key, value in headers.items():
-            lower_key = key.lower()
-            if lower_key == "authorization":
-                api_headers["Authorization"] = value
-            elif lower_key.startswith("openai-"):
-                api_headers[key] = value
-
-        if "Authorization" not in api_headers:
-            api_key = get_default_api_key_from_provider(provider=self.name)
-            api_headers["Authorization"] = f"Bearer {api_key}"
-        log.debug(
-            event="Built provider API headers",
-            provider=self.name,
-            input_header_keys=list(headers.keys()),
-            output_header_keys=list(api_headers.keys()),
-            has_authorization="Authorization" in api_headers,
-        )
-        return api_headers
 
     async def process_batch(
         self,
