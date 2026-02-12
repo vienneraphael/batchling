@@ -21,7 +21,15 @@ class OpenAIProvider(BaseProvider):
 
     name = "openai"
     hostnames = ("api.openai.com",)
-    batchable_endpoints = ("/v1/chat/completions",)
+    batchable_endpoints = (
+        "/v1/responses",
+        "/v1/chat/completions",
+        "/v1/embeddings",
+        "/v1/completions",
+        "/v1/moderations",
+        "/v1/images/generations",
+        "/v1/images/edits",
+    )
     terminal_states = {"completed", "failed", "cancelled", "expired"}
 
     def build_api_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
