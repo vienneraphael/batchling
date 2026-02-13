@@ -7,7 +7,8 @@ import asyncio
 import httpx
 import pytest
 
-from batchling.batching.core import Batcher
+from batchling.batching.core import Batcher, _PendingRequest
+from batchling.batching.providers.mistral import MistralProvider
 from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
 
@@ -997,6 +998,60 @@ async def test_homogeneous_provider_same_model_uses_same_queue():
 
 
 @pytest.mark.asyncio
+async def test_homogeneous_provider_pending_request_stores_queue_key():
+    """Test homogeneous providers store queue key on pending requests."""
+    provider = HomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+
+    task = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )
+    )
+
+    await asyncio.sleep(delay=0.05)
+
+    queue = batcher._pending_by_provider[
+        _queue_key(provider_name=provider.name, model_name="model-a")
+    ]
+    assert queue[0].queue_key == _queue_key(provider_name=provider.name, model_name="model-a")
+
+    await batcher.close()
+    await task
+
+
+@pytest.mark.asyncio
+async def test_non_homogeneous_provider_pending_request_stores_queue_key():
+    """Test non-homogeneous providers store provider-only queue key on requests."""
+    provider = NonHomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+
+    task = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )
+    )
+
+    await asyncio.sleep(delay=0.05)
+
+    queue = batcher._pending_by_provider[_queue_key(provider_name=provider.name)]
+    assert queue[0].queue_key == _queue_key(provider_name=provider.name)
+
+    await batcher.close()
+    await task
+
+
+@pytest.mark.asyncio
 async def test_homogeneous_provider_different_models_use_distinct_queues():
     """Test homogeneous provider partitions queues by model."""
     provider = HomogeneousOpenAIProvider()
@@ -1148,3 +1203,105 @@ async def test_close_flushes_all_model_scoped_queues_for_homogeneous_provider():
 
     assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
     assert len(batcher._active_batches) == 2
+
+
+@pytest.mark.asyncio
+async def test_submit_requests_passes_queue_key_to_process_batch():
+    """Test _submit_requests forwards queue_key to _process_batch."""
+    provider = OpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+    loop = asyncio.get_running_loop()
+    request = _PendingRequest(
+        custom_id="request-id",
+        queue_key=_queue_key(provider_name=provider.name),
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.openai.com",
+            "endpoint": "/v1/chat/completions",
+            "body": b'{"model":"model-a","messages":[]}',
+        },
+        provider=provider,
+        future=loop.create_future(),
+    )
+    captured: dict[str, QueueKey] = {}
+    called_event = asyncio.Event()
+
+    async def fake_process_batch(*, queue_key: QueueKey, requests: list[_PendingRequest]) -> None:
+        captured["queue_key"] = queue_key
+        captured["request_queue_key"] = requests[0].queue_key
+        called_event.set()
+
+    batcher._process_batch = fake_process_batch  # type: ignore[method-assign]
+    queue_key = _queue_key(provider_name=provider.name)
+    await batcher._submit_requests(queue_key=queue_key, requests=[request])
+    await asyncio.wait_for(called_event.wait(), timeout=1.0)
+
+    assert captured["queue_key"] == queue_key
+    assert captured["request_queue_key"] == queue_key
+
+
+@pytest.mark.asyncio
+async def test_process_batch_calls_provider_with_queue_key():
+    """Test _process_batch passes queue_key argument to provider.process_batch."""
+    provider = HomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=False)
+    loop = asyncio.get_running_loop()
+    queue_key = _queue_key(provider_name=provider.name, model_name="model-a")
+    request = _PendingRequest(
+        custom_id="request-1",
+        queue_key=queue_key,
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.openai.com",
+            "endpoint": "/v1/chat/completions",
+            "body": b'{"model":"model-a","messages":[]}',
+            "headers": {},
+        },
+        provider=provider,
+        future=loop.create_future(),
+    )
+    captured: dict[str, QueueKey] = {}
+
+    async def fake_process_batch(
+        *,
+        requests,
+        client_factory,
+        queue_key: QueueKey,
+    ):
+        del requests
+        del client_factory
+        captured["queue_key"] = queue_key
+        raise RuntimeError("provider call captured")
+
+    provider.process_batch = fake_process_batch  # type: ignore[method-assign]
+    await batcher._process_batch(queue_key=queue_key, requests=[request])
+
+    assert captured["queue_key"] == queue_key
+    with pytest.raises(RuntimeError, match="provider call captured"):
+        await request.future
+
+
+@pytest.mark.asyncio
+async def test_mistral_build_batch_payload_uses_queue_key_model():
+    """Test Mistral payload model comes from queue_key."""
+    provider = MistralProvider()
+    payload = await provider._build_batch_payload(
+        file_id="file-123",
+        endpoint="/v1/chat/completions",
+        queue_key=_queue_key(provider_name=provider.name, model_name="mistral-small-latest"),
+    )
+    assert payload["model"] == "mistral-small-latest"
+
+
+@pytest.mark.asyncio
+async def test_mistral_build_batch_payload_without_model_fails():
+    """Test Mistral payload build fails when queue_key has no model."""
+    provider = MistralProvider()
+    with pytest.raises(ValueError, match="queue key"):
+        await provider._build_batch_payload(
+            file_id="file-123",
+            endpoint="/v1/chat/completions",
+            queue_key=_queue_key(provider_name=provider.name),
+        )

@@ -24,6 +24,9 @@ resolves futures back to callers.
 1. `submit()` builds a `_PendingRequest`, computes a queue key, and enqueues the request.
    Providers with `batch_requires_homogeneous_model = True` are partitioned by
    `(provider, model)` and require a root-level `model` key in request JSON body.
+   The extracted `QueueKey` is stored on each `_PendingRequest` and propagated through
+   `_submit_requests()` and provider `process_batch()` calls so model context is
+   resolved once at enqueue time.
 2. When thresholds are hit, `_submit_requests()` starts a provider-specific batch submission task.
 3. The provider submits the batch job and returns poll metadata (`base_url`, headers,
    batch ID).

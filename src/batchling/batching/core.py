@@ -31,6 +31,7 @@ class _PendingRequest:
     """A request waiting to be batched."""
 
     custom_id: str
+    queue_key: QueueKey
     params: dict[str, t.Any]
     provider: BaseProvider
     future: asyncio.Future[t.Any]
@@ -130,13 +131,13 @@ class Batcher:
         return f"{provider_name}:{model_name}"
 
     @staticmethod
-    def _extract_model_from_body(*, body: bytes) -> str:
+    def _extract_model_from_body(*, body: bytes | None) -> str:
         """
         Extract the request model from a JSON body payload.
 
         Parameters
         ----------
-        body : bytes
+        body : bytes | None
             Raw request body captured by hooks.
 
         Returns
@@ -150,6 +151,9 @@ class Batcher:
             If body is missing, invalid JSON, or ``model`` is not a non-empty
             string.
         """
+        if body is None:
+            raise ValueError("Batch request JSON body is required for homogeneous providers")
+
         body_text = body.decode(encoding="utf-8")
         payload = json.loads(s=body_text)
         model = payload.get("model")
@@ -157,7 +161,7 @@ class Batcher:
             raise ValueError("Batch request JSON must include non-empty string 'model'")
         return model
 
-    def _build_queue_key(self, *, provider: BaseProvider, body: bytes) -> QueueKey:
+    def _build_queue_key(self, *, provider: BaseProvider, body: bytes | None) -> QueueKey:
         """
         Compute queue partition key for a pending request.
 
@@ -165,7 +169,7 @@ class Batcher:
         ----------
         provider : BaseProvider
             Provider responsible for the request.
-        body : bytes
+        body : bytes | None
             Request body used for model extraction when required.
 
         Returns
@@ -186,7 +190,7 @@ class Batcher:
         endpoint: str,
         provider: BaseProvider,
         headers: dict[str, str] | None = None,
-        body: bytes = None,
+        body: bytes | None = None,
         **kwargs: t.Any,
     ) -> t.Any:
         """
@@ -221,21 +225,6 @@ class Batcher:
 
         custom_id = str(object=uuid.uuid4())
 
-        request = _PendingRequest(
-            custom_id=custom_id,
-            params={
-                "client_type": client_type,
-                "method": method,
-                "url": url,
-                "endpoint": endpoint,
-                "headers": headers,
-                "body": body,
-                **kwargs,
-            },
-            provider=provider,
-            future=future,
-        )
-
         provider_name = provider.name
         try:
             queue_key = self._build_queue_key(provider=provider, body=body)
@@ -248,6 +237,22 @@ class Batcher:
             )
             future.set_exception(error)
             return await future
+
+        request = _PendingRequest(
+            custom_id=custom_id,
+            queue_key=queue_key,
+            params={
+                "client_type": client_type,
+                "method": method,
+                "url": url,
+                "endpoint": endpoint,
+                "headers": headers,
+                "body": body,
+                **kwargs,
+            },
+            provider=provider,
+            future=future,
+        )
 
         queue_name = self._format_queue_key(queue_key=queue_key)
         _, model_name = queue_key
@@ -408,7 +413,7 @@ class Batcher:
             request_count=len(requests),
         )
         asyncio.create_task(
-            coro=self._process_batch(requests=requests),
+            coro=self._process_batch(queue_key=queue_key, requests=requests),
             name=f"batch_submit_{queue_name}_{uuid.uuid4()}",
         )
 
@@ -466,16 +471,28 @@ class Batcher:
                 if not req.future.done():
                     req.future.set_exception(error)
 
-    async def _process_batch(self, *, requests: list[_PendingRequest]) -> None:
+    async def _process_batch(
+        self,
+        *,
+        queue_key: QueueKey,
+        requests: list[_PendingRequest],
+    ) -> None:
         """
         Submit a provider batch and start polling lifecycle.
 
         Parameters
         ----------
+        queue_key : QueueKey
+            Queue key associated with the drained request batch.
         requests : list[_PendingRequest]
             Requests to submit in the batch.
         """
+        if not requests:
+            raise ValueError("Cannot process an empty request batch")
+
         provider = requests[0].provider
+        queue_name = self._format_queue_key(queue_key=queue_key)
+        provider_name, model_name = queue_key
         try:
             if self._dry_run:
                 dry_run_batch_id = f"dryrun-{uuid.uuid4()}"
@@ -498,6 +515,8 @@ class Batcher:
                 log.info(
                     event="Dry-run batch resolved",
                     provider=provider.name,
+                    model=model_name,
+                    queue_key=queue_name,
                     batch_id=dry_run_batch_id,
                     request_count=len(requests),
                 )
@@ -506,15 +525,20 @@ class Batcher:
             log.info(
                 event="Processing batch",
                 provider=provider.name,
+                model=model_name,
+                queue_key=queue_name,
                 request_count=len(requests),
             )
             batch_submission = await provider.process_batch(
                 requests=requests,
                 client_factory=self._client_factory,
+                queue_key=queue_key,
             )
             log.debug(
                 event="Provider batch submitted",
                 provider=provider.name,
+                model=model_name,
+                queue_key=queue_name,
                 batch_id=batch_submission.batch_id,
                 base_url=batch_submission.base_url,
             )
@@ -530,6 +554,8 @@ class Batcher:
             log.debug(
                 event="Tracking active batch",
                 provider=provider.name,
+                model=model_name,
+                queue_key=queue_name,
                 batch_id=batch_submission.batch_id,
                 active_batch_count=len(self._active_batches),
             )
@@ -541,7 +567,13 @@ class Batcher:
                 active_batch=active_batch,
             )
         except Exception as e:
-            log.error(event="Batch submission failed", error=str(object=e))
+            log.error(
+                event="Batch submission failed",
+                provider=provider_name,
+                model=model_name,
+                queue_key=queue_name,
+                error=str(object=e),
+            )
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)

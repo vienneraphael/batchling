@@ -323,10 +323,12 @@ class BaseProvider(ABC):
         *,
         file_id: str,
         endpoint: str,
-    ) -> BatchPayload:
+        queue_key: tuple[str, str | None],
+    ) -> t.Mapping[str, t.Any]:
         """
         Build a batch payload for the provider.
         """
+        del queue_key
         return self.batch_payload_type(
             input_file_id=file_id,
             endpoint=endpoint,
@@ -341,6 +343,7 @@ class BaseProvider(ABC):
         api_headers: dict[str, str],
         file_id: str,
         endpoint: str,
+        queue_key: tuple[str, str | None],
         client_factory: t.Callable[[], httpx.AsyncClient],
     ) -> str:
         """
@@ -356,6 +359,8 @@ class BaseProvider(ABC):
             Uploaded input file ID.
         endpoint : str
             Endpoint path included in the batch job.
+        queue_key : tuple[str, str | None]
+            Queue key associated with the current batch.
         client_factory : typing.Callable[[], httpx.AsyncClient]
             Async client factory for provider API calls.
 
@@ -364,11 +369,15 @@ class BaseProvider(ABC):
         str
             OpenAI batch ID.
         """
-        payload = await self._build_batch_payload(file_id=file_id, endpoint=endpoint)
+        payload = await self._build_batch_payload(
+            file_id=file_id,
+            endpoint=endpoint,
+            queue_key=queue_key,
+        )
         log.debug(
             "Sending batch request",
             url=f"{base_url}{self.batch_endpoint}",
-            headers=api_headers,
+            headers={k: "***" for k in api_headers.keys()},
             payload=payload,
         )
         async with client_factory() as client:
@@ -384,6 +393,7 @@ class BaseProvider(ABC):
         *,
         requests: t.Sequence[PendingRequestLike],
         client_factory: t.Callable[[], httpx.AsyncClient],
+        queue_key: tuple[str, str | None],
     ) -> BatchSubmission:
         """
         Upload a JSONL file and create an OpenAI batch job.
@@ -394,6 +404,8 @@ class BaseProvider(ABC):
             Requests to submit in a single batch.
         client_factory : typing.Callable[[], httpx.AsyncClient]
             Async client factory for provider API calls.
+        queue_key : tuple[str, str | None]
+            Queue key associated with the current batch.
 
         Returns
         -------
@@ -441,6 +453,7 @@ class BaseProvider(ABC):
             api_headers=api_headers,
             file_id=file_id,
             endpoint=endpoint,
+            queue_key=queue_key,
             client_factory=client_factory,
         )
         return BatchSubmission(
