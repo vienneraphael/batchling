@@ -81,8 +81,9 @@ class BaseProvider(ABC):
     batchable_endpoints: tuple[str, ...] = ()
     file_upload_endpoint: str
     batch_endpoint: str
-    batch_terminal_states: type[BatchTerminalStatesLike]
+    batch_requires_homogeneous_model: bool = False
     batch_payload_type: type[BatchPayload]
+    batch_terminal_states: type[BatchTerminalStatesLike]
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
