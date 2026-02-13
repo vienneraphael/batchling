@@ -48,6 +48,17 @@ class PendingRequestLike(t.Protocol):
     params: dict[str, t.Any]
 
 
+class BatchPayload(t.TypedDict):
+    """
+    Minimal shape required by providers to serialize batch input.
+    """
+
+    input_file_id: str
+    endpoint: str
+    completion_window: t.NotRequired[str]
+    metadata: t.NotRequired[dict[str, str]]
+
+
 class BatchTerminalStatesLike(t.Protocol):
     SUCCESS: str
     FAILED: str
@@ -71,6 +82,7 @@ class BaseProvider(ABC):
     file_upload_endpoint: str
     batch_endpoint: str
     batch_terminal_states: type[BatchTerminalStatesLike]
+    batch_payload_type: type[BatchPayload]
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
@@ -305,6 +317,22 @@ class BaseProvider(ABC):
             payload = response.json()
         return payload["id"]
 
+    async def _build_batch_payload(
+        self,
+        *,
+        file_id: str,
+        endpoint: str,
+    ) -> BatchPayload:
+        """
+        Build a batch payload for the provider.
+        """
+        return self.batch_payload_type(
+            input_file_id=file_id,
+            endpoint=endpoint,
+            completion_window="24h",
+            metadata={"description": "batchling runtime batch"},
+        )
+
     async def _create_batch_job(
         self,
         *,
@@ -335,16 +363,16 @@ class BaseProvider(ABC):
         str
             OpenAI batch ID.
         """
+        payload = await self._build_batch_payload(file_id=file_id, endpoint=endpoint)
+        log.debug(
+            "Sending batch request",
+            url=f"{base_url}{self.batch_endpoint}",
+            headers=api_headers,
+            payload=payload,
+        )
         async with client_factory() as client:
             response = await client.post(
-                url=f"{base_url}{self.batch_endpoint}",
-                headers=api_headers,
-                json={
-                    "input_file_id": file_id,
-                    "endpoint": endpoint,
-                    "completion_window": "24h",
-                    "metadata": {"description": "batchling runtime batch"},
-                },
+                url=f"{base_url}{self.batch_endpoint}", headers=api_headers, json=payload
             )
             response.raise_for_status()
             payload = response.json()
@@ -407,7 +435,6 @@ class BaseProvider(ABC):
             file_id=file_id,
             request_count=len(jsonl_lines),
         )
-
         batch_id = await self._create_batch_job(
             base_url=base_url,
             api_headers=api_headers,

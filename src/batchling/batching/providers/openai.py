@@ -1,9 +1,17 @@
+import typing as t
 from enum import StrEnum
 
 from batchling.batching.providers.base import (
     BaseProvider,
     BatchTerminalStatesLike,
 )
+
+
+class OpenAIBatchPayload(t.TypedDict):
+    input_file_id: str
+    endpoint: str
+    completion_window: t.Literal["24h"]
+    metadata: dict[str, str]
 
 
 class OpenAIBatchTerminalStates(StrEnum):
@@ -29,4 +37,5 @@ class OpenAIProvider(BaseProvider):
     )
     file_upload_endpoint = "/v1/files"
     batch_endpoint = "/v1/batches"
+    batch_payload_type: type[OpenAIBatchPayload] = OpenAIBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = OpenAIBatchTerminalStates

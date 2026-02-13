@@ -1,4 +1,10 @@
-from batchling.batching.providers.openai import OpenAIProvider
+import typing as t
+
+from batchling.batching.providers.openai import OpenAIBatchPayload, OpenAIProvider
+
+
+class DoublewordBatchPayload(OpenAIBatchPayload):
+    completion_window: t.Literal["1h", "24h"]
 
 
 class DoublewordProvider(OpenAIProvider):
@@ -6,4 +12,10 @@ class DoublewordProvider(OpenAIProvider):
 
     name = "doubleword"
     hostnames = ("api.doubleword.ai",)
-    batchable_endpoints = ("/v1/chat/completions",)
+    batchable_endpoints = (
+        "/v1/chat/completions",
+        "/v1/embeddings",
+        "/v1/moderations",
+        "/v1/completions",
+    )
+    batch_payload_type: type[DoublewordBatchPayload] = DoublewordBatchPayload
