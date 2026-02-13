@@ -11,6 +11,22 @@ from batchling.batching.core import Batcher
 from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
 
+QueueKey = tuple[str, str | None]
+
+
+class HomogeneousOpenAIProvider(OpenAIProvider):
+    """OpenAI-like provider requiring model-homogeneous batches."""
+
+    name = "homogeneous-openai"
+    batch_requires_homogeneous_model = True
+
+
+class NonHomogeneousOpenAIProvider(OpenAIProvider):
+    """OpenAI-like provider allowing mixed models in a batch."""
+
+    name = "non-homogeneous-openai"
+    batch_requires_homogeneous_model = False
+
 
 @pytest.fixture
 def provider() -> OpenAIProvider:
@@ -98,7 +114,30 @@ def _pending_count_for_provider(batcher: Batcher, provider_name: str) -> int:
     int
         Pending request count for the provider.
     """
-    return len(batcher._pending_by_provider.get(provider_name, []))
+    return sum(
+        len(queue)
+        for queue_key, queue in batcher._pending_by_provider.items()
+        if queue_key[0] == provider_name
+    )
+
+
+def _queue_key(*, provider_name: str, model_name: str | None = None) -> QueueKey:
+    """
+    Build queue key used by Batcher internals.
+
+    Parameters
+    ----------
+    provider_name : str
+        Provider name component.
+    model_name : str | None, optional
+        Model partition component.
+
+    Returns
+    -------
+    QueueKey
+        Queue key tuple.
+    """
+    return provider_name, model_name
 
 
 @pytest.mark.asyncio
@@ -169,7 +208,7 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
 
     # Should have 2 pending requests
     assert _pending_count_for_provider(batcher=batcher, provider_name="openai") == 2
-    assert "openai" in batcher._window_tasks
+    assert _queue_key(provider_name="openai") in batcher._window_tasks
 
     # Wait for both tasks to complete
     await task1
@@ -219,7 +258,7 @@ async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provid
     assert len(batcher._active_batches) == 1
 
     # Window task should be cancelled/None
-    assert "openai" not in batcher._window_tasks
+    assert _queue_key(provider_name="openai") not in batcher._window_tasks
 
 
 @pytest.mark.asyncio
@@ -283,8 +322,8 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
     await asyncio.sleep(delay=0.05)
 
     # Timer should be running
-    assert "openai" in batcher._window_tasks
-    assert not batcher._window_tasks["openai"].done()
+    assert _queue_key(provider_name="openai") in batcher._window_tasks
+    assert not batcher._window_tasks[_queue_key(provider_name="openai")].done()
 
     # Submit third request to trigger size threshold
     task3 = asyncio.create_task(
@@ -302,7 +341,7 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
     await asyncio.gather(task1, task2, task3)
 
     # Timer should be cancelled/None
-    assert "openai" not in batcher._window_tasks
+    assert _queue_key(provider_name="openai") not in batcher._window_tasks
 
 
 @pytest.mark.asyncio
@@ -466,14 +505,14 @@ async def test_close_cancels_window_timer(fast_batcher: Batcher, provider: OpenA
     await asyncio.sleep(delay=0.05)
 
     # Timer should be running
-    assert "openai" in fast_batcher._window_tasks
-    assert not fast_batcher._window_tasks["openai"].done()
+    assert _queue_key(provider_name="openai") in fast_batcher._window_tasks
+    assert not fast_batcher._window_tasks[_queue_key(provider_name="openai")].done()
 
     # Close should cancel timer and submit batch
     await fast_batcher.close()
 
     # Timer should be cancelled
-    assert "openai" not in fast_batcher._window_tasks
+    assert _queue_key(provider_name="openai") not in fast_batcher._window_tasks
 
     # Request should complete
     await task
@@ -575,7 +614,10 @@ async def test_window_timer_error_handling(
 @pytest.mark.asyncio
 async def test_empty_batch_not_submitted(batcher: Batcher, provider: OpenAIProvider):
     """Test that submitting an empty batch does nothing."""
-    await batcher._submit_requests(provider_name=provider.name, requests=[])
+    await batcher._submit_requests(
+        queue_key=_queue_key(provider_name=provider.name),
+        requests=[],
+    )
 
     # Should have no active batches
     assert len(batcher._active_batches) == 0
@@ -921,3 +963,188 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
     assert result.status_code == 200
     assert result.headers.get("x-batchling-dry-run") == "1"
     assert len(dry_run_batcher._active_batches) == 1
+
+
+@pytest.mark.asyncio
+async def test_homogeneous_provider_same_model_uses_same_queue():
+    """Test homogeneous provider batches same-model requests together."""
+    provider = HomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+
+    results = await asyncio.gather(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"gpt-4o-mini","messages":[]}',
+        ),
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"gpt-4o-mini","messages":[]}',
+        ),
+    )
+
+    assert len(batcher._active_batches) == 1
+    assert all(result.status_code == 200 for result in results)
+    assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_homogeneous_provider_different_models_use_distinct_queues():
+    """Test homogeneous provider partitions queues by model."""
+    provider = HomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+
+    await asyncio.gather(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        ),
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        ),
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-b","messages":[]}',
+        ),
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-b","messages":[]}',
+        ),
+    )
+
+    assert len(batcher._active_batches) == 2
+    assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_homogeneous_provider_missing_model_fails_fast():
+    """Test homogeneous provider rejects requests without model."""
+    provider = HomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+
+    with pytest.raises(ValueError, match="model"):
+        await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"messages":[]}',
+        )
+
+    assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
+    assert len(batcher._pending_by_provider) == 0
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_non_homogeneous_provider_mixed_models_share_single_queue():
+    """Test non-homogeneous provider keeps one queue for mixed models."""
+    provider = NonHomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+
+    task_1 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )
+    )
+    task_2 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-b","messages":[]}',
+        )
+    )
+
+    await asyncio.sleep(delay=0.05)
+
+    assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 2
+    assert _queue_key(provider_name=provider.name) in batcher._window_tasks
+    assert (
+        _queue_key(provider_name=provider.name, model_name="model-a") not in batcher._window_tasks
+    )
+    assert (
+        _queue_key(provider_name=provider.name, model_name="model-b") not in batcher._window_tasks
+    )
+
+    await batcher.close()
+    await asyncio.gather(task_1, task_2)
+
+
+@pytest.mark.asyncio
+async def test_close_flushes_all_model_scoped_queues_for_homogeneous_provider():
+    """Test close flushes all model-scoped queues for homogeneous providers."""
+    provider = HomogeneousOpenAIProvider()
+    batcher = Batcher(batch_size=5, batch_window_seconds=10.0, dry_run=True)
+
+    task_1 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )
+    )
+    task_2 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-b","messages":[]}',
+        )
+    )
+
+    await asyncio.sleep(delay=0.05)
+
+    assert (
+        _queue_key(provider_name=provider.name, model_name="model-a")
+        in batcher._pending_by_provider
+    )
+    assert (
+        _queue_key(provider_name=provider.name, model_name="model-b")
+        in batcher._pending_by_provider
+    )
+
+    await batcher.close()
+    await asyncio.gather(task_1, task_2)
+
+    assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
+    assert len(batcher._active_batches) == 2

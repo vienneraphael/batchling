@@ -19,6 +19,7 @@ import structlog
 from batchling.batching.providers import BaseProvider
 
 log = structlog.get_logger(__name__)
+QueueKey = tuple[str, str | None]
 
 
 @dataclass
@@ -58,7 +59,8 @@ class Batcher:
 
     Notes
     -----
-    The pending queue is partitioned by provider to apply batching limits per provider.
+    The pending queue is partitioned by provider and, when required by the
+    provider, by model to apply batching limits per queue scope.
     """
 
     def __init__(
@@ -87,9 +89,9 @@ class Batcher:
         self._dry_run = dry_run
 
         # Request collection
-        self._pending_by_provider: dict[str, list[_PendingRequest]] = {}
+        self._pending_by_provider: dict[QueueKey, list[_PendingRequest]] = {}
         self._pending_lock = asyncio.Lock()
-        self._window_tasks: dict[str, asyncio.Task[None]] = {}
+        self._window_tasks: dict[QueueKey, asyncio.Task[None]] = {}
 
         # Active batches being tracked
         self._active_batches: list[_ActiveBatch] = []
@@ -106,6 +108,76 @@ class Batcher:
             dry_run=dry_run,
         )
 
+    @staticmethod
+    def _format_queue_key(*, queue_key: QueueKey) -> str:
+        """
+        Format a queue key for readability in logs.
+
+        Parameters
+        ----------
+        queue_key : QueueKey
+            Queue identifier as ``(provider_name, model_or_none)``.
+
+        Returns
+        -------
+        str
+            ``provider`` for non-model-partitioned queues, otherwise
+            ``provider:model``.
+        """
+        provider_name, model_name = queue_key
+        if model_name is None:
+            return provider_name
+        return f"{provider_name}:{model_name}"
+
+    @staticmethod
+    def _extract_model_from_body(*, body: bytes) -> str:
+        """
+        Extract the request model from a JSON body payload.
+
+        Parameters
+        ----------
+        body : bytes
+            Raw request body captured by hooks.
+
+        Returns
+        -------
+        str
+            Non-empty model name from top-level ``model`` key.
+
+        Raises
+        ------
+        ValueError
+            If body is missing, invalid JSON, or ``model`` is not a non-empty
+            string.
+        """
+        body_text = body.decode(encoding="utf-8")
+        payload = json.loads(s=body_text)
+        model = payload.get("model")
+        if not isinstance(model, str) or not model.strip():
+            raise ValueError("Batch request JSON must include non-empty string 'model'")
+        return model
+
+    def _build_queue_key(self, *, provider: BaseProvider, body: bytes) -> QueueKey:
+        """
+        Compute queue partition key for a pending request.
+
+        Parameters
+        ----------
+        provider : BaseProvider
+            Provider responsible for the request.
+        body : bytes
+            Request body used for model extraction when required.
+
+        Returns
+        -------
+        QueueKey
+            Queue key tuple containing provider and optional model.
+        """
+        if not provider.batch_requires_homogeneous_model:
+            return provider.name, None
+        model = self._extract_model_from_body(body=body)
+        return provider.name, model
+
     async def submit(
         self,
         client_type: str,
@@ -114,7 +186,7 @@ class Batcher:
         endpoint: str,
         provider: BaseProvider,
         headers: dict[str, str] | None = None,
-        body: t.Any = None,
+        body: bytes = None,
         **kwargs: t.Any,
     ) -> t.Any:
         """
@@ -134,7 +206,7 @@ class Batcher:
             Provider for this request.
         headers : dict[str, str] | None, optional
             HTTP headers for the request.
-        body : typing.Any, optional
+        body : bytes, optional
             Raw request body.
         **kwargs : typing.Any
             Additional request parameters forwarded from the hook.
@@ -165,11 +237,27 @@ class Batcher:
         )
 
         provider_name = provider.name
+        try:
+            queue_key = self._build_queue_key(provider=provider, body=body)
+        except ValueError as error:
+            log.error(
+                event="Failed to resolve queue key",
+                provider=provider_name,
+                custom_id=custom_id,
+                error=str(object=error),
+            )
+            future.set_exception(error)
+            return await future
+
+        queue_name = self._format_queue_key(queue_key=queue_key)
+        _, model_name = queue_key
         requests_to_submit: list[_PendingRequest] = []
 
         log.debug(
             event="Queued request for batch",
             provider=provider_name,
+            model=model_name,
+            queue_key=queue_name,
             custom_id=custom_id,
             client_type=client_type,
             method=method,
@@ -178,12 +266,14 @@ class Batcher:
         )
 
         async with self._pending_lock:
-            queue = self._pending_by_provider.setdefault(provider_name, [])
+            queue = self._pending_by_provider.setdefault(queue_key, [])
             queue.append(request)
             pending_count = len(queue)
             log.debug(
                 event="Pending queue updated",
                 provider=provider_name,
+                model=model_name,
+                queue_key=queue_name,
                 pending_count=pending_count,
             )
 
@@ -192,11 +282,13 @@ class Batcher:
                 log.debug(
                     event="Starting batch window timer",
                     provider=provider_name,
+                    model=model_name,
+                    queue_key=queue_name,
                     batch_window_seconds=self._batch_window_seconds,
                 )
-                self._window_tasks[provider_name] = asyncio.create_task(
-                    coro=self._window_timer(provider_name=provider_name),
-                    name=f"batch_window_timer_{provider_name}",
+                self._window_tasks[queue_key] = asyncio.create_task(
+                    coro=self._window_timer(queue_key=queue_key),
+                    name=f"batch_window_timer_{queue_name}",
                 )
 
             # Check if we've hit the size threshold
@@ -204,68 +296,85 @@ class Batcher:
                 log.debug(
                     event="Batch size reached",
                     provider=provider_name,
+                    model=model_name,
+                    queue_key=queue_name,
                     batch_size=self._batch_size,
                 )
                 requests_to_submit = self._drain_provider_queue(
-                    provider_name=provider_name,
+                    queue_key=queue_key,
                 )
 
         if requests_to_submit:
             await self._submit_requests(
-                provider_name=provider_name,
+                queue_key=queue_key,
                 requests=requests_to_submit,
             )
 
         return await future
 
-    async def _window_timer(self, *, provider_name: str) -> None:
+    async def _window_timer(self, *, queue_key: QueueKey) -> None:
         """
         Trigger provider batch submission after the window elapses.
 
         Parameters
         ----------
-        provider_name : str
-            Provider key for the pending queue.
+        queue_key : QueueKey
+            Queue key for the pending queue.
         """
+        provider_name, model_name = queue_key
+        queue_name = self._format_queue_key(queue_key=queue_key)
         try:
             log.debug(
                 event="Window timer started",
                 provider=provider_name,
+                model=model_name,
+                queue_key=queue_name,
                 batch_window_seconds=self._batch_window_seconds,
             )
             await asyncio.sleep(delay=self._batch_window_seconds)
             requests_to_submit: list[_PendingRequest] = []
             async with self._pending_lock:
-                queue = self._pending_by_provider.get(provider_name, [])
+                queue = self._pending_by_provider.get(queue_key, [])
                 if queue:
                     log.debug(
                         event="Batch window elapsed, submitting batch",
                         provider=provider_name,
+                        model=model_name,
+                        queue_key=queue_name,
                     )
                     requests_to_submit = self._drain_provider_queue(
-                        provider_name=provider_name,
+                        queue_key=queue_key,
                     )
                 else:
                     log.debug(
                         event="Batch window elapsed with empty queue",
                         provider=provider_name,
+                        model=model_name,
+                        queue_key=queue_name,
                     )
             if requests_to_submit:
                 await self._submit_requests(
-                    provider_name=provider_name,
+                    queue_key=queue_key,
                     requests=requests_to_submit,
                 )
         except asyncio.CancelledError:
-            log.debug(event="Window timer cancelled", provider=provider_name)
+            log.debug(
+                event="Window timer cancelled",
+                provider=provider_name,
+                model=model_name,
+                queue_key=queue_name,
+            )
             raise
         except Exception as e:
             log.error(
                 event="Window timer error",
                 provider=provider_name,
+                model=model_name,
+                queue_key=queue_name,
                 error=str(object=e),
             )
             await self._fail_pending_provider_requests(
-                provider_name=provider_name,
+                queue_key=queue_key,
                 error=e,
             )
             raise
@@ -273,7 +382,7 @@ class Batcher:
     async def _submit_requests(
         self,
         *,
-        provider_name: str,
+        queue_key: QueueKey,
         requests: list[_PendingRequest],
     ) -> None:
         """
@@ -281,32 +390,36 @@ class Batcher:
 
         Parameters
         ----------
-        provider_name : str
-            Provider key associated with the batch.
+        queue_key : QueueKey
+            Queue key associated with the batch.
         requests : list[_PendingRequest]
             Requests to submit in a single provider batch.
         """
         if not requests:
             return
+        provider_name, model_name = queue_key
+        queue_name = self._format_queue_key(queue_key=queue_key)
 
         log.info(
             event="Submitting batch",
             provider=provider_name,
+            model=model_name,
+            queue_key=queue_name,
             request_count=len(requests),
         )
         asyncio.create_task(
             coro=self._process_batch(requests=requests),
-            name=f"batch_submit_{provider_name}_{uuid.uuid4()}",
+            name=f"batch_submit_{queue_name}_{uuid.uuid4()}",
         )
 
-    def _drain_provider_queue(self, *, provider_name: str) -> list[_PendingRequest]:
+    def _drain_provider_queue(self, *, queue_key: QueueKey) -> list[_PendingRequest]:
         """
         Drain pending requests for a provider and cancel its window timer.
 
         Parameters
         ----------
-        provider_name : str
-            Provider key for the pending queue.
+        queue_key : QueueKey
+            Queue key for the pending queue.
 
         Returns
         -------
@@ -314,15 +427,19 @@ class Batcher:
             Drained requests for that provider.
         """
         current_task = asyncio.current_task()
-        window_task = self._window_tasks.get(provider_name)
+        provider_name, model_name = queue_key
+        queue_name = self._format_queue_key(queue_key=queue_key)
+        window_task = self._window_tasks.get(queue_key)
         if window_task and not window_task.done() and window_task is not current_task:
             window_task.cancel()
-        self._window_tasks.pop(provider_name, None)
+        self._window_tasks.pop(queue_key, None)
 
-        requests = self._pending_by_provider.pop(provider_name, [])
+        requests = self._pending_by_provider.pop(queue_key, [])
         log.debug(
             event="Drained provider queue",
             provider=provider_name,
+            model=model_name,
+            queue_key=queue_name,
             drained_count=len(requests),
         )
         return requests
@@ -330,7 +447,7 @@ class Batcher:
     async def _fail_pending_provider_requests(
         self,
         *,
-        provider_name: str,
+        queue_key: QueueKey,
         error: Exception,
     ) -> None:
         """
@@ -338,13 +455,13 @@ class Batcher:
 
         Parameters
         ----------
-        provider_name : str
-            Provider key for the pending queue.
+        queue_key : QueueKey
+            Queue key for the pending queue.
         error : Exception
             Exception to attach to pending futures.
         """
         async with self._pending_lock:
-            queue = self._pending_by_provider.get(provider_name, [])
+            queue = self._pending_by_provider.get(queue_key, [])
             for req in queue:
                 if not req.future.done():
                     req.future.set_exception(error)
@@ -725,30 +842,42 @@ class Batcher:
         -----
         Pending requests are submitted per provider before closing.
         """
-        for provider_name, window_task in list(self._window_tasks.items()):
+        for queue_key, window_task in list(self._window_tasks.items()):
+            provider_name, model_name = queue_key
+            queue_name = self._format_queue_key(queue_key=queue_key)
             if window_task and not window_task.done():
                 window_task.cancel()
                 try:
                     await window_task
                 except asyncio.CancelledError:
+                    log.debug(
+                        event="Window timer cancelled during close",
+                        provider=provider_name,
+                        model=model_name,
+                        queue_key=queue_name,
+                    )
                     pass
         self._window_tasks.clear()
 
-        pending_batches: list[tuple[str, list[_PendingRequest]]] = []
+        pending_batches: list[tuple[QueueKey, list[_PendingRequest]]] = []
         async with self._pending_lock:
-            for provider_name in list(self._pending_by_provider.keys()):
-                requests = self._drain_provider_queue(provider_name=provider_name)
+            for queue_key in list(self._pending_by_provider.keys()):
+                requests = self._drain_provider_queue(queue_key=queue_key)
                 if requests:
-                    pending_batches.append((provider_name, requests))
+                    pending_batches.append((queue_key, requests))
 
-        for provider_name, requests in pending_batches:
+        for queue_key, requests in pending_batches:
+            provider_name, model_name = queue_key
+            queue_name = self._format_queue_key(queue_key=queue_key)
             log.info(
                 event="Submitting final batch on close",
                 provider=provider_name,
+                model=model_name,
+                queue_key=queue_name,
                 request_count=len(requests),
             )
             await self._submit_requests(
-                provider_name=provider_name,
+                queue_key=queue_key,
                 requests=requests,
             )
 
