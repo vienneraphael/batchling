@@ -19,7 +19,6 @@ When running tests, you can exclude these files:
   - test_db.py
   - test_experiment_manager.py
   - test_file_utils.py
-
 - Run pre-commits (using `prek run -a`) for every code change including code comments or documentation.
 
 pre-commits to check for:
@@ -30,6 +29,10 @@ pre-commits to check for:
 - bandit/detect-secrets: security-related, does not autofix but can have false flags.
 <!-- - complexipy: outputs a function complexity report. For high-complexity functions/methods, try to find a way to better organize the code for readability, if possible.
 - skylos: finds dead code. Can have false positive but review each case and make a decision. -->
+
+- When pursuing a complex task, break it down as simpler tasks and make atomic commits to facilitate code review.
+When the task is done, include atomic commit names in your recap to streamline your approach.
+Always follow good practices for atomic commits.
 
 ## Component index
 
