@@ -39,3 +39,5 @@ class OpenAIProvider(BaseProvider):
     batch_endpoint = "/v1/batches"
     batch_payload_type: type[OpenAIBatchPayload] = OpenAIBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = OpenAIBatchTerminalStates
+    output_file_field_name: str = "output_file_id"
+    error_file_field_name: str = "error_file_id"

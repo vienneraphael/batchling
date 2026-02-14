@@ -84,6 +84,8 @@ class BaseProvider(ABC):
     batch_requires_homogeneous_model: bool = False
     batch_payload_type: type[BatchPayload]
     batch_terminal_states: type[BatchTerminalStatesLike]
+    output_file_field_name: str
+    error_file_field_name: str
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
