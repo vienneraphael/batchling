@@ -31,7 +31,7 @@ pre-commits to check for:
 - skylos: finds dead code. Can have false positive but review each case and make a decision. -->
 
 - When pursuing a complex task, break it down as simpler tasks and make atomic commits to facilitate code review.
-You can make commits using `git commit -m`.
+Do the atomic commits yourself using `git commit -m`.
 When the task is done, include atomic commit names in your recap to streamline your approach.
 Always follow good practices for atomic commits.
 
