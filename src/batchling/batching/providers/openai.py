@@ -37,7 +37,6 @@ class OpenAIProvider(BaseProvider):
     )
     file_upload_endpoint = "/v1/files"
     batch_endpoint = "/v1/batches"
-    batch_requires_homogeneous_model = True
     batch_payload_type: type[OpenAIBatchPayload] = OpenAIBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = OpenAIBatchTerminalStates
     output_file_field_name: str = "output_file_id"

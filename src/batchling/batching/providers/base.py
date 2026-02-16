@@ -81,7 +81,6 @@ class BaseProvider(ABC):
     batchable_endpoints: tuple[str, ...] = ()
     file_upload_endpoint: str
     batch_endpoint: str
-    batch_requires_homogeneous_model: bool = False
     batch_payload_type: type[BatchPayload]
     batch_terminal_states: type[BatchTerminalStatesLike]
     output_file_field_name: str
@@ -226,6 +225,38 @@ class BaseProvider(ABC):
             for request in requests
         ]
 
+    @staticmethod
+    def _extract_model_from_request_params(*, params: dict[str, t.Any]) -> str:
+        """
+        Extract a non-empty model name from request params body.
+
+        Parameters
+        ----------
+        params : dict[str, typing.Any]
+            Request params containing a raw JSON body.
+
+        Returns
+        -------
+        str
+            Non-empty model name from top-level ``model`` key.
+
+        Raises
+        ------
+        ValueError
+            If body is missing, invalid JSON, or ``model`` is not a non-empty
+            string.
+        """
+        body = params.get("body")
+        if body is None:
+            raise ValueError("Batch request JSON body is required for strict homogeneous batching")
+        if not isinstance(body, bytes):
+            raise ValueError("Batch request body must be bytes")
+        payload = json.loads(s=body.decode(encoding="utf-8"))
+        model = payload.get("model")
+        if not isinstance(model, str) or not model.strip():
+            raise ValueError("Batch request JSON must include non-empty string 'model'")
+        return model
+
     def encode_body(self, *, body: dict[str, t.Any]) -> tuple[bytes, dict[str, str]]:
         """
         Encode response payloads into bytes and content headers.
@@ -325,7 +356,7 @@ class BaseProvider(ABC):
         *,
         file_id: str,
         endpoint: str,
-        queue_key: tuple[str, str | None],
+        queue_key: tuple[str, str, str],
     ) -> t.Mapping[str, t.Any]:
         """
         Build a batch payload for the provider.
@@ -345,7 +376,7 @@ class BaseProvider(ABC):
         api_headers: dict[str, str],
         file_id: str,
         endpoint: str,
-        queue_key: tuple[str, str | None],
+        queue_key: tuple[str, str, str],
         client_factory: t.Callable[[], httpx.AsyncClient],
     ) -> str:
         """
@@ -361,7 +392,7 @@ class BaseProvider(ABC):
             Uploaded input file ID.
         endpoint : str
             Endpoint path included in the batch job.
-        queue_key : tuple[str, str | None]
+        queue_key : tuple[str, str, str]
             Queue key associated with the current batch.
         client_factory : typing.Callable[[], httpx.AsyncClient]
             Async client factory for provider API calls.
@@ -395,7 +426,7 @@ class BaseProvider(ABC):
         *,
         requests: t.Sequence[PendingRequestLike],
         client_factory: t.Callable[[], httpx.AsyncClient],
-        queue_key: tuple[str, str | None],
+        queue_key: tuple[str, str, str],
     ) -> BatchSubmission:
         """
         Upload a JSONL file and create an OpenAI batch job.
@@ -406,7 +437,7 @@ class BaseProvider(ABC):
             Requests to submit in a single batch.
         client_factory : typing.Callable[[], httpx.AsyncClient]
             Async client factory for provider API calls.
-        queue_key : tuple[str, str | None]
+        queue_key : tuple[str, str, str]
             Queue key associated with the current batch.
 
         Returns
@@ -417,8 +448,27 @@ class BaseProvider(ABC):
         if not requests:
             raise ValueError("Cannot process an empty request batch")
 
+        expected_provider_name, expected_endpoint, expected_model = queue_key
+        if expected_provider_name != self.name:
+            raise ValueError(
+                f"Queue key provider mismatch: expected {self.name}, got {expected_provider_name}"
+            )
+        for request in requests:
+            request_endpoint = request.params["endpoint"]
+            request_model = self._extract_model_from_request_params(params=request.params)
+            if request_endpoint != expected_endpoint:
+                raise ValueError(
+                    "Batch requests must share the same endpoint; "
+                    f"expected {expected_endpoint}, got {request_endpoint}"
+                )
+            if request_model != expected_model:
+                raise ValueError(
+                    "Batch requests must share the same model; "
+                    f"expected {expected_model}, got {request_model}"
+                )
+
         base_url = self._normalize_base_url(url=requests[0].params["url"])
-        endpoint = requests[0].params["endpoint"]
+        endpoint = expected_endpoint
         log.debug(
             event="Resolved batch submission target",
             provider=self.name,

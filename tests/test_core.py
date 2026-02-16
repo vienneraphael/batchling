@@ -12,21 +12,13 @@ from batchling.batching.providers.mistral import MistralProvider
 from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
 
-QueueKey = tuple[str, str | None]
+QueueKey = tuple[str, str, str]
 
 
 class HomogeneousOpenAIProvider(OpenAIProvider):
-    """OpenAI-like provider requiring model-homogeneous batches."""
+    """OpenAI-like provider with custom provider name for queue-key tests."""
 
     name = "homogeneous-openai"
-    batch_requires_homogeneous_model = True
-
-
-class NonHomogeneousOpenAIProvider(OpenAIProvider):
-    """OpenAI-like provider allowing mixed models in a batch."""
-
-    name = "non-homogeneous-openai"
-    batch_requires_homogeneous_model = False
 
 
 @pytest.fixture
@@ -122,7 +114,12 @@ def _pending_count_for_provider(batcher: Batcher, provider_name: str) -> int:
     )
 
 
-def _queue_key(*, provider_name: str, model_name: str | None = None) -> QueueKey:
+def _queue_key(
+    *,
+    provider_name: str,
+    endpoint: str = "/v1/chat/completions",
+    model_name: str = "model-a",
+) -> QueueKey:
     """
     Build queue key used by Batcher internals.
 
@@ -130,7 +127,9 @@ def _queue_key(*, provider_name: str, model_name: str | None = None) -> QueueKey
     ----------
     provider_name : str
         Provider name component.
-    model_name : str | None, optional
+    endpoint : str, optional
+        Endpoint partition component.
+    model_name : str, optional
         Model partition component.
 
     Returns
@@ -138,7 +137,7 @@ def _queue_key(*, provider_name: str, model_name: str | None = None) -> QueueKey
     QueueKey
         Queue key tuple.
     """
-    return provider_name, model_name
+    return provider_name, endpoint, model_name
 
 
 @pytest.mark.asyncio
@@ -165,9 +164,9 @@ async def test_submit_single_request(batcher: Batcher, provider: OpenAIProvider)
         client_type="httpx",
         method="GET",
         url="api.openai.com",
-        endpoint="/v1/test",
+        endpoint="/v1/chat/completions",
         provider=provider,
-        body=b'{"key": "value"}',
+        body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
 
@@ -186,9 +185,9 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -197,9 +196,9 @@ async def test_submit_multiple_requests_queued(batcher: Batcher, provider: OpenA
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -224,27 +223,27 @@ async def test_batch_size_threshold_triggers_submission(batcher: Batcher, provid
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
     )
@@ -271,9 +270,9 @@ async def test_window_time_triggers_submission(fast_batcher: Batcher, provider: 
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -302,9 +301,9 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -313,9 +312,9 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -332,9 +331,9 @@ async def test_window_timer_cancelled_on_size_threshold(batcher: Batcher, provid
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -354,18 +353,18 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
     )
@@ -376,18 +375,18 @@ async def test_multiple_batches_submitted(fast_batcher: Batcher, provider: OpenA
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         fast_batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/4",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
     )
@@ -407,9 +406,9 @@ async def test_concurrent_requests(batcher: Batcher, provider: OpenAIProvider):
                 client_type="httpx",
                 method="GET",
                 url="api.openai.com",
-                endpoint=f"/v1/{i}",
+                endpoint="/v1/chat/completions",
                 provider=provider,
-                body=b'{"key": "value"}',
+                body=b'{"model":"model-a","messages":[]}',
                 headers={"Authorization": "Bearer token"},
             )
         )
@@ -434,10 +433,10 @@ async def test_submit_with_kwargs(batcher: Batcher, provider: OpenAIProvider):
         method="POST",
         url="api.openai.com",
         endpoint="/v1/api",
-        json=b'{"key": "value"}',
+        json=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
         provider=provider,
-        body=b'{"key": "value"}',
+        body=b'{"model":"model-a","messages":[]}',
     )
 
     assert isinstance(result, httpx.Response)
@@ -452,7 +451,7 @@ async def test_submit_with_kwargs(batcher: Batcher, provider: OpenAIProvider):
     assert request.params["method"] == "POST"
     assert request.params["url"] == "api.openai.com"
     assert request.params["endpoint"] == "/v1/api"
-    assert request.params["json"] == b'{"key": "value"}'
+    assert request.params["json"] == b'{"model":"model-a","messages":[]}'
     assert request.params["headers"] == {"Authorization": "Bearer token"}
 
 
@@ -465,9 +464,9 @@ async def test_close_submits_remaining_requests(fast_batcher: Batcher, provider:
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -496,9 +495,9 @@ async def test_close_cancels_window_timer(fast_batcher: Batcher, provider: OpenA
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -540,9 +539,9 @@ async def test_batch_submission_error_handling(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -551,9 +550,9 @@ async def test_batch_submission_error_handling(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -562,9 +561,9 @@ async def test_batch_submission_error_handling(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -595,9 +594,9 @@ async def test_window_timer_error_handling(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -634,27 +633,27 @@ async def test_custom_id_uniqueness(batcher: Batcher, provider: OpenAIProvider):
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
     )
@@ -677,27 +676,27 @@ async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider)
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
     )
@@ -721,9 +720,9 @@ async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: Open
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -736,9 +735,9 @@ async def test_multiple_windows_sequential(fast_batcher: Batcher, provider: Open
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         )
     )
@@ -765,9 +764,9 @@ async def test_large_batch_size(
                 client_type="httpx",
                 method="GET",
                 url="api.openai.com",
-                endpoint=f"/v1/{i}",
+                endpoint="/v1/chat/completions",
                 provider=provider,
-                body=b'{"key": "value"}',
+                body=b'{"model":"model-a","messages":[]}',
                 headers={"Authorization": "Bearer token"},
             )
         )
@@ -802,9 +801,9 @@ async def test_submit_after_close(batcher: Batcher, provider: OpenAIProvider):
         client_type="httpx",
         method="GET",
         url="api.openai.com",
-        endpoint="/v1/1",
+        endpoint="/v1/chat/completions",
         provider=provider,
-        body=b'{"key": "value"}',
+        body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
     assert isinstance(result, httpx.Response)
@@ -824,9 +823,9 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
         client_type="httpx",
         method="GET",
         url="api.openai.com",
-        endpoint="/v1/1",
+        endpoint="/v1/chat/completions",
         provider=provider,
-        body=b'{"key": "value"}',
+        body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
 
@@ -834,9 +833,9 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
         client_type="httpx",
         method="GET",
         url="api.openai.com",
-        endpoint="/v1/test",
+        endpoint="/v1/chat/completions",
         provider=provider,
-        body=b'{"key": "value"}',
+        body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
 
@@ -878,9 +877,9 @@ async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProv
         client_type="httpx",
         method="GET",
         url="api.openai.com",
-        endpoint="/v1/1",
+        endpoint="/v1/chat/completions",
         provider=provider,
-        body=b'{"key": "value"}',
+        body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
 
@@ -904,27 +903,27 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         dry_run_batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/2",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
         dry_run_batcher.submit(
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/3",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
     )
@@ -950,9 +949,9 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
             client_type="httpx",
             method="GET",
             url="api.openai.com",
-            endpoint="/v1/1",
+            endpoint="/v1/chat/completions",
             provider=provider,
-            body=b'{"key": "value"}',
+            body=b'{"model":"model-a","messages":[]}',
         )
     )
 
@@ -968,7 +967,7 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
 
 @pytest.mark.asyncio
 async def test_homogeneous_provider_same_model_uses_same_queue():
-    """Test homogeneous provider batches same-model requests together."""
+    """Test strict batching groups same endpoint/model requests together."""
     provider = HomogeneousOpenAIProvider()
     batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
 
@@ -999,7 +998,7 @@ async def test_homogeneous_provider_same_model_uses_same_queue():
 
 @pytest.mark.asyncio
 async def test_homogeneous_provider_pending_request_stores_queue_key():
-    """Test homogeneous providers store queue key on pending requests."""
+    """Test strict batching stores full queue key on pending requests."""
     provider = HomogeneousOpenAIProvider()
     batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
 
@@ -1026,9 +1025,9 @@ async def test_homogeneous_provider_pending_request_stores_queue_key():
 
 
 @pytest.mark.asyncio
-async def test_non_homogeneous_provider_pending_request_stores_queue_key():
-    """Test non-homogeneous providers store provider-only queue key on requests."""
-    provider = NonHomogeneousOpenAIProvider()
+async def test_strict_queue_key_stores_provider_endpoint_model():
+    """Test strict queue keys always store provider, endpoint, and model."""
+    provider = OpenAIProvider()
     batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
 
     task = asyncio.create_task(
@@ -1044,8 +1043,13 @@ async def test_non_homogeneous_provider_pending_request_stores_queue_key():
 
     await asyncio.sleep(delay=0.05)
 
-    queue = batcher._pending_by_provider[_queue_key(provider_name=provider.name)]
-    assert queue[0].queue_key == _queue_key(provider_name=provider.name)
+    queue_key = _queue_key(
+        provider_name=provider.name,
+        endpoint="/v1/chat/completions",
+        model_name="model-a",
+    )
+    queue = batcher._pending_by_provider[queue_key]
+    assert queue[0].queue_key == queue_key
 
     await batcher.close()
     await task
@@ -1053,7 +1057,7 @@ async def test_non_homogeneous_provider_pending_request_stores_queue_key():
 
 @pytest.mark.asyncio
 async def test_homogeneous_provider_different_models_use_distinct_queues():
-    """Test homogeneous provider partitions queues by model."""
+    """Test strict batching partitions queues by model."""
     provider = HomogeneousOpenAIProvider()
     batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
 
@@ -1099,7 +1103,7 @@ async def test_homogeneous_provider_different_models_use_distinct_queues():
 
 @pytest.mark.asyncio
 async def test_homogeneous_provider_missing_model_fails_fast():
-    """Test homogeneous provider rejects requests without model."""
+    """Test strict batching rejects requests without model."""
     provider = HomogeneousOpenAIProvider()
     batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
 
@@ -1119,9 +1123,9 @@ async def test_homogeneous_provider_missing_model_fails_fast():
 
 
 @pytest.mark.asyncio
-async def test_non_homogeneous_provider_mixed_models_share_single_queue():
-    """Test non-homogeneous provider keeps one queue for mixed models."""
-    provider = NonHomogeneousOpenAIProvider()
+async def test_strict_queue_key_mixed_models_use_distinct_queues():
+    """Test strict queue key partitions requests by model."""
+    provider = OpenAIProvider()
     batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
 
     task_1 = asyncio.create_task(
@@ -1148,12 +1152,57 @@ async def test_non_homogeneous_provider_mixed_models_share_single_queue():
     await asyncio.sleep(delay=0.05)
 
     assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 2
-    assert _queue_key(provider_name=provider.name) in batcher._window_tasks
+    assert _queue_key(provider_name=provider.name, model_name="model-a") in batcher._window_tasks
+    assert _queue_key(provider_name=provider.name, model_name="model-b") in batcher._window_tasks
+
+    await batcher.close()
+    await asyncio.gather(task_1, task_2)
+
+
+@pytest.mark.asyncio
+async def test_strict_queue_key_different_endpoints_use_distinct_queues():
+    """Test strict queue key partitions requests by endpoint."""
+    provider = OpenAIProvider()
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+
+    task_1 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )
+    )
+    task_2 = asyncio.create_task(
+        batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/embeddings",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )
+    )
+
+    await asyncio.sleep(delay=0.05)
+
     assert (
-        _queue_key(provider_name=provider.name, model_name="model-a") not in batcher._window_tasks
+        _queue_key(
+            provider_name=provider.name,
+            endpoint="/v1/chat/completions",
+            model_name="model-a",
+        )
+        in batcher._window_tasks
     )
     assert (
-        _queue_key(provider_name=provider.name, model_name="model-b") not in batcher._window_tasks
+        _queue_key(
+            provider_name=provider.name,
+            endpoint="/v1/embeddings",
+            model_name="model-a",
+        )
+        in batcher._window_tasks
     )
 
     await batcher.close()
@@ -1162,7 +1211,7 @@ async def test_non_homogeneous_provider_mixed_models_share_single_queue():
 
 @pytest.mark.asyncio
 async def test_close_flushes_all_model_scoped_queues_for_homogeneous_provider():
-    """Test close flushes all model-scoped queues for homogeneous providers."""
+    """Test close flushes all strict model-scoped queues."""
     provider = HomogeneousOpenAIProvider()
     batcher = Batcher(batch_size=5, batch_window_seconds=10.0, dry_run=True)
 
@@ -1284,6 +1333,47 @@ async def test_process_batch_calls_provider_with_queue_key():
 
 
 @pytest.mark.asyncio
+async def test_provider_process_batch_rejects_mixed_endpoint_or_model():
+    """Test provider process_batch fails fast for heterogeneous request payloads."""
+    provider = OpenAIProvider()
+    loop = asyncio.get_running_loop()
+    request_1 = _PendingRequest(
+        custom_id="request-1",
+        queue_key=_queue_key(provider_name=provider.name, model_name="model-a"),
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.openai.com",
+            "endpoint": "/v1/chat/completions",
+            "body": b'{"model":"model-a","messages":[]}',
+            "headers": {},
+        },
+        provider=provider,
+        future=loop.create_future(),
+    )
+    request_2 = _PendingRequest(
+        custom_id="request-2",
+        queue_key=_queue_key(provider_name=provider.name, model_name="model-b"),
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.openai.com",
+            "endpoint": "/v1/chat/completions",
+            "body": b'{"model":"model-b","messages":[]}',
+            "headers": {},
+        },
+        provider=provider,
+        future=loop.create_future(),
+    )
+    with pytest.raises(ValueError, match="same model"):
+        await provider.process_batch(
+            requests=[request_1, request_2],
+            client_factory=lambda: httpx.AsyncClient(),
+            queue_key=_queue_key(provider_name=provider.name, model_name="model-a"),
+        )
+
+
+@pytest.mark.asyncio
 async def test_mistral_build_batch_payload_uses_queue_key_model():
     """Test Mistral payload model comes from queue_key."""
     provider = MistralProvider()
@@ -1303,5 +1393,9 @@ async def test_mistral_build_batch_payload_without_model_fails():
         await provider._build_batch_payload(
             file_id="file-123",
             endpoint="/v1/chat/completions",
-            queue_key=_queue_key(provider_name=provider.name),
+            queue_key=(
+                provider.name,
+                "/v1/chat/completions",
+                "",
+            ),
         )

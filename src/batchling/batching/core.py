@@ -1,7 +1,7 @@
 """
 Core engine containing the async batch watching mechanism.
 The mechanism acts as a batch queue that collects requests and submits them as batches.
-Should support multiple queues for multiple providers/models called in same job.
+Should support multiple queues for multiple providers/endpoints/models called in same job.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import structlog
 from batchling.batching.providers import BaseProvider
 
 log = structlog.get_logger(__name__)
-QueueKey = tuple[str, str | None]
+QueueKey = tuple[str, str, str]
 
 
 @dataclass
@@ -60,8 +60,8 @@ class Batcher:
 
     Notes
     -----
-    The pending queue is partitioned by provider and, when required by the
-    provider, by model to apply batching limits per queue scope.
+    The pending queue is partitioned by ``(provider, endpoint, model)`` to
+    apply batching limits per queue scope.
     """
 
     def __init__(
@@ -117,18 +117,15 @@ class Batcher:
         Parameters
         ----------
         queue_key : QueueKey
-            Queue identifier as ``(provider_name, model_or_none)``.
+            Queue identifier as ``(provider_name, endpoint, model_name)``.
 
         Returns
         -------
         str
-            ``provider`` for non-model-partitioned queues, otherwise
-            ``provider:model``.
+            Queue key formatted as ``provider:endpoint:model``.
         """
-        provider_name, model_name = queue_key
-        if model_name is None:
-            return provider_name
-        return f"{provider_name}:{model_name}"
+        provider_name, endpoint, model_name = queue_key
+        return f"{provider_name}:{endpoint}:{model_name}"
 
     @staticmethod
     def _extract_model_from_body(*, body: bytes | None) -> str:
@@ -152,7 +149,7 @@ class Batcher:
             string.
         """
         if body is None:
-            raise ValueError("Batch request JSON body is required for homogeneous providers")
+            raise ValueError("Batch request JSON body is required for strict homogeneous batching")
 
         body_text = body.decode(encoding="utf-8")
         payload = json.loads(s=body_text)
@@ -161,7 +158,9 @@ class Batcher:
             raise ValueError("Batch request JSON must include non-empty string 'model'")
         return model
 
-    def _build_queue_key(self, *, provider: BaseProvider, body: bytes | None) -> QueueKey:
+    def _build_queue_key(
+        self, *, provider: BaseProvider, endpoint: str, body: bytes | None
+    ) -> QueueKey:
         """
         Compute queue partition key for a pending request.
 
@@ -169,18 +168,18 @@ class Batcher:
         ----------
         provider : BaseProvider
             Provider responsible for the request.
+        endpoint : str
+            Request endpoint used for queue partitioning.
         body : bytes | None
-            Request body used for model extraction when required.
+            Request body used for model extraction.
 
         Returns
         -------
         QueueKey
-            Queue key tuple containing provider and optional model.
+            Queue key tuple containing provider, endpoint, and model.
         """
-        if not provider.batch_requires_homogeneous_model:
-            return provider.name, None
         model = self._extract_model_from_body(body=body)
-        return provider.name, model
+        return provider.name, endpoint, model
 
     async def submit(
         self,
@@ -227,7 +226,7 @@ class Batcher:
 
         provider_name = provider.name
         try:
-            queue_key = self._build_queue_key(provider=provider, body=body)
+            queue_key = self._build_queue_key(provider=provider, endpoint=endpoint, body=body)
         except ValueError as error:
             log.error(
                 event="Failed to resolve queue key",
@@ -255,12 +254,13 @@ class Batcher:
         )
 
         queue_name = self._format_queue_key(queue_key=queue_key)
-        _, model_name = queue_key
+        _, queue_endpoint, model_name = queue_key
         requests_to_submit: list[_PendingRequest] = []
 
         log.debug(
             event="Queued request for batch",
             provider=provider_name,
+            queue_endpoint=queue_endpoint,
             model=model_name,
             queue_key=queue_name,
             custom_id=custom_id,
@@ -277,6 +277,7 @@ class Batcher:
             log.debug(
                 event="Pending queue updated",
                 provider=provider_name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 pending_count=pending_count,
@@ -287,6 +288,7 @@ class Batcher:
                 log.debug(
                     event="Starting batch window timer",
                     provider=provider_name,
+                    queue_endpoint=queue_endpoint,
                     model=model_name,
                     queue_key=queue_name,
                     batch_window_seconds=self._batch_window_seconds,
@@ -301,6 +303,7 @@ class Batcher:
                 log.debug(
                     event="Batch size reached",
                     provider=provider_name,
+                    queue_endpoint=queue_endpoint,
                     model=model_name,
                     queue_key=queue_name,
                     batch_size=self._batch_size,
@@ -326,12 +329,13 @@ class Batcher:
         queue_key : QueueKey
             Queue key for the pending queue.
         """
-        provider_name, model_name = queue_key
+        provider_name, queue_endpoint, model_name = queue_key
         queue_name = self._format_queue_key(queue_key=queue_key)
         try:
             log.debug(
                 event="Window timer started",
                 provider=provider_name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 batch_window_seconds=self._batch_window_seconds,
@@ -344,6 +348,7 @@ class Batcher:
                     log.debug(
                         event="Batch window elapsed, submitting batch",
                         provider=provider_name,
+                        queue_endpoint=queue_endpoint,
                         model=model_name,
                         queue_key=queue_name,
                     )
@@ -354,6 +359,7 @@ class Batcher:
                     log.debug(
                         event="Batch window elapsed with empty queue",
                         provider=provider_name,
+                        queue_endpoint=queue_endpoint,
                         model=model_name,
                         queue_key=queue_name,
                     )
@@ -366,6 +372,7 @@ class Batcher:
             log.debug(
                 event="Window timer cancelled",
                 provider=provider_name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
             )
@@ -374,6 +381,7 @@ class Batcher:
             log.error(
                 event="Window timer error",
                 provider=provider_name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 error=str(object=e),
@@ -402,12 +410,13 @@ class Batcher:
         """
         if not requests:
             return
-        provider_name, model_name = queue_key
+        provider_name, queue_endpoint, model_name = queue_key
         queue_name = self._format_queue_key(queue_key=queue_key)
 
         log.info(
             event="Submitting batch",
             provider=provider_name,
+            queue_endpoint=queue_endpoint,
             model=model_name,
             queue_key=queue_name,
             request_count=len(requests),
@@ -432,7 +441,7 @@ class Batcher:
             Drained requests for that provider.
         """
         current_task = asyncio.current_task()
-        provider_name, model_name = queue_key
+        provider_name, queue_endpoint, model_name = queue_key
         queue_name = self._format_queue_key(queue_key=queue_key)
         window_task = self._window_tasks.get(queue_key)
         if window_task and not window_task.done() and window_task is not current_task:
@@ -443,6 +452,7 @@ class Batcher:
         log.debug(
             event="Drained provider queue",
             provider=provider_name,
+            queue_endpoint=queue_endpoint,
             model=model_name,
             queue_key=queue_name,
             drained_count=len(requests),
@@ -492,7 +502,7 @@ class Batcher:
 
         provider = requests[0].provider
         queue_name = self._format_queue_key(queue_key=queue_key)
-        provider_name, model_name = queue_key
+        provider_name, queue_endpoint, model_name = queue_key
         try:
             if self._dry_run:
                 dry_run_batch_id = f"dryrun-{uuid.uuid4()}"
@@ -515,6 +525,7 @@ class Batcher:
                 log.info(
                     event="Dry-run batch resolved",
                     provider=provider.name,
+                    queue_endpoint=queue_endpoint,
                     model=model_name,
                     queue_key=queue_name,
                     batch_id=dry_run_batch_id,
@@ -525,6 +536,7 @@ class Batcher:
             log.info(
                 event="Processing batch",
                 provider=provider.name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 request_count=len(requests),
@@ -537,6 +549,7 @@ class Batcher:
             log.debug(
                 event="Provider batch submitted",
                 provider=provider.name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 batch_id=batch_submission.batch_id,
@@ -554,6 +567,7 @@ class Batcher:
             log.debug(
                 event="Tracking active batch",
                 provider=provider.name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 batch_id=batch_submission.batch_id,
@@ -570,6 +584,7 @@ class Batcher:
             log.error(
                 event="Batch submission failed",
                 provider=provider_name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 error=str(object=e),
@@ -875,7 +890,7 @@ class Batcher:
         Pending requests are submitted per provider before closing.
         """
         for queue_key, window_task in list(self._window_tasks.items()):
-            provider_name, model_name = queue_key
+            provider_name, queue_endpoint, model_name = queue_key
             queue_name = self._format_queue_key(queue_key=queue_key)
             if window_task and not window_task.done():
                 window_task.cancel()
@@ -885,6 +900,7 @@ class Batcher:
                     log.debug(
                         event="Window timer cancelled during close",
                         provider=provider_name,
+                        queue_endpoint=queue_endpoint,
                         model=model_name,
                         queue_key=queue_name,
                     )
@@ -899,11 +915,12 @@ class Batcher:
                     pending_batches.append((queue_key, requests))
 
         for queue_key, requests in pending_batches:
-            provider_name, model_name = queue_key
+            provider_name, queue_endpoint, model_name = queue_key
             queue_name = self._format_queue_key(queue_key=queue_key)
             log.info(
                 event="Submitting final batch on close",
                 provider=provider_name,
+                queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
                 request_count=len(requests),

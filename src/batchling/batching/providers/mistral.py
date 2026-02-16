@@ -38,7 +38,6 @@ class MistralProvider(BaseProvider):
     )
     file_upload_endpoint = "/v1/files"
     batch_endpoint = "/v1/batch/jobs"
-    batch_requires_homogeneous_model = True
     batch_payload_type: type[MistralBatchPayload] = MistralBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = MistralBatchTerminalStates
     output_file_field_name: str = "output_file"
@@ -49,12 +48,12 @@ class MistralProvider(BaseProvider):
         *,
         file_id: str,
         endpoint: str,
-        queue_key: tuple[str, str | None],
+        queue_key: tuple[str, str, str],
     ) -> t.Mapping[str, t.Any]:
         """
         Build a batch payload for the provider.
         """
-        _, model_name = queue_key
+        _, _, model_name = queue_key
         if not isinstance(model_name, str) or not model_name.strip():
             raise ValueError("Mistral homogeneous batch requires model name in queue key")
         return self.batch_payload_type(
