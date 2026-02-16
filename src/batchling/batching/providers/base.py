@@ -79,11 +79,12 @@ class BaseProvider(ABC):
     hostnames: tuple[str, ...] = ()
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
+    is_file_based: bool = True
     file_upload_endpoint: str
     file_content_endpoint: str
     batch_endpoint: str
-    batch_payload_type: type[BatchPayload]
     batch_terminal_states: type[BatchTerminalStatesLike]
+    batch_status_field_name: str = "status"
     output_file_field_name: str
     error_file_field_name: str
 
@@ -262,6 +263,8 @@ class BaseProvider(ABC):
             lower_key = key.lower()
             if lower_key == "authorization":
                 api_headers["Authorization"] = value
+            elif lower_key == "x-api-key":
+                api_headers["X-Api-Key"] = value
             elif lower_key.startswith(f"{self.name}-"):
                 api_headers[key] = value
         return api_headers
@@ -336,7 +339,7 @@ class BaseProvider(ABC):
             json_response = response.json()
         return json_response["id"]
 
-    async def build_batch_payload(
+    async def build_file_based_batch_payload(
         self,
         *,
         file_id: str,
@@ -354,13 +357,25 @@ class BaseProvider(ABC):
             "metadata": {"description": "batchling runtime batch"},
         }
 
+    async def build_inline_batch_payload(
+        self,
+        *,
+        jsonl_lines: list[dict[str, t.Any]],
+    ) -> dict[str, t.Any]:
+        """
+        Build an inline batch payload for the provider.
+        """
+        return {
+            "requests": jsonl_lines,
+        }
+
     def _get_batch_id_from_response(self, *, response_json: dict) -> str:
         """
         Get the batch ID from the response.
         """
         return response_json["id"]
 
-    async def _create_batch_job(
+    async def _create_file_based_batch_job(
         self,
         *,
         base_url: str,
@@ -393,13 +408,55 @@ class BaseProvider(ABC):
         str
             batch ID.
         """
-        payload = await self.build_batch_payload(
+        payload = await self.build_file_based_batch_payload(
             file_id=file_id,
             endpoint=endpoint,
             queue_key=queue_key,
         )
         log.debug(
             "Sending batch request",
+            url=f"{base_url}{self.batch_endpoint}",
+            headers={k: "***" for k in api_headers.keys()},
+            payload=payload,
+        )
+        async with client_factory() as client:
+            response = await client.post(
+                url=f"{base_url}{self.batch_endpoint}", headers=api_headers, json=payload
+            )
+            response.raise_for_status()
+            json_response = response.json()
+        return self._get_batch_id_from_response(response_json=json_response)
+
+    async def _create_inline_batch_job(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        jsonl_lines: list[dict[str, t.Any]],
+        client_factory: t.Callable[[], httpx.AsyncClient],
+    ) -> str:
+        """
+        Create an inline batch job.
+
+        Parameters
+        ----------
+        base_url : str
+            base URL.
+        api_headers : dict[str, str]
+            API headers.
+        jsonl_lines : list[dict[str, typing.Any]]
+            JSONL line payloads.
+        client_factory : typing.Callable[[], httpx.AsyncClient]
+            Async client factory for provider API calls.
+
+        Returns
+        -------
+        str
+            batch ID.
+        """
+        payload = await self.build_inline_batch_payload(jsonl_lines=jsonl_lines)
+        log.debug(
+            event="Sending inline batch request",
             url=f"{base_url}{self.batch_endpoint}",
             headers={k: "***" for k in api_headers.keys()},
             payload=payload,
@@ -459,27 +516,34 @@ class BaseProvider(ABC):
             provider=self.name,
             request_count=len(jsonl_lines),
         )
-
-        file_id = await self._upload_batch_file(
-            base_url=base_url,
-            api_headers=api_headers,
-            jsonl_lines=jsonl_lines,
-            client_factory=client_factory,
-        )
-        log.info(
-            event="Uploaded batch file",
-            provider=self.name,
-            file_id=file_id,
-            request_count=len(jsonl_lines),
-        )
-        batch_id = await self._create_batch_job(
-            base_url=base_url,
-            api_headers=api_headers,
-            file_id=file_id,
-            endpoint=endpoint,
-            queue_key=queue_key,
-            client_factory=client_factory,
-        )
+        if self.is_file_based:
+            file_id = await self._upload_batch_file(
+                base_url=base_url,
+                api_headers=api_headers,
+                jsonl_lines=jsonl_lines,
+                client_factory=client_factory,
+            )
+            log.info(
+                event="Uploaded batch file",
+                provider=self.name,
+                file_id=file_id,
+                request_count=len(jsonl_lines),
+            )
+            batch_id = await self._create_file_based_batch_job(
+                base_url=base_url,
+                api_headers=api_headers,
+                file_id=file_id,
+                endpoint=endpoint,
+                queue_key=queue_key,
+                client_factory=client_factory,
+            )
+        else:
+            batch_id = await self._create_inline_batch_job(
+                base_url=base_url,
+                api_headers=api_headers,
+                jsonl_lines=jsonl_lines,
+                client_factory=client_factory,
+            )
         return BatchSubmission(
             base_url=base_url,
             api_headers=api_headers,
@@ -488,12 +552,12 @@ class BaseProvider(ABC):
 
     def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
         """
-        Convert OpenAI batch results into an ``httpx.Response``.
+        Convert provider batch results into an ``httpx.Response``.
 
         Parameters
         ----------
         result_item : dict[str, typing.Any]
-            OpenAI batch result JSON line.
+            provider batch result JSON line.
 
         Returns
         -------

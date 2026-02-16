@@ -3,6 +3,7 @@ import base64
 import os
 import typing as t
 
+from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 from mistralai import Mistral
 from openai import AsyncOpenAI
@@ -84,8 +85,31 @@ async def together_tasks():
             messages=t.cast(t.Any, messages),
         ),
         client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+            model="google/gemma-3n-E4B-it",
             messages=t.cast(t.Any, messages),
+        ),
+    ]
+    return tasks
+
+
+async def anthropic_tasks():
+    client = AsyncAnthropic(api_key=os.getenv(key="ANTHROPIC_API_KEY"))
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    tasks = [
+        client.messages.create(
+            max_tokens=1024,
+            messages=t.cast(t.Any, messages),
+            model="claude-haiku-4-5",
+        ),
+        client.messages.create(
+            max_tokens=1024,
+            messages=t.cast(t.Any, messages),
+            model="claude-3-5-haiku-latest",
         ),
     ]
     return tasks
@@ -99,6 +123,8 @@ async def main(provider: str):
             tasks = await openai_tasks()
         case "together":
             tasks = await together_tasks()
+        case "anthropic":
+            tasks = await anthropic_tasks()
         case _:
             raise ValueError(f"Invalid provider: {provider}")
     responses = await asyncio.gather(*tasks)

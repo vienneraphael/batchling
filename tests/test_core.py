@@ -3,11 +3,13 @@ Tests for the Batcher class in batchling.batching.core.
 """
 
 import asyncio
+import typing as t
 
 import httpx
 import pytest
 
 from batchling.batching.core import Batcher, _PendingRequest
+from batchling.batching.providers.anthropic import AnthropicProvider
 from batchling.batching.providers.mistral import MistralProvider
 from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
@@ -1333,12 +1335,69 @@ async def test_process_batch_calls_provider_with_queue_key():
 
 
 @pytest.mark.asyncio
-async def test_mistral_build_batch_payload_uses_queue_key_model():
-    """Test Mistral payload model comes from queue_key."""
+async def test_mistral_build_file_based_batch_payload_uses_queue_key_model():
+    """Test Mistral file-based payload model comes from queue_key."""
     provider = MistralProvider()
-    payload = await provider.build_batch_payload(
+    payload = await provider.build_file_based_batch_payload(
         file_id="file-123",
         endpoint="/v1/chat/completions",
         queue_key=_queue_key(provider_name=provider.name, model_name="mistral-small-latest"),
     )
+    assert payload["input_files"] == ["file-123"]
+    assert payload["endpoint"] == "/v1/chat/completions"
     assert payload["model"] == "mistral-small-latest"
+
+
+@pytest.mark.asyncio
+async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
+    """Test Anthropic inline flow skips file upload and submits inline requests."""
+    provider = AnthropicProvider()
+    queue_key = _queue_key(
+        provider_name=provider.name, endpoint="/v1/messages", model_name="claude"
+    )
+    request = _PendingRequest(
+        custom_id="request-1",
+        queue_key=queue_key,
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.anthropic.com",
+            "endpoint": "/v1/messages",
+            "body": b'{"model":"claude","max_tokens":32,"messages":[{"role":"user","content":"hi"}]}',
+            "headers": {"X-Api-Key": "test-key"},
+        },
+        provider=provider,
+        future=asyncio.get_running_loop().create_future(),
+    )
+    calls: dict[str, t.Any] = {"uploaded": False, "inline_lines": []}
+
+    async def fail_upload(**_kwargs):
+        calls["uploaded"] = True
+        raise AssertionError("inline providers should not upload files")
+
+    async def fake_create_inline_batch_job(*, base_url, api_headers, jsonl_lines, client_factory):
+        del client_factory
+        calls["base_url"] = base_url
+        calls["api_headers"] = api_headers
+        calls["inline_lines"] = jsonl_lines
+        return "msgbatch-123"
+
+    monkeypatch.setattr(target=provider, name="_upload_batch_file", value=fail_upload)
+    monkeypatch.setattr(
+        target=provider,
+        name="_create_inline_batch_job",
+        value=fake_create_inline_batch_job,
+    )
+
+    submission = await provider.process_batch(
+        requests=[request],
+        client_factory=lambda: httpx.AsyncClient(),
+        queue_key=queue_key,
+    )
+
+    assert not calls["uploaded"]
+    assert calls["base_url"] == "https://api.anthropic.com"
+    assert calls["api_headers"]["X-Api-Key"] == "test-key"
+    assert calls["api_headers"]["x-batchling-internal"] == "1"
+    assert calls["inline_lines"][0]["params"]["model"] == "claude"
+    assert submission.batch_id == "msgbatch-123"

@@ -10,9 +10,7 @@ batch results.
 - Declare explicit batchable HTTP endpoints (`path`) for hook routing.
 - Declare provider-specific terminal batch states used by the core poller.
 - Identify whether a URL belongs to a provider.
-- Submit provider batches via `process_batch()` (upload/create job as needed).
-- Consume `queue_key` context in `process_batch()` for queue-scoped behaviors
-  (strictly provider + endpoint + model).
+- Submit provider batches via `process_batch()` (file-based or inline).
 - Normalize request URLs for provider batch endpoints.
 - Convert JSONL batch result lines into `httpx.Response` objects for callers.
 
@@ -28,15 +26,21 @@ batch results.
 The OpenAI provider implements:
 
 - `build_api_headers()` for auth + provider-specific passthrough headers.
-- `process_batch()` to upload JSONL input and create `/v1/batches` jobs.
-  It normalizes host-only values (for example, `api.openai.com`) to `https://` URLs.
-  The method receives the queue key for the drained batch.
+- file-based batch submission (`/v1/files` then `/v1/batches`).
+- `from_batch_result()` to decode batch output lines.
+
+## Anthropic provider
+
+The Anthropic provider implements:
+
+- inline batch submission to `/v1/messages/batches` (no file upload step).
+- provider-specific status polling field (`processing_status`).
+- `x-api-key` passthrough via `build_api_headers()`.
 - `from_batch_result()` to decode batch output lines.
 
 ## Mistral provider
 
-The Mistral provider reuses the OpenAI-like flow and keeps queue-derived endpoint/model
-context for payload construction:
+The Mistral provider reuses the file-based flow with provider-specific endpoints:
 
 - `hostnames = ("api.mistral.ai",)`
 - `batch_endpoint = "/v1/batch/jobs"`
@@ -78,17 +82,22 @@ Provider configuration on `BaseProvider` includes:
 - `hostnames`
 - `batch_method`
 - `batchable_endpoints`
+- `is_file_based` (switch between file upload flow and inline flow)
 - `file_upload_endpoint` (where JSONL input files are uploaded)
 - `file_content_endpoint` (where output/error file content is fetched)
-- `terminal_states` (statuses that stop polling and trigger result resolution)
+- `batch_endpoint` (where the batch job is created)
+- `batch_terminal_states` (statuses that stop polling and trigger result resolution)
+- `batch_status_field_name` (status field read from poll responses)
+- `output_file_field_name` / `error_file_field_name`
 
 ## Extension notes
 
 - Add new provider classes by subclassing `BaseProvider` in a new module under
   `src/batchling/batching/providers/`.
-- Implement `process_batch()`, `build_api_headers()`, and `from_batch_result()`.
-- Use `queue_key` as the source of truth for endpoint/model context.
-- Define `terminal_states` for the provider so `Batcher` can stop polling at the
+- Override provider methods as needed (`build_jsonl_lines()`,
+  `build_file_based_batch_payload()`, `build_inline_batch_payload()`,
+  `build_api_headers()`, `from_batch_result()`).
+- Define `batch_terminal_states` for the provider so `Batcher` can stop polling at the
   correct lifecycle states.
 - Keep `matches_url()` conservative if you override it.
 

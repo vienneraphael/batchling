@@ -7,14 +7,6 @@ from batchling.batching.providers.base import (
 )
 
 
-class MistralBatchPayload(t.TypedDict):
-    model: str
-    input_files: list[str]
-    endpoint: str
-    timeout_hours: int
-    metadata: dict[str, str]
-
-
 class MistralBatchTerminalStates(StrEnum):
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
@@ -39,12 +31,11 @@ class MistralProvider(BaseProvider):
     file_upload_endpoint = "/v1/files"
     file_content_endpoint = "/v1/files/{id}/content"
     batch_endpoint = "/v1/batch/jobs"
-    batch_payload_type: type[MistralBatchPayload] = MistralBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = MistralBatchTerminalStates
     output_file_field_name: str = "output_file"
     error_file_field_name: str = "error_file"
 
-    async def build_batch_payload(
+    async def build_file_based_batch_payload(
         self,
         *,
         file_id: str,

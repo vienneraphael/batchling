@@ -1,17 +1,9 @@
-import typing as t
 from enum import StrEnum
 
 from batchling.batching.providers.base import (
     BaseProvider,
     BatchTerminalStatesLike,
 )
-
-
-class TogetherBatchPayload(t.TypedDict):
-    input_file_id: str
-    endpoint: str
-    completion_window: t.Literal["24h"]
-    metadata: dict[str, str]
 
 
 class TogetherBatchTerminalStates(StrEnum):
@@ -33,7 +25,6 @@ class TogetherProvider(BaseProvider):
     file_upload_endpoint = "/v1/files/upload"
     file_content_endpoint = "/v1/files/{id}/content"
     batch_endpoint = "/v1/batches"
-    batch_payload_type: type[TogetherBatchPayload] = TogetherBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = TogetherBatchTerminalStates
     output_file_field_name: str = "output_file_id"
     error_file_field_name: str = "error_file_id"

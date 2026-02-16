@@ -662,7 +662,7 @@ class Batcher:
                 response.raise_for_status()
                 payload = response.json()
             # FIXME: fit into a data validation model
-            status = payload.get("status", "created")
+            status = payload.get(provider.batch_status_field_name, "created")
             active_batch.output_file_id = payload.get(provider.output_file_field_name) or ""
             active_batch.error_file_id = payload.get(provider.error_file_field_name) or ""
             log.debug(
