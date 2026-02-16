@@ -225,38 +225,6 @@ class BaseProvider(ABC):
             for request in requests
         ]
 
-    @staticmethod
-    def _extract_model_from_request_params(*, params: dict[str, t.Any]) -> str:
-        """
-        Extract a non-empty model name from request params body.
-
-        Parameters
-        ----------
-        params : dict[str, typing.Any]
-            Request params containing a raw JSON body.
-
-        Returns
-        -------
-        str
-            Non-empty model name from top-level ``model`` key.
-
-        Raises
-        ------
-        ValueError
-            If body is missing, invalid JSON, or ``model`` is not a non-empty
-            string.
-        """
-        body = params.get("body")
-        if body is None:
-            raise ValueError("Batch request JSON body is required for strict homogeneous batching")
-        if not isinstance(body, bytes):
-            raise ValueError("Batch request body must be bytes")
-        payload = json.loads(s=body.decode(encoding="utf-8"))
-        model = payload.get("model")
-        if not isinstance(model, str) or not model.strip():
-            raise ValueError("Batch request JSON must include non-empty string 'model'")
-        return model
-
     def encode_body(self, *, body: dict[str, t.Any]) -> tuple[bytes, dict[str, str]]:
         """
         Encode response payloads into bytes and content headers.
@@ -448,24 +416,11 @@ class BaseProvider(ABC):
         if not requests:
             raise ValueError("Cannot process an empty request batch")
 
-        expected_provider_name, expected_endpoint, expected_model = queue_key
+        expected_provider_name, expected_endpoint, _ = queue_key
         if expected_provider_name != self.name:
             raise ValueError(
                 f"Queue key provider mismatch: expected {self.name}, got {expected_provider_name}"
             )
-        for request in requests:
-            request_endpoint = request.params["endpoint"]
-            request_model = self._extract_model_from_request_params(params=request.params)
-            if request_endpoint != expected_endpoint:
-                raise ValueError(
-                    "Batch requests must share the same endpoint; "
-                    f"expected {expected_endpoint}, got {request_endpoint}"
-                )
-            if request_model != expected_model:
-                raise ValueError(
-                    "Batch requests must share the same model; "
-                    f"expected {expected_model}, got {request_model}"
-                )
 
         base_url = self._normalize_base_url(url=requests[0].params["url"])
         endpoint = expected_endpoint
