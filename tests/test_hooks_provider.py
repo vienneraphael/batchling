@@ -37,7 +37,7 @@ async def test_hook_routes_openai_url_to_batcher(reset_hooks, reset_context):
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 url="https://api.openai.com/v1/chat/completions",
-                json={"messages": [{"role": "user", "content": "hi"}]},
+                json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
             )
     finally:
         active_batcher.reset(token)
