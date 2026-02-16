@@ -6,8 +6,8 @@ resolves futures back to callers.
 
 ## Responsibilities
 
-- Maintain pending queues protected by an async lock, partitioned by provider and,
-  when required, by model.
+- Maintain pending queues protected by an async lock, partitioned by
+  `(provider, endpoint, model)`.
 - Start a per-queue window timer when the first request arrives and submit when it elapses.
 - Submit immediately when a queue reaches `batch_size`.
 - Delegate provider-specific batch submission to `provider.process_batch()`.
@@ -21,12 +21,12 @@ resolves futures back to callers.
 
 ## Lifecycle outline
 
-1. `submit()` builds a `_PendingRequest`, computes a queue key, and enqueues the request.
-   Providers with `batch_requires_homogeneous_model = True` are partitioned by
-   `(provider, model)` and require a root-level `model` key in request JSON body.
-   The extracted `QueueKey` is stored on each `_PendingRequest` and propagated through
-   `_submit_requests()` and provider `process_batch()` calls so model context is
-   resolved once at enqueue time.
+1. `submit()` builds a `_PendingRequest`, computes a strict queue key, and enqueues
+   the request. Every request is partitioned by `(provider, endpoint, model)` and
+   requires a root-level `model` key in request JSON body. The extracted `QueueKey`
+   is stored on each `_PendingRequest` and propagated through `_submit_requests()`
+   and provider `process_batch()` calls so endpoint/model context is resolved once
+   at enqueue time.
 2. When thresholds are hit, `_submit_requests()` starts a provider-specific batch submission task.
 3. The provider submits the batch job and returns poll metadata (`base_url`, headers,
    batch ID).

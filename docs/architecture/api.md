@@ -14,6 +14,8 @@ yields `None`. Import it from `batchling` or `batchling.batching`.
 ## Inputs and outputs
 
 - **Inputs**: batcher configuration arguments.
+- **Queue semantics**: `batch_size` and `batch_window_seconds` are applied per
+  strict queue key `(provider, endpoint, model)`.
 - **`dry_run` behavior**: when `dry_run=True`, requests are still intercepted, queued,
   and grouped using normal window/size triggers, but provider batch submission and polling
   are skipped. Requests resolve with synthetic `httpx.Response` objects marked with

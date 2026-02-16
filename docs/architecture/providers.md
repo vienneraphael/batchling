@@ -12,7 +12,7 @@ batch results.
 - Identify whether a URL belongs to a provider.
 - Submit provider batches via `process_batch()` (upload/create job as needed).
 - Consume `queue_key` context in `process_batch()` for queue-scoped behaviors
-  (for example, homogeneous model selection).
+  (strictly provider + endpoint + model).
 - Normalize request URLs for provider batch endpoints.
 - Convert JSONL batch result lines into `httpx.Response` objects for callers.
 
@@ -30,8 +30,8 @@ The OpenAI provider implements:
 - `build_api_headers()` for auth + provider-specific passthrough headers.
 - `process_batch()` to upload JSONL input and create `/v1/batches` jobs.
   It normalizes host-only values (for example, `api.openai.com`) to `https://` URLs.
-  The method receives the queue key for the drained batch so providers can avoid
-  re-parsing request bodies for model routing.
+  The method receives the queue key for the drained batch and validates that all
+  requests are homogeneous for endpoint and model.
 - `from_batch_result()` to decode batch output lines.
 
 ## Doubleword provider
@@ -64,8 +64,7 @@ Provider configuration on `BaseProvider` includes:
 - Add new provider classes by subclassing `BaseProvider` in a new module under
   `src/batchling/batching/providers/`.
 - Implement `process_batch()`, `build_api_headers()`, and `from_batch_result()`.
-- Prefer `queue_key` as the source of truth for homogeneous-model context instead of
-  decoding request bodies during submission.
+- Use `queue_key` as the source of truth for endpoint/model context.
 - Define `terminal_states` for the provider so `Batcher` can stop polling at the
   correct lifecycle states.
 - Keep `matches_url()` conservative if you override it.
