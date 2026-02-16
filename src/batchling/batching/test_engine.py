@@ -5,6 +5,7 @@ import typing as t
 
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
+from groq import AsyncGroq
 from mistralai import Mistral
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
@@ -115,6 +116,27 @@ async def anthropic_tasks():
     return tasks
 
 
+async def groq_tasks():
+    client = AsyncGroq(api_key=os.getenv(key="GROQ_API_KEY"))
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    tasks = [
+        client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=t.cast(t.Any, messages),
+        ),
+        client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=t.cast(t.Any, messages),
+        ),
+    ]
+    return tasks
+
+
 async def main(provider: str):
     match provider:
         case "mistral":
@@ -125,6 +147,8 @@ async def main(provider: str):
             tasks = await together_tasks()
         case "anthropic":
             tasks = await anthropic_tasks()
+        case "groq":
+            tasks = await groq_tasks()
         case _:
             raise ValueError(f"Invalid provider: {provider}")
     responses = await asyncio.gather(*tasks)
