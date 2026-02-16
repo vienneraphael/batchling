@@ -5,6 +5,7 @@ import typing as t
 
 from dotenv import load_dotenv
 from mistralai import Mistral
+from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 load_dotenv()
@@ -20,9 +21,8 @@ class ImageAnalysis(BaseModel):
     fun_fact: str = Field(description="a fun fact about the image")
 
 
-async def main():
+async def mistral_tasks():
     client = Mistral(api_key=os.getenv(key="MISTRAL_API_KEY"))
-    # with batchify(dry_run=False):
     messages: list[dict[str, str]] = [
         {
             "content": "Who is the best French painter? Answer in one short sentence.",
@@ -35,11 +35,47 @@ async def main():
             messages=t.cast(t.Any, messages),
             stream=False,
             response_format={"type": "text"},
-        )
+        ),
+        client.chat.complete_async(
+            model="mistral-small-2506",
+            messages=t.cast(t.Any, messages),
+            stream=False,
+            response_format={"type": "text"},
+        ),
     ]
+    return tasks
+
+
+async def openai_tasks():
+    client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    tasks = [
+        client.responses.create(
+            input=t.cast(t.Any, messages),
+            model="gpt-4o-mini",
+            stream=False,
+        ),
+        client.responses.create(
+            input=t.cast(t.Any, messages),
+            model="gpt-5-nano",
+            stream=False,
+        ),
+    ]
+    return tasks
+
+
+async def main(provider: str):
+    match provider:
+        case "mistral":
+            tasks = await mistral_tasks()
+        case "openai":
+            tasks = await openai_tasks()
+        case _:
+            raise ValueError(f"Invalid provider: {provider}")
     responses = await asyncio.gather(*tasks)
     print(responses)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
