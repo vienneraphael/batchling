@@ -37,7 +37,7 @@ class MistralProvider(BaseProvider):
         "/v1/conversations/v1/audio/transcriptions",
     )
     file_upload_endpoint = "/v1/files"
-    file_content_endpoint = "/v1/files"
+    file_content_endpoint = "/v1/files/{id}/content"
     batch_endpoint = "/v1/batch/jobs"
     batch_payload_type: type[MistralBatchPayload] = MistralBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = MistralBatchTerminalStates

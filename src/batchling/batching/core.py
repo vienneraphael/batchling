@@ -798,9 +798,10 @@ class Batcher:
         str
             Raw JSONL content.
         """
+        file_content_url = provider.file_content_endpoint.format(id=file_id)
         async with self._client_factory() as client:
             response = await client.get(
-                url=f"{base_url}{provider.file_content_endpoint}/{file_id}/content",
+                url=f"{base_url}{file_content_url}",
                 headers=api_headers,
             )
             response.raise_for_status()

@@ -31,7 +31,7 @@ class TogetherProvider(BaseProvider):
         "/v1/audio/transcriptions",
     )
     file_upload_endpoint = "/v1/files/upload"
-    file_content_endpoint = "/v1/files"
+    file_content_endpoint = "/v1/files/{id}/content"
     batch_endpoint = "/v1/batches"
     batch_payload_type: type[TogetherBatchPayload] = TogetherBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = TogetherBatchTerminalStates
