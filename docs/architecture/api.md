@@ -20,6 +20,26 @@ yields `None`. Import it from `batchling` or `batchling.batching`.
   `x-batchling-dry-run: 1`.
 - **Outputs**: `BatchingContext[None]` instance that yields `None`.
 
+## CLI callable usage
+
+The `batchling` CLI can execute an async callable from a script inside `batchify`:
+
+```bash
+batchling path/to/my_script.py:foo arg1 --name alice --count=3 --dry-run
+```
+
+Behavior:
+
+- CLI options map directly to `batchify` arguments:
+  `batch_size`, `batch_window_seconds`, `batch_poll_interval_seconds`, and `dry_run`.
+- Script target must use `module_path:function_name` syntax.
+- Forwarded callable arguments are mapped as:
+  positional tokens are passed as positional arguments;
+  `--name value` and `--name=value` are passed as keyword arguments.
+- Standalone `--flag` tokens are passed as boolean keyword arguments with `True`.
+- The script file is loaded with `runpy.run_path(..., run_name="batchling.runtime")`
+  and the target async callable is awaited.
+
 ## Extension notes
 
 - Any new hook types should be installed by `install_hooks()` so the behavior stays centralized.
