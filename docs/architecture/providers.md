@@ -33,6 +33,28 @@ The OpenAI provider implements:
   The method receives the queue key for the drained batch.
 - `from_batch_result()` to decode batch output lines.
 
+## Mistral provider
+
+The Mistral provider reuses the OpenAI-like flow and keeps queue-derived endpoint/model
+context for payload construction:
+
+- `hostnames = ("api.mistral.ai",)`
+- `batch_endpoint = "/v1/batch/jobs"`
+- `file_upload_endpoint = "/v1/files"`
+- `file_content_endpoint = "/v1/files"`
+
+## Together provider
+
+The Together provider follows the same batch lifecycle with provider-specific upload and
+batch response shapes:
+
+- `hostnames = ("api.together.xyz",)`
+- `batchable_endpoints = ("/v1/chat/completions", "/v1/audio/transcriptions")`
+- `file_upload_endpoint = "/v1/files/upload"`
+- `file_content_endpoint = "/v1/files"`
+- overrides batch file upload form fields (`file_name`, `purpose=batch-api`)
+- extracts batch id from nested response payload (`job.id`)
+
 ## Doubleword provider
 
 The Doubleword provider reuses the OpenAI provider implementation and only changes:
@@ -56,6 +78,8 @@ Provider configuration on `BaseProvider` includes:
 - `hostnames`
 - `batch_method`
 - `batchable_endpoints`
+- `file_upload_endpoint` (where JSONL input files are uploaded)
+- `file_content_endpoint` (where output/error file content is fetched)
 - `terminal_states` (statuses that stop polling and trigger result resolution)
 
 ## Extension notes

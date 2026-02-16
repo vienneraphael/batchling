@@ -36,6 +36,7 @@ class OpenAIProvider(BaseProvider):
         "/v1/images/edits",
     )
     file_upload_endpoint = "/v1/files"
+    file_content_endpoint = "/v1/files"
     batch_endpoint = "/v1/batches"
     batch_payload_type: type[OpenAIBatchPayload] = OpenAIBatchPayload
     batch_terminal_states: type[BatchTerminalStatesLike] = OpenAIBatchTerminalStates

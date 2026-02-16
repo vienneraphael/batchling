@@ -800,7 +800,7 @@ class Batcher:
         """
         async with self._client_factory() as client:
             response = await client.get(
-                url=f"{base_url}{provider.file_upload_endpoint}/{file_id}/content",
+                url=f"{base_url}{provider.file_content_endpoint}/{file_id}/content",
                 headers=api_headers,
             )
             response.raise_for_status()

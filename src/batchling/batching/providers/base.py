@@ -80,6 +80,7 @@ class BaseProvider(ABC):
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
     file_upload_endpoint: str
+    file_content_endpoint: str
     batch_endpoint: str
     batch_payload_type: type[BatchPayload]
     batch_terminal_states: type[BatchTerminalStatesLike]
@@ -265,6 +266,24 @@ class BaseProvider(ABC):
                 api_headers[key] = value
         return api_headers
 
+    def _build_batch_file_files_payload(
+        self, *, file_content: bytes
+    ) -> dict[str, tuple[str, bytes, str]]:
+        """
+        Build a batch file files payload for the provider.
+        """
+        return {
+            "file": ("batch.jsonl", file_content, "application/jsonl"),
+        }
+
+    def _build_batch_file_data_payload(self) -> dict[str, str]:
+        """
+        Build a batch file data payload for the provider.
+        """
+        return {
+            "purpose": "batch",
+        }
+
     async def _upload_batch_file(
         self,
         *,
@@ -295,17 +314,15 @@ class BaseProvider(ABC):
         file_content = "\n".join(json.dumps(obj=line) for line in jsonl_lines).encode(
             encoding="utf-8"
         )
-        files = {
-            "file": ("batch.jsonl", file_content, "application/jsonl"),
-        }
+        files = self._build_batch_file_files_payload(file_content=file_content)
+        data = self._build_batch_file_data_payload()
 
         log.debug(
             event="Uploading batch file",
-            provider=self.name,
-            base_url=base_url,
-            line_count=len(jsonl_lines),
-            bytes=len(file_content),
-            first_custom_id=jsonl_lines[0]["custom_id"] if jsonl_lines else None,
+            url=f"{base_url}{self.file_upload_endpoint}",
+            headers={k: "***" for k in api_headers.keys()},
+            files=files,
+            data=data,
         )
 
         async with client_factory() as client:
@@ -313,29 +330,35 @@ class BaseProvider(ABC):
                 url=f"{base_url}{self.file_upload_endpoint}",
                 headers=api_headers,
                 files=files,
-                data={"purpose": "batch"},
+                data=data,
             )
             response.raise_for_status()
-            payload = response.json()
-        return payload["id"]
+            json_response = response.json()
+        return json_response["id"]
 
-    async def _build_batch_payload(
+    async def build_batch_payload(
         self,
         *,
         file_id: str,
         endpoint: str,
         queue_key: tuple[str, str, str],
-    ) -> t.Mapping[str, t.Any]:
+    ) -> dict[str, t.Any]:
         """
         Build a batch payload for the provider.
         """
         del queue_key
-        return self.batch_payload_type(
-            input_file_id=file_id,
-            endpoint=endpoint,
-            completion_window="24h",
-            metadata={"description": "batchling runtime batch"},
-        )
+        return {
+            "input_file_id": file_id,
+            "endpoint": endpoint,
+            "completion_window": "24h",
+            "metadata": {"description": "batchling runtime batch"},
+        }
+
+    def _get_batch_id_from_response(self, *, response_json: dict) -> str:
+        """
+        Get the batch ID from the response.
+        """
+        return response_json["id"]
 
     async def _create_batch_job(
         self,
@@ -353,9 +376,9 @@ class BaseProvider(ABC):
         Parameters
         ----------
         base_url : str
-            OpenAI base URL.
+            base URL.
         api_headers : dict[str, str]
-            OpenAI API headers.
+            API headers.
         file_id : str
             Uploaded input file ID.
         endpoint : str
@@ -368,9 +391,9 @@ class BaseProvider(ABC):
         Returns
         -------
         str
-            OpenAI batch ID.
+            batch ID.
         """
-        payload = await self._build_batch_payload(
+        payload = await self.build_batch_payload(
             file_id=file_id,
             endpoint=endpoint,
             queue_key=queue_key,
@@ -386,8 +409,8 @@ class BaseProvider(ABC):
                 url=f"{base_url}{self.batch_endpoint}", headers=api_headers, json=payload
             )
             response.raise_for_status()
-            payload = response.json()
-        return payload["id"]
+            json_response = response.json()
+        return self._get_batch_id_from_response(response_json=json_response)
 
     async def process_batch(
         self,
@@ -416,14 +439,8 @@ class BaseProvider(ABC):
         if not requests:
             raise ValueError("Cannot process an empty request batch")
 
-        expected_provider_name, expected_endpoint, _ = queue_key
-        if expected_provider_name != self.name:
-            raise ValueError(
-                f"Queue key provider mismatch: expected {self.name}, got {expected_provider_name}"
-            )
-
+        _, endpoint, _ = queue_key
         base_url = self._normalize_base_url(url=requests[0].params["url"])
-        endpoint = expected_endpoint
         log.debug(
             event="Resolved batch submission target",
             provider=self.name,

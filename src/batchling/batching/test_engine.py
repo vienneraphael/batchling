@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from mistralai import Mistral
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
+from together import AsyncTogether
 
 load_dotenv()
 
@@ -69,12 +70,35 @@ async def openai_tasks():
     return tasks
 
 
+async def together_tasks():
+    client = AsyncTogether(api_key=os.getenv(key="TOGETHER_API_KEY"))
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    tasks = [
+        client.chat.completions.create(
+            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+            messages=t.cast(t.Any, messages),
+        ),
+        client.chat.completions.create(
+            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+            messages=t.cast(t.Any, messages),
+        ),
+    ]
+    return tasks
+
+
 async def main(provider: str):
     match provider:
         case "mistral":
             tasks = await mistral_tasks()
         case "openai":
             tasks = await openai_tasks()
+        case "together":
+            tasks = await together_tasks()
         case _:
             raise ValueError(f"Invalid provider: {provider}")
     responses = await asyncio.gather(*tasks)

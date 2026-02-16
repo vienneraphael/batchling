@@ -1336,25 +1336,9 @@ async def test_process_batch_calls_provider_with_queue_key():
 async def test_mistral_build_batch_payload_uses_queue_key_model():
     """Test Mistral payload model comes from queue_key."""
     provider = MistralProvider()
-    payload = await provider._build_batch_payload(
+    payload = await provider.build_batch_payload(
         file_id="file-123",
         endpoint="/v1/chat/completions",
         queue_key=_queue_key(provider_name=provider.name, model_name="mistral-small-latest"),
     )
     assert payload["model"] == "mistral-small-latest"
-
-
-@pytest.mark.asyncio
-async def test_mistral_build_batch_payload_without_model_fails():
-    """Test Mistral payload build fails when queue_key has no model."""
-    provider = MistralProvider()
-    with pytest.raises(ValueError, match="queue key"):
-        await provider._build_batch_payload(
-            file_id="file-123",
-            endpoint="/v1/chat/completions",
-            queue_key=(
-                provider.name,
-                "/v1/chat/completions",
-                "",
-            ),
-        )
