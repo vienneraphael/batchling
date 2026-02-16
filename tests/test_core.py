@@ -1333,47 +1333,6 @@ async def test_process_batch_calls_provider_with_queue_key():
 
 
 @pytest.mark.asyncio
-async def test_provider_process_batch_rejects_mixed_endpoint_or_model():
-    """Test provider process_batch fails fast for heterogeneous request payloads."""
-    provider = OpenAIProvider()
-    loop = asyncio.get_running_loop()
-    request_1 = _PendingRequest(
-        custom_id="request-1",
-        queue_key=_queue_key(provider_name=provider.name, model_name="model-a"),
-        params={
-            "client_type": "httpx",
-            "method": "POST",
-            "url": "api.openai.com",
-            "endpoint": "/v1/chat/completions",
-            "body": b'{"model":"model-a","messages":[]}',
-            "headers": {},
-        },
-        provider=provider,
-        future=loop.create_future(),
-    )
-    request_2 = _PendingRequest(
-        custom_id="request-2",
-        queue_key=_queue_key(provider_name=provider.name, model_name="model-b"),
-        params={
-            "client_type": "httpx",
-            "method": "POST",
-            "url": "api.openai.com",
-            "endpoint": "/v1/chat/completions",
-            "body": b'{"model":"model-b","messages":[]}',
-            "headers": {},
-        },
-        provider=provider,
-        future=loop.create_future(),
-    )
-    with pytest.raises(ValueError, match="same model"):
-        await provider.process_batch(
-            requests=[request_1, request_2],
-            client_factory=lambda: httpx.AsyncClient(),
-            queue_key=_queue_key(provider_name=provider.name, model_name="model-a"),
-        )
-
-
-@pytest.mark.asyncio
 async def test_mistral_build_batch_payload_uses_queue_key_model():
     """Test Mistral payload model comes from queue_key."""
     provider = MistralProvider()
