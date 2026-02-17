@@ -14,11 +14,6 @@
 
 - Run tests (using pytest) for every code change but not when changing code comments or documentation.
 If the pytest command does not work due to missing imports, try activating the environment first with `source .venv/bin/activate`
-When running tests, you can exclude these files:
-  - test_cli.py
-  - test_db.py
-  - test_experiment_manager.py
-  - test_file_utils.py
 - Run pre-commits (using `prek run -a`) for every code change including code comments or documentation.
 
 pre-commits to check for:
