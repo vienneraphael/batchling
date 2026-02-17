@@ -10,6 +10,7 @@ import pytest
 
 from batchling.batching.core import Batcher, _PendingRequest
 from batchling.batching.providers.anthropic import AnthropicProvider
+from batchling.batching.providers.gemini import GeminiProvider
 from batchling.batching.providers.mistral import MistralProvider
 from batchling.batching.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
@@ -1057,6 +1058,118 @@ async def test_strict_queue_key_stores_provider_endpoint_model():
     await task
 
 
+def test_gemini_queue_key_extracts_model_from_endpoint() -> None:
+    """
+    Ensure queue partitioning for Gemini reads model from URL endpoint.
+
+    Returns
+    -------
+    None
+        This test asserts queue-key model extraction.
+    """
+    provider = GeminiProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+
+    queue_key = batcher._build_queue_key(
+        provider=provider,
+        endpoint="/v1beta/models/gemini-3-flash-preview:generateContent",
+        body=b'{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}',
+    )
+
+    assert queue_key == (
+        "gemini",
+        "/v1beta/models/gemini-3-flash-preview:generateContent",
+        "gemini-3-flash-preview",
+    )
+
+
+def test_gemini_uses_distinct_submit_poll_and_results_paths() -> None:
+    """
+    Ensure Gemini exposes separate submit, poll, and results endpoints.
+
+    Returns
+    -------
+    None
+        This test asserts Gemini endpoint path builders.
+    """
+    provider = GeminiProvider()
+    queue_key = (
+        "gemini",
+        "/v1beta/models/gemini-3-flash-preview:generateContent",
+        "gemini-3-flash-preview",
+    )
+
+    assert (
+        provider.build_batch_submit_path(queue_key=queue_key)
+        == "/v1beta/models/gemini-3-flash-preview:batchGenerateContent"
+    )
+    assert provider.build_batch_poll_path(batch_id="batch-123") == "/v1beta/batches/batch-123"
+    assert (
+        provider.build_batch_results_path(
+            file_id="files/gemini-output-123",
+            batch_id="batch-123",
+        )
+        == "/download/v1beta/files/files/gemini-output-123:download?alt=media"
+    )
+
+
+def test_openai_default_batch_paths_remain_unchanged() -> None:
+    """
+    Ensure default provider batch path builders keep legacy behavior.
+
+    Returns
+    -------
+    None
+        This test asserts default path builders on OpenAI provider.
+    """
+    provider = OpenAIProvider()
+    queue_key = (
+        "openai",
+        "/v1/chat/completions",
+        "gpt-4o-mini",
+    )
+
+    assert provider.build_batch_submit_path(queue_key=queue_key) == "/v1/batches"
+    assert provider.build_batch_poll_path(batch_id="batch-123") == "/v1/batches/batch-123"
+    assert (
+        provider.build_batch_results_path(file_id="file-123", batch_id="batch-123")
+        == "/v1/files/file-123/content"
+    )
+
+
+def test_default_batch_status_extraction_uses_top_level_field() -> None:
+    """
+    Ensure default batch status extraction reads provider status field.
+
+    Returns
+    -------
+    None
+        This test asserts base status extraction behavior.
+    """
+    provider = OpenAIProvider()
+
+    assert provider.extract_batch_status(payload={"status": "completed"}) == "completed"
+    assert provider.extract_batch_status(payload={}) == "created"
+
+
+def test_gemini_batch_status_extraction_uses_metadata_state_field() -> None:
+    """
+    Ensure Gemini status extraction reads metadata.state.
+
+    Returns
+    -------
+    None
+        This test asserts Gemini nested status extraction behavior.
+    """
+    provider = GeminiProvider()
+
+    assert (
+        provider.extract_batch_status(payload={"metadata": {"state": "BATCH_STATE_SUCCEEDED"}})
+        == "BATCH_STATE_SUCCEEDED"
+    )
+    assert provider.extract_batch_status(payload={}) == "created"
+
+
 @pytest.mark.asyncio
 async def test_homogeneous_provider_different_models_use_distinct_queues():
     """Test strict batching partitions queues by model."""
@@ -1375,8 +1488,11 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
         calls["uploaded"] = True
         raise AssertionError("inline providers should not upload files")
 
-    async def fake_create_inline_batch_job(*, base_url, api_headers, jsonl_lines, client_factory):
+    async def fake_create_inline_batch_job(
+        *, base_url, api_headers, jsonl_lines, queue_key, client_factory
+    ):
         del client_factory
+        calls["queue_key"] = queue_key
         calls["base_url"] = base_url
         calls["api_headers"] = api_headers
         calls["inline_lines"] = jsonl_lines
@@ -1400,4 +1516,5 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
     assert calls["api_headers"]["X-Api-Key"] == "test-key"
     assert calls["api_headers"]["x-batchling-internal"] == "1"
     assert calls["inline_lines"][0]["params"]["model"] == "claude"
+    assert calls["queue_key"] == queue_key
     assert submission.batch_id == "msgbatch-123"

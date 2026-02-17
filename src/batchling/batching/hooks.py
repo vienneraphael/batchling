@@ -7,11 +7,16 @@ The context var is set by the `batchify` function upon calling.
 """
 
 import contextvars
+import json
 import typing as t
 from urllib.parse import urlparse
 
+import aiohttp
 import httpx
 import structlog
+from aiohttp.client_reqrep import RequestInfo
+from multidict import CIMultiDict, CIMultiDictProxy
+from yarl import URL
 
 from batchling.batching.core import Batcher
 from batchling.batching.providers import get_provider_for_batch_request
@@ -25,7 +30,101 @@ active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher"
 # Original method storage to avoid infinite recursion
 _BASE_HTTPX_ASYNC_SEND = httpx.AsyncClient.send
 _original_httpx_async_send: t.Callable[..., t.Awaitable[httpx.Response]] | None = None
+_BASE_AIOHTTP_REQUEST = aiohttp.ClientSession._request
+_original_aiohttp_request: t.Callable[..., t.Awaitable[t.Any]] | None = None
 _hooks_installed = False
+
+
+class _BatchedAiohttpResponse(aiohttp.ClientResponse):
+    """
+    Lightweight aiohttp-compatible response wrapper for batched results.
+    """
+
+    def __init__(
+        self,
+        *,
+        method: str,
+        url: str,
+        request_headers: dict[str, str] | None,
+        status: int,
+        reason: str,
+        headers: dict[str, str],
+        body: bytes,
+    ) -> None:
+        request_url = URL(url)
+        request_headers_map = CIMultiDictProxy(CIMultiDict(request_headers or {}))
+        request_info = RequestInfo(
+            url=request_url,
+            method=method,
+            headers=request_headers_map,
+            real_url=request_url,
+        )
+
+        self._cache: dict[str, t.Any] = {}
+        self._url = request_url
+        self._real_url = request_url
+        self._method = method
+        self._request_info = request_info
+        self._history = tuple()
+        self.status = status
+        self.reason = reason
+        headers_map = CIMultiDict(headers)
+        self._headers = CIMultiDictProxy(headers_map)
+        self._raw_headers = tuple(
+            (key.encode(encoding="utf-8"), value.encode(encoding="utf-8"))
+            for key, value in headers_map.items()
+        )
+        self._body = body
+
+    async def text(self, encoding: str | None = None, errors: str = "strict") -> str:
+        """
+        Decode response bytes into text.
+        """
+        del errors
+        decode_encoding = encoding or "utf-8"
+        body = self._body or b""
+        return body.decode(encoding=decode_encoding)
+
+    async def json(
+        self,
+        encoding: str | None = None,
+        loads: t.Callable[[str], t.Any] = json.loads,
+        content_type: str | None = "application/json",
+    ) -> t.Any:
+        """
+        Decode response body into JSON.
+        """
+        del content_type
+        text_body = await self.text(encoding=encoding)
+        return loads(text_body)
+
+    async def read(self) -> bytes:
+        """
+        Return response body bytes.
+        """
+        return self._body or b""
+
+    @classmethod
+    def from_httpx_response(
+        cls,
+        *,
+        response: httpx.Response,
+        method: str,
+        url: str,
+        request_headers: dict[str, str] | None,
+    ) -> "_BatchedAiohttpResponse":
+        """
+        Build wrapper from an httpx response.
+        """
+        return cls(
+            method=method,
+            url=url,
+            request_headers=request_headers,
+            status=response.status_code,
+            reason=response.reason_phrase,
+            headers=dict(response.headers),
+            body=response.content,
+        )
 
 
 def _extract_body_and_headers_from_request(
@@ -73,6 +172,19 @@ def _normalize_httpx_headers(*, headers: httpx.Headers) -> dict[str, str]:
     return {
         _decode_header_value(value=key).lower(): _decode_header_value(value=value)
         for key, value in headers.raw
+    }
+
+
+def _normalize_aiohttp_headers(*, headers: t.Any) -> dict[str, str]:
+    """
+    Normalize aiohttp request headers into a lowercase dictionary.
+    """
+    if headers is None:
+        return {}
+    if not hasattr(headers, "items"):
+        return {}
+    return {
+        str(object=key).lower(): _decode_header_value(value=value) for key, value in headers.items()
     }
 
 
@@ -168,12 +280,52 @@ def _log_httpx_request(
     log.info(event="httpx request intercepted", **log_context)
 
 
+def _log_aiohttp_request(
+    *,
+    method: str,
+    url: str,
+    headers: dict[str, str] | None,
+    body: t.Any = None,
+) -> None:
+    """
+    Emit structured logs for an intercepted aiohttp request.
+    """
+    log_context: dict[str, t.Any] = {
+        "method": method,
+        "url": url,
+    }
+    if headers:
+        log_context["headers"] = {k: "***" for k in headers.keys()}
+    log_context["body"] = body
+    log.info(event="aiohttp request intercepted", **log_context)
+
+
+def _extract_aiohttp_body(*, kwargs: dict[str, t.Any]) -> bytes | None:
+    """
+    Convert aiohttp request kwargs into raw body bytes for queueing.
+    """
+    if kwargs.get("json") is not None:
+        return json.dumps(obj=kwargs["json"]).encode(encoding="utf-8")
+
+    raw_data = kwargs.get("data")
+    if raw_data is None:
+        return None
+    if isinstance(raw_data, bytes):
+        return raw_data
+    if isinstance(raw_data, str):
+        return raw_data.encode(encoding="utf-8")
+    if isinstance(raw_data, bytearray):
+        return bytes(raw_data)
+    return None
+
+
 def _maybe_route_to_batcher(
     *,
     method: str,
     url: str,
     headers: dict[str, str] | None,
     body: t.Any,
+    client_type: str,
 ) -> tuple[Batcher, BaseProvider, dict[str, t.Any]] | None:
     """
     Resolve the active batcher and provider for a request.
@@ -222,11 +374,12 @@ def _maybe_route_to_batcher(
                 path=path,
             )
         return None
+
     return (
         batcher,
         provider,
         {
-            "client_type": "httpx",
+            "client_type": client_type,
             "method": method,
             "url": hostname,
             "endpoint": path,
@@ -277,6 +430,7 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
         url=url_str,
         headers=headers,
         body=body,
+        client_type="httpx",
     )
     if routed is not None:
         batcher, provider, submit_kwargs = routed
@@ -299,15 +453,71 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
     return await _original_httpx_async_send(self, request, **kwargs)
 
 
+async def _aiohttp_async_request_hook(
+    self: t.Any,
+    method: str,
+    str_or_url: t.Any,
+    **kwargs: t.Any,
+) -> t.Any:
+    """
+    Intercept ``aiohttp.ClientSession._request`` to route requests into the batcher.
+    """
+    url_str = str(object=str_or_url)
+    headers = _normalize_aiohttp_headers(headers=kwargs.get("headers"))
+    body = _extract_aiohttp_body(kwargs=kwargs)
+
+    # Keep interception narrow: only route JSON/bytes request bodies.
+    if kwargs.get("data") is not None and body is None:
+        return await _BASE_AIOHTTP_REQUEST(self, method, str_or_url, **kwargs)
+
+    if headers.get("x-batchling-internal") == "1":
+        return await _BASE_AIOHTTP_REQUEST(self, method, str_or_url, **kwargs)
+
+    _log_aiohttp_request(
+        method=method,
+        url=url_str,
+        headers=headers,
+        body=body,
+    )
+
+    routed = _maybe_route_to_batcher(
+        method=method,
+        url=url_str,
+        headers=headers,
+        body=body,
+        client_type="aiohttp",
+    )
+    if routed is not None:
+        batcher, provider, submit_kwargs = routed
+        response = await batcher.submit(provider=provider, **submit_kwargs)
+        if isinstance(response, httpx.Response):
+            return _BatchedAiohttpResponse.from_httpx_response(
+                response=response,
+                method=method,
+                url=url_str,
+                request_headers=headers,
+            )
+        return response
+
+    if _original_aiohttp_request is None:
+        raise RuntimeError("aiohttp request hooks have not been installed")
+
+    if _original_aiohttp_request is _aiohttp_async_request_hook:
+        return await _BASE_AIOHTTP_REQUEST(self, method, str_or_url, **kwargs)
+
+    return await _original_aiohttp_request(self, method, str_or_url, **kwargs)
+
+
 def install_hooks():
     """
     Install global hooks for supported libraries.
 
     Notes
     -----
-    This function is idempotent and currently supports ``httpx``.
+    This function is idempotent and supports ``httpx`` and ``aiohttp``.
     """
     global _original_httpx_async_send
+    global _original_aiohttp_request
     global _hooks_installed
 
     if _hooks_installed:
@@ -328,5 +538,18 @@ def install_hooks():
         )
     # Patch httpx clients with our hooks
     httpx.AsyncClient.send = t.cast(typ=t.Any, val=_httpx_async_send_hook)
+
+    if aiohttp.ClientSession._request is _aiohttp_async_request_hook:
+        if _original_aiohttp_request is None:
+            _original_aiohttp_request = _BASE_AIOHTTP_REQUEST
+    else:
+        _original_aiohttp_request = t.cast(
+            typ=t.Callable[..., t.Awaitable[t.Any]],
+            val=aiohttp.ClientSession._request,
+        )
+        aiohttp.ClientSession._request = t.cast(
+            typ=t.Any,
+            val=_aiohttp_async_request_hook,
+        )
 
     _hooks_installed = True

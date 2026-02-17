@@ -23,7 +23,8 @@ resolves futures back to callers.
 
 1. `submit()` builds a `_PendingRequest`, computes a strict queue key, and enqueues
    the request. Every request is partitioned by `(provider, endpoint, model)` and
-   requires a root-level `model` key in request JSON body. The extracted `QueueKey`
+   resolves `model` via provider-specific extraction (for example, from request body or
+   endpoint path). The extracted `QueueKey`
    is stored on each `_PendingRequest` and propagated through `_submit_requests()`
    and provider `process_batch()` calls so endpoint/model context is resolved once
    at enqueue time.

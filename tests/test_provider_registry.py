@@ -7,6 +7,7 @@ from batchling.batching.providers import (
     BaseProvider,
     get_provider_for_batch_request,
 )
+from batchling.batching.providers.gemini import GeminiProvider
 
 
 def test_provider_registry_auto_discovers_modules() -> None:
@@ -123,3 +124,57 @@ def test_batchable_lookup_requires_configured_endpoint() -> None:
         path="/v1/doesnotexist",
     )
     assert provider is None
+
+
+def test_provider_lookup_resolves_gemini_dynamic_model_endpoint() -> None:
+    """
+    Ensure Gemini dynamic model endpoints are recognized as batchable.
+
+    Returns
+    -------
+    None
+        This test asserts dynamic endpoint matching.
+    """
+    provider = get_provider_for_batch_request(
+        method="POST",
+        hostname="generativelanguage.googleapis.com",
+        path="/v1beta/models/gemini-3-flash-preview:generateContent",
+    )
+    assert provider is not None
+    assert provider.name == "gemini"
+
+
+def test_provider_lookup_rejects_non_batchable_gemini_path() -> None:
+    """
+    Ensure Gemini paths not matching generateContent are not routed.
+
+    Returns
+    -------
+    None
+        This test asserts endpoint gating for Gemini requests.
+    """
+    provider = get_provider_for_batch_request(
+        method="POST",
+        hostname="generativelanguage.googleapis.com",
+        path="/v1beta/models/gemini-3-flash-preview:batchGenerateContent",
+    )
+    assert provider is None
+
+
+def test_base_provider_supports_template_batchable_endpoint_matching() -> None:
+    """
+    Ensure template placeholders in ``batchable_endpoints`` are matched.
+
+    Returns
+    -------
+    None
+        This test asserts template endpoint matching behavior.
+    """
+    gemini_provider = GeminiProvider()
+
+    assert gemini_provider.matches_batchable_endpoint(
+        path="/v1beta/models/gemini-2.5-flash:generateContent"
+    )
+    assert not gemini_provider.matches_batchable_endpoint(
+        path="/v1beta/models/gemini-2.5-flash:batchGenerateContent"
+    )

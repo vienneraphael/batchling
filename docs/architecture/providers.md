@@ -29,6 +29,18 @@ The OpenAI provider implements:
 - file-based batch submission (`/v1/files` then `/v1/batches`).
 - `from_batch_result()` to decode batch output lines.
 
+## Gemini provider
+
+The Gemini provider implements:
+
+- dynamic batchable endpoint matching (`/v1beta/models/{model}:generateContent`).
+- model extraction from the request endpoint path (for strict queue partitioning).
+- file upload via Gemini resumable uploads (`/upload/v1beta/files`).
+- model-scoped batch submission path (`/v1beta/models/{model}:batchGenerateContent`).
+- poll path override (`/v1beta/batches/{batch_id}`) with `metadata.state` status extraction.
+- output file extraction from poll payload (`response.responsesFile`).
+- provider-specific result row key mapping (`custom_id_field_name = "key"`).
+
 ## Anthropic provider
 
 The Anthropic provider implements:
@@ -72,9 +84,16 @@ Common helpers now live on `BaseProvider` and can be reused by all providers:
 
 - `matches_url()`
 - `is_batchable_request()`
+- `matches_batchable_endpoint()`
 - `normalize_url()`
 - `extract_base_and_endpoint()`
+- `extract_model_name()`
 - `build_jsonl_lines()`
+- `build_batch_submit_path()`
+- `build_batch_poll_path()`
+- `build_batch_results_path()`
+- `extract_batch_status()`
+- `get_output_file_id_from_poll_response()`
 - `encode_body()`
 
 Provider configuration on `BaseProvider` includes:
@@ -88,6 +107,7 @@ Provider configuration on `BaseProvider` includes:
 - `batch_endpoint` (where the batch job is created)
 - `batch_terminal_states` (statuses that stop polling and trigger result resolution)
 - `batch_status_field_name` (status field read from poll responses)
+- `custom_id_field_name` (result key used to map output rows back to requests)
 - `output_file_field_name` / `error_file_field_name`
 
 ## Extension notes

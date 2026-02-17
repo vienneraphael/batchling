@@ -5,6 +5,7 @@ import typing as t
 
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
+from google import genai
 from groq import AsyncGroq
 from mistralai import Mistral
 from openai import AsyncOpenAI
@@ -137,6 +138,22 @@ async def groq_tasks():
     return tasks
 
 
+async def gemini_tasks():
+    client = genai.Client(api_key=os.getenv(key="GEMINI_API_KEY")).aio
+    contents = "Who is the best French painter? Answer in one short sentence."
+    tasks = [
+        client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
+        ),
+        client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
+        ),
+    ]
+    return tasks
+
+
 async def main(provider: str):
     match provider:
         case "mistral":
@@ -149,6 +166,8 @@ async def main(provider: str):
             tasks = await anthropic_tasks()
         case "groq":
             tasks = await groq_tasks()
+        case "gemini":
+            tasks = await gemini_tasks()
         case _:
             raise ValueError(f"Invalid provider: {provider}")
     responses = await asyncio.gather(*tasks)

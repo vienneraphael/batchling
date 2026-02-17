@@ -127,37 +127,6 @@ class Batcher:
         provider_name, endpoint, model_name = queue_key
         return f"{provider_name}:{endpoint}:{model_name}"
 
-    @staticmethod
-    def _extract_model_from_body(*, body: bytes | None) -> str:
-        """
-        Extract the request model from a JSON body payload.
-
-        Parameters
-        ----------
-        body : bytes | None
-            Raw request body captured by hooks.
-
-        Returns
-        -------
-        str
-            Non-empty model name from top-level ``model`` key.
-
-        Raises
-        ------
-        ValueError
-            If body is missing, invalid JSON, or ``model`` is not a non-empty
-            string.
-        """
-        if body is None:
-            raise ValueError("Batch request JSON body is required for strict homogeneous batching")
-
-        body_text = body.decode(encoding="utf-8")
-        payload = json.loads(s=body_text)
-        model = payload.get("model")
-        if not isinstance(model, str) or not model.strip():
-            raise ValueError("Batch request JSON must include non-empty string 'model'")
-        return model
-
     def _build_queue_key(
         self, *, provider: BaseProvider, endpoint: str, body: bytes | None
     ) -> QueueKey:
@@ -178,7 +147,10 @@ class Batcher:
         QueueKey
             Queue key tuple containing provider, endpoint, and model.
         """
-        model = self._extract_model_from_body(body=body)
+        model = provider.extract_model_name(
+            endpoint=endpoint,
+            body=body,
+        )
         return provider.name, endpoint, model
 
     async def submit(
@@ -654,16 +626,19 @@ class Batcher:
             poll_interval_seconds=self._poll_interval_seconds,
         )
         while True:
+            poll_path = provider.build_batch_poll_path(batch_id=active_batch.batch_id)
             async with self._client_factory() as client:
                 response = await client.get(
-                    url=f"{base_url}{provider.batch_endpoint}/{active_batch.batch_id}",
+                    url=f"{base_url}{poll_path}",
                     headers=api_headers,
                 )
                 response.raise_for_status()
                 payload = response.json()
             # FIXME: fit into a data validation model
-            status = payload.get(provider.batch_status_field_name, "created")
-            active_batch.output_file_id = payload.get(provider.output_file_field_name) or ""
+            status = provider.extract_batch_status(payload=payload)
+            active_batch.output_file_id = await provider.get_output_file_id_from_poll_response(
+                payload=payload,
+            )
             active_batch.error_file_id = payload.get(provider.error_file_field_name) or ""
             log.debug(
                 event="Batch poll tick",
@@ -713,13 +688,23 @@ class Batcher:
         active_batch : _ActiveBatch
             Active batch metadata.
         """
-        file_id = self._resolve_batch_file_id(active_batch=active_batch)
-        if file_id is None:
+        file_id = active_batch.output_file_id or active_batch.error_file_id
+        try:
+            results_path = provider.build_batch_results_path(
+                file_id=file_id,
+                batch_id=active_batch.batch_id,
+            )
+        except ValueError as error:
             log.error(
                 event="Batch resolved without output file",
                 provider=provider.name,
                 batch_id=active_batch.batch_id,
+                error=str(object=error),
             )
+            runtime_error = RuntimeError(str(object=error))
+            for req in active_batch.requests.values():
+                if not req.future.done():
+                    req.future.set_exception(runtime_error)
             return
 
         log.info(
@@ -727,12 +712,12 @@ class Batcher:
             provider=provider.name,
             batch_id=active_batch.batch_id,
             file_id=file_id,
+            results_path=results_path,
         )
         content = await self._download_batch_content(
-            provider=provider,
             base_url=base_url,
             api_headers=api_headers,
-            file_id=file_id,
+            results_path=results_path,
         )
         seen = self._apply_batch_results(
             provider=provider,
@@ -748,60 +733,33 @@ class Batcher:
         )
         self._fail_missing_results(active_batch=active_batch, seen=seen)
 
-    def _resolve_batch_file_id(self, *, active_batch: _ActiveBatch) -> str | None:
-        """
-        Resolve the output or error file ID for a batch.
-
-        Parameters
-        ----------
-        active_batch : _ActiveBatch
-            Active batch metadata.
-
-        Returns
-        -------
-        str | None
-            File identifier or ``None`` if unavailable.
-        """
-        file_id = active_batch.output_file_id or active_batch.error_file_id
-        if not file_id:
-            error = RuntimeError("Batch completed without output or error file")
-            for req in active_batch.requests.values():
-                if not req.future.done():
-                    req.future.set_exception(error)
-            return None
-        return file_id
-
     async def _download_batch_content(
         self,
         *,
-        provider: BaseProvider,
         base_url: str,
         api_headers: dict[str, str],
-        file_id: str,
+        results_path: str,
     ) -> str:
         """
         Download batch results file content.
 
         Parameters
         ----------
-        provider : BaseProvider
-            Provider adapter.
         base_url : str
             Provider base URL.
         api_headers : dict[str, str]
             Provider API headers.
-        file_id : str
-            Provider file ID.
+        results_path : str
+            Provider results endpoint path.
 
         Returns
         -------
         str
             Raw JSONL content.
         """
-        file_content_url = provider.file_content_endpoint.format(id=file_id)
         async with self._client_factory() as client:
             response = await client.get(
-                url=f"{base_url}{file_content_url}",
+                url=f"{base_url}{results_path}",
                 headers=api_headers,
             )
             response.raise_for_status()
@@ -836,7 +794,9 @@ class Batcher:
             if not line.strip():
                 continue
             result_item = json.loads(s=line)
-            custom_id = result_item.get("custom_id")
+            custom_id = result_item.get(
+                provider.custom_id_field_name,
+            )
             if custom_id is None:
                 log.debug(
                     event="Batch result missing custom_id",

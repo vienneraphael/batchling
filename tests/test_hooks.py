@@ -4,6 +4,7 @@ Tests for the httpx request hook system.
 
 from unittest.mock import patch
 
+import aiohttp
 import httpx
 import pytest
 import respx
@@ -18,15 +19,18 @@ def restore_hooks():
     """Fixture to restore original httpx client methods after tests."""
     # Store original state
     original_async_send = httpx.AsyncClient.send
+    original_aiohttp_request = aiohttp.ClientSession._request
     original_hooks_installed = hooks_module._hooks_installed
 
     yield
 
     # Restore original state
     httpx.AsyncClient.send = original_async_send
+    aiohttp.ClientSession._request = original_aiohttp_request
     # Reset module-level variables
     hooks_module._hooks_installed = original_hooks_installed
     hooks_module._original_httpx_async_send = original_async_send
+    hooks_module._original_aiohttp_request = original_aiohttp_request
 
 
 def test_install_hooks_idempotent(restore_hooks):

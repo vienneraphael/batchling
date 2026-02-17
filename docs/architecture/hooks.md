@@ -1,8 +1,7 @@
 # HTTP hooks: request interception
 
 Hooks intercept HTTP client requests and decide whether to batch them. The current
-implementation targets `httpx.AsyncClient.send`, but the hook mechanism is intended to
-expand to other clients.
+implementation targets `httpx.AsyncClient.send` and `aiohttp.ClientSession._request`.
 
 ## Responsibilities
 
@@ -15,13 +14,14 @@ expand to other clients.
 
 ## Flow summary
 
-1. `install_hooks()` stores the original method and patches `httpx.AsyncClient.send`.
-2. `_httpx_async_send_hook()` logs request details and checks `active_batcher`.
+1. `install_hooks()` stores original methods and patches both `httpx` and `aiohttp`.
+2. Hook handlers (`_httpx_async_send_hook()` and `_aiohttp_async_request_hook()`) log request
+   details and check `active_batcher`.
 3. If the request is marked as internal (`x-batchling-internal: 1`), the hook bypasses
    batching to avoid recursion.
 4. If a provider marks the `method + endpoint` as batchable and a batcher is active,
    the request is enqueued via `batcher.submit()` and the resolved response is returned
-   (often an `httpx.Response`, but providers can return other shapes).
+   (usually an `httpx.Response`; aiohttp callers receive an aiohttp-compatible wrapper).
 5. Otherwise, the original request is invoked.
 
 ## Extension notes

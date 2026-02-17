@@ -1,3 +1,4 @@
+import aiohttp
 import httpx
 import pytest
 
@@ -58,12 +59,16 @@ def mock_providers(respx_mock, request):
 def reset_hooks():
     """Reset hook state and restore original httpx client methods."""
     original_async_send = httpx.AsyncClient.send
+    original_aiohttp_request = aiohttp.ClientSession._request
     hooks_module._hooks_installed = False
     hooks_module._original_httpx_async_send = None
+    hooks_module._original_aiohttp_request = None
     yield
     httpx.AsyncClient.send = original_async_send
+    aiohttp.ClientSession._request = original_aiohttp_request
     hooks_module._hooks_installed = False
     hooks_module._original_httpx_async_send = None
+    hooks_module._original_aiohttp_request = None
 
 
 @pytest.fixture

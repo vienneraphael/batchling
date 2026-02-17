@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import typing as t
 from abc import ABC
 from dataclasses import dataclass
@@ -85,6 +86,7 @@ class BaseProvider(ABC):
     batch_endpoint: str
     batch_terminal_states: type[BatchTerminalStatesLike]
     batch_status_field_name: str = "status"
+    custom_id_field_name: str = "custom_id"
     output_file_field_name: str
     error_file_field_name: str
 
@@ -158,7 +160,7 @@ class BaseProvider(ABC):
         if not self.matches_url(hostname=hostname):
             return False
         method_ok = normalized_method == self.batch_method
-        endpoint_ok = path in self.batchable_endpoints
+        endpoint_ok = self.matches_batchable_endpoint(path=path)
         is_batchable = method_ok and endpoint_ok
         log.debug(
             event="Provider batchable endpoint evaluated",
@@ -172,6 +174,147 @@ class BaseProvider(ABC):
             configured_endpoints=self.batchable_endpoints,
         )
         return is_batchable
+
+    def matches_batchable_endpoint(self, *, path: str) -> bool:
+        """
+        Check whether a request path is batchable for this provider.
+
+        Parameters
+        ----------
+        path : str
+            Candidate request path.
+
+        Returns
+        -------
+        bool
+            ``True`` when ``path`` matches a configured batchable endpoint.
+            Endpoints may include template placeholders such as ``{model}``,
+            which match one path segment (excluding ``/``).
+        """
+        for endpoint in self.batchable_endpoints:
+            if "{" not in endpoint:
+                if path == endpoint:
+                    return True
+                continue
+
+            escaped_endpoint = re.escape(pattern=endpoint)
+            endpoint_pattern = re.sub(
+                pattern=r"\\\{[^{}]+\\\}",
+                repl=r"[^/]+",
+                string=escaped_endpoint,
+            )
+            if re.fullmatch(pattern=endpoint_pattern, string=path) is not None:
+                return True
+
+        return False
+
+    def extract_model_name(self, *, endpoint: str, body: bytes | None) -> str:
+        """
+        Extract request model name used for queue partitioning.
+
+        Parameters
+        ----------
+        endpoint : str
+            Request endpoint path.
+        body : bytes | None
+            Raw request body captured by hooks.
+
+        Returns
+        -------
+        str
+            Non-empty model name.
+
+        Raises
+        ------
+        ValueError
+            If body is missing, invalid JSON, or model is absent.
+        """
+        del endpoint
+        if body is None:
+            raise ValueError("Batch request JSON body is required for strict homogeneous batching")
+
+        body_text = body.decode(encoding="utf-8")
+        payload = json.loads(s=body_text)
+        model = payload.get("model")
+        if not isinstance(model, str) or not model.strip():
+            raise ValueError("Batch request JSON must include non-empty string 'model'")
+        return model
+
+    def build_batch_submit_path(self, *, queue_key: tuple[str, str, str]) -> str:
+        """
+        Build the provider path used to submit a batch.
+
+        Parameters
+        ----------
+        queue_key : tuple[str, str, str]
+            Queue key associated with the current batch.
+
+        Returns
+        -------
+        str
+            Relative submit path.
+        """
+        del queue_key
+        return self.batch_endpoint
+
+    def build_batch_poll_path(self, *, batch_id: str) -> str:
+        """
+        Build the provider path used to poll a batch.
+
+        Parameters
+        ----------
+        batch_id : str
+            Provider batch identifier.
+
+        Returns
+        -------
+        str
+            Relative poll path.
+        """
+        return f"{self.batch_endpoint}/{batch_id}"
+
+    def build_batch_results_path(self, *, file_id: str | None, batch_id: str) -> str:
+        """
+        Build the provider path used to download batch results.
+
+        Parameters
+        ----------
+        file_id : str | None
+            Provider output or error file identifier.
+        batch_id : str
+            Provider batch identifier.
+
+        Returns
+        -------
+        str
+            Relative results path.
+
+        Raises
+        ------
+        ValueError
+            If this provider requires a file id and it is missing.
+        """
+        del batch_id
+        if not file_id:
+            raise ValueError("Batch completed without output or error file")
+        return self.file_content_endpoint.format(id=file_id)
+
+    def extract_batch_status(self, *, payload: dict[str, t.Any]) -> str:
+        """
+        Extract provider batch status from a poll payload.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Provider poll response payload.
+
+        Returns
+        -------
+        str
+            Normalized status string.
+        """
+        status = payload.get(self.batch_status_field_name, "created")
+        return str(object=status)
 
     def build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
@@ -265,6 +408,8 @@ class BaseProvider(ABC):
                 api_headers["Authorization"] = value
             elif lower_key == "x-api-key":
                 api_headers["X-Api-Key"] = value
+            elif lower_key == "x-goog-api-key":
+                api_headers["x-goog-api-key"] = value
             elif lower_key.startswith(f"{self.name}-"):
                 api_headers[key] = value
         return api_headers
@@ -369,6 +514,16 @@ class BaseProvider(ABC):
             "requests": jsonl_lines,
         }
 
+    async def get_output_file_id_from_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> str:
+        """
+        Get the output file ID from the poll response.
+        """
+        return payload.get(self.output_file_field_name) or ""
+
     def _get_batch_id_from_response(self, *, response_json: dict) -> str:
         """
         Get the batch ID from the response.
@@ -408,6 +563,7 @@ class BaseProvider(ABC):
         str
             batch ID.
         """
+        submit_path = self.build_batch_submit_path(queue_key=queue_key)
         payload = await self.build_file_based_batch_payload(
             file_id=file_id,
             endpoint=endpoint,
@@ -415,13 +571,13 @@ class BaseProvider(ABC):
         )
         log.debug(
             "Sending batch request",
-            url=f"{base_url}{self.batch_endpoint}",
+            url=f"{base_url}{submit_path}",
             headers={k: "***" for k in api_headers.keys()},
             payload=payload,
         )
         async with client_factory() as client:
             response = await client.post(
-                url=f"{base_url}{self.batch_endpoint}", headers=api_headers, json=payload
+                url=f"{base_url}{submit_path}", headers=api_headers, json=payload
             )
             response.raise_for_status()
             json_response = response.json()
@@ -433,6 +589,7 @@ class BaseProvider(ABC):
         base_url: str,
         api_headers: dict[str, str],
         jsonl_lines: list[dict[str, t.Any]],
+        queue_key: tuple[str, str, str],
         client_factory: t.Callable[[], httpx.AsyncClient],
     ) -> str:
         """
@@ -454,16 +611,17 @@ class BaseProvider(ABC):
         str
             batch ID.
         """
+        submit_path = self.build_batch_submit_path(queue_key=queue_key)
         payload = await self.build_inline_batch_payload(jsonl_lines=jsonl_lines)
         log.debug(
             event="Sending inline batch request",
-            url=f"{base_url}{self.batch_endpoint}",
+            url=f"{base_url}{submit_path}",
             headers={k: "***" for k in api_headers.keys()},
             payload=payload,
         )
         async with client_factory() as client:
             response = await client.post(
-                url=f"{base_url}{self.batch_endpoint}", headers=api_headers, json=payload
+                url=f"{base_url}{submit_path}", headers=api_headers, json=payload
             )
             response.raise_for_status()
             json_response = response.json()
@@ -542,6 +700,7 @@ class BaseProvider(ABC):
                 base_url=base_url,
                 api_headers=api_headers,
                 jsonl_lines=jsonl_lines,
+                queue_key=queue_key,
                 client_factory=client_factory,
             )
         return BatchSubmission(
@@ -565,13 +724,13 @@ class BaseProvider(ABC):
             HTTP response derived from the batch result.
         """
         response = result_item.get("response")
-        error = result_item.get("error")
+        error = result_item.get("error") or {}
         if response:
             status_code = int(response.get("status_code", 200))
             headers = dict(response.get("headers") or {})
             body = response.get("body")
         else:
-            status_code = int(error.get("status_code", 500)) if error else 500
+            status_code = int(error.get("status_code", 500))
             headers = {}
             body = error or {"error": "Missing response"}
 
