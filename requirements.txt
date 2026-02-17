@@ -337,7 +337,6 @@ pycparser==2.23 ; (implementation_name != 'PyPy' and platform_python_implementat
 pydantic==2.12.3
     # via
     #   anthropic
-    #   batchling
     #   google-genai
     #   groq
     #   litellm
