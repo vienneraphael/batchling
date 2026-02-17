@@ -18,9 +18,9 @@ from aiohttp.client_reqrep import RequestInfo
 from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
-from batchling.batching.core import Batcher
-from batchling.batching.providers import get_provider_for_batch_request
-from batchling.batching.providers.base import BaseProvider
+from batchling.core import Batcher
+from batchling.providers import get_provider_for_batch_request
+from batchling.providers.base import BaseProvider
 
 log = structlog.get_logger(__name__)
 

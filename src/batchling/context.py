@@ -6,10 +6,8 @@ import asyncio
 import typing as t
 import warnings
 
-from batchling.batching.hooks import active_batcher
-
-if t.TYPE_CHECKING:
-    from batchling.batching.core import Batcher
+from batchling.core import Batcher
+from batchling.hooks import active_batcher
 
 
 class BatchingContext:

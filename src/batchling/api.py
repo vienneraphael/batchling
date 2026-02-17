@@ -4,9 +4,9 @@ Exposes a `batchify` function that returns a BatchingContext that activates
 the active Batcher for the duration of a context manager.
 """
 
-from batchling.batching.context import BatchingContext
-from batchling.batching.core import Batcher
-from batchling.batching.hooks import install_hooks
+from batchling.context import BatchingContext
+from batchling.core import Batcher
+from batchling.hooks import install_hooks
 
 
 def batchify(

@@ -1,174 +1,97 @@
-from functools import cached_property
+import json
+import typing as t
+from enum import StrEnum
 
-import structlog
-from pydantic import computed_field, field_validator
+import httpx
 
-from batchling.experiment import Experiment
-from batchling.models import BatchResult, ProviderBatch, ProviderFile
-from batchling.request import (
-    AnthropicBody,
-    AnthropicPart,
-    AnthropicRequest,
-    RawMessage,
-    RawRequest,
+from batchling.providers.base import (
+    BaseProvider,
+    BatchTerminalStatesLike,
+    PendingRequestLike,
 )
-from batchling.utils.files import read_jsonl_file
-
-log = structlog.get_logger(__name__)
 
 
-class AnthropicExperiment(Experiment):
-    BASE_URL: str = "https://api.anthropic.com/v1/messages/batches"
+class AnthropicBatchTerminalStates(StrEnum):
+    SUCCESS = "ended"
 
-    def _headers(self) -> dict[str, str]:
-        return {
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-            "anthropic-beta": "structured-outputs-2025-11-13",
-        }
 
-    @field_validator("raw_requests", mode="after")
-    @classmethod
-    def validate_max_tokens(cls, value: list[RawRequest] | None) -> list[RawRequest] | None:
-        if value is None:
-            return None
-        if any(request.max_tokens is None for request in value):
-            raise ValueError(
-                "max_tokens is required to be set for each request for Anthropic experiments"
-            )
-        return value
+class AnthropicProvider(BaseProvider):
+    """Provider adapter for OpenAI's HTTP and Batch APIs."""
 
-    @computed_field
-    @cached_property
-    def processed_requests(self) -> list[AnthropicRequest]:
-        processed_requests: list[AnthropicRequest] = []
-        for raw_request in self.raw_requests:
-            cleaned_messages = []
-            for message in raw_request.messages:
-                if isinstance(message.content, str):
-                    cleaned_messages.append(RawMessage(role=message.role, content=message.content))
-                else:
-                    parts = []
-                    for c in message.content:
-                        if c.get("type") == "image_url":
-                            raw_media_type, b64_data = (
-                                c.get("image_url", {}).get("url", "").split(";base64,")
-                            )
-                            media_type = raw_media_type.strip("data:")
-                            d = {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": media_type,
-                                    "data": b64_data,
-                                },
-                            }
-                            parts.append(d)
-                        else:
-                            parts.append({"type": "text", "text": c.get("text")})
-                    cleaned_messages.append(RawMessage(role=message.role, content=parts))
-            thinking_config = None
-            if self.thinking_budget is not None:
-                thinking_config = {"type": "enabled", "budget_tokens": self.thinking_budget}
-            elif self.thinking_level is not None:
-                raise ValueError(
-                    "thinking_level is not supported for Anthropic, use thinking_budget instead"
-                )
+    name = "anthropic"
+    hostnames = ("api.anthropic.com",)
+    batchable_endpoints = ("/v1/messages",)
+    is_file_based = False
+    file_content_endpoint = "/v1/messages/batches/{id}/results"
+    batch_endpoint = "/v1/messages/batches"
+    batch_terminal_states: type[BatchTerminalStatesLike] = AnthropicBatchTerminalStates
+    batch_status_field_name: str = "processing_status"
+    output_file_field_name: str = "id"
+    error_file_field_name: str = "id"
 
-            params_data = {
-                "model": self.model,
-                "max_tokens": raw_request.max_tokens,
-                "messages": cleaned_messages,
-                "output_format": {
-                    "type": "json_schema",
-                    "schema": self.response_format["json_schema"]["schema"],
-                }
-                if self.response_format
-                else None,
-                "system": [AnthropicPart(type="text", text=raw_request.system_prompt)],
-            }
-            if thinking_config:
-                params_data["thinking"] = thinking_config
-
-            processed_requests.append(
-                AnthropicRequest(
-                    custom_id=raw_request.id,
-                    params=AnthropicBody.model_validate(params_data),
-                )
-            )
-        return processed_requests
-
-    def retrieve_provider_file(self) -> ProviderFile | str:
-        # Anthropic does not expose file objects; we return the local path
-        return self.processed_file_path
-
-    def retrieve_provider_batch(self) -> ProviderBatch | None:
-        data = self._http_get_json(f"{self.BASE_URL}/{self.batch_id}")
-        return ProviderBatch.model_validate(data)
-
-    @property
-    def provider_file(self) -> ProviderFile | str | None:
-        if self.provider_file_id is None:
-            return None
-        return self.processed_file_path
-
-    @property
-    def batch(self) -> ProviderBatch | None:
-        if self.batch_id is None:
-            return None
-        return self.retrieve_provider_batch()
-
-    @property
-    def status(
+    def build_jsonl_lines(
         self,
-    ) -> str:
-        if self.batch is None:
-            return "created"
-        return self.batch.status
+        *,
+        requests: t.Sequence[PendingRequestLike],
+    ) -> list[dict[str, t.Any]]:
+        """
+        Build provider batch-file JSONL lines.
 
-    def create_provider_file(self) -> str:
-        return self.processed_file_path
+        Parameters
+        ----------
+        requests : list[PendingRequestLike]
+            Pending requests to serialize.
 
-    def delete_provider_file(self):
-        pass
+        Returns
+        -------
+        list[dict[str, typing.Any]]
+            JSONL-ready request lines.
+        """
+        jsonl_lines = []
+        for request in requests:
+            body = json.loads(s=request.params["body"].decode(encoding="utf-8"))
+            jsonl_lines.append(
+                {
+                    "custom_id": request.custom_id,
+                    "params": {
+                        "model": body["model"],
+                        "max_tokens": body["max_tokens"],
+                        "messages": body["messages"],
+                    },
+                }
+            )
+        return jsonl_lines
 
-    def create_provider_batch(self) -> str:
-        data = read_jsonl_file(self.processed_file_path)
-        request_list = []
-        for request in data:
-            request["params"]["model"] = self.model
-            request_list.append(request)
-        response = self._http_post_json(
-            f"{self.BASE_URL}",
-            json={
-                "requests": request_list,
-            },
+    def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
+        """
+        Convert Anthropic batch results into an ``httpx.Response``.
+
+        Parameters
+        ----------
+        result_item : dict[str, typing.Any]
+            Anthropic batch result JSON line.
+
+        Returns
+        -------
+        httpx.Response
+            HTTP response derived from the batch result.
+        """
+        result = t.cast(dict[str, t.Any], result_item.get("result") or {})
+        response = t.cast(dict[str, t.Any] | None, result.get("message"))
+        if response:
+            status_code = 200
+            headers = dict(response.get("headers") or {})
+            body = response
+        else:
+            status_code = 500
+            headers = {}
+            body = t.cast(dict[str, t.Any], result.get("error") or {"error": "Missing response"})
+
+        content, content_headers = self.encode_body(body=body)
+        headers.update(content_headers)
+
+        return httpx.Response(
+            status_code=status_code,
+            headers=headers,
+            content=content,
         )
-        return ProviderBatch.model_validate(response).id
-
-    def raise_not_in_running_status(self):
-        if self.status not in ["in_progress"]:
-            raise ValueError(f"Experiment in status {self.status} is not in in_progress status")
-
-    def raise_not_in_completed_status(self):
-        if self.status != "ended":
-            raise ValueError(f"Experiment in status {self.status} is not in ended status")
-
-    def cancel_provider_batch(self) -> None:
-        self._http_post_json(f"{self.BASE_URL}/{self.batch_id}/cancel")
-
-    def delete_provider_batch(self) -> None:
-        batch = self.batch
-        if batch is None:
-            return
-        if batch.status in ["in_progress"]:
-            self.cancel_provider_batch()
-        elif batch.status == "ended" and batch.output_file_id:
-            self._http_delete(f"{self.BASE_URL}/{self.batch_id}")
-
-    def get_provider_results(self) -> list[BatchResult]:
-        batch = self.batch
-        log.debug("Getting provider results", batch=batch)
-        if batch and batch.output_file_id:
-            return self._download_results(batch.output_file_id)
-        return []

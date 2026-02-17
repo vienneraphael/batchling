@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-import batchling.batching.providers as providers_module
-from batchling.batching.providers import (
+import batchling.providers as providers_module
+from batchling.providers import (
     BaseProvider,
     get_provider_for_batch_request,
 )
-from batchling.batching.providers.gemini import GeminiProvider
+from batchling.providers.gemini import GeminiProvider
 
 
 def test_provider_registry_auto_discovers_modules() -> None:

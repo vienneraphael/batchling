@@ -2,8 +2,8 @@ import aiohttp
 import httpx
 import pytest
 
-import batchling.batching.hooks as hooks_module
-from batchling.batching.hooks import active_batcher
+import batchling.hooks as hooks_module
+from batchling.hooks import active_batcher
 from tests.mocks.providers import (
     setup_anthropic_mocks,
     setup_gemini_mocks,

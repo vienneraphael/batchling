@@ -1,5 +1,5 @@
 """
-Tests for the BatchingContext class in batchling.batching.context.
+Tests for the BatchingContext class in batchling.context.
 """
 
 import asyncio
@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from batchling.batching.context import BatchingContext
-from batchling.batching.core import Batcher
-from batchling.batching.hooks import active_batcher
+from batchling.context import BatchingContext
+from batchling.core import Batcher
+from batchling.hooks import active_batcher
 
 
 @pytest.fixture

@@ -8,11 +8,11 @@ import typing as t
 import httpx
 import pytest
 
-from batchling.batching.core import Batcher, _PendingRequest
-from batchling.batching.providers.anthropic import AnthropicProvider
-from batchling.batching.providers.gemini import GeminiProvider
-from batchling.batching.providers.mistral import MistralProvider
-from batchling.batching.providers.openai import OpenAIProvider
+from batchling.core import Batcher, _PendingRequest
+from batchling.providers.anthropic import AnthropicProvider
+from batchling.providers.gemini import GeminiProvider
+from batchling.providers.mistral import MistralProvider
+from batchling.providers.openai import OpenAIProvider
 from tests.mocks.batching import make_openai_batch_transport
 
 QueueKey = tuple[str, str, str]

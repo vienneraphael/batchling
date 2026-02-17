@@ -9,7 +9,7 @@ import httpx
 import pytest
 import respx
 
-import batchling.batching.hooks as hooks_module
+import batchling.hooks as hooks_module
 
 install_hooks = hooks_module.install_hooks
 

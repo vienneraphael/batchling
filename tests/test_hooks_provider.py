@@ -7,9 +7,9 @@ import aiohttp
 import httpx
 import pytest
 
-import batchling.batching.hooks as hooks_module
-from batchling.batching.core import Batcher
-from batchling.batching.hooks import active_batcher, install_hooks
+import batchling.hooks as hooks_module
+from batchling.core import Batcher
+from batchling.hooks import active_batcher, install_hooks
 from tests.mocks.batching import make_openai_batch_transport
 
 

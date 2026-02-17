@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import httpx
 import structlog
 
-from batchling.batching.providers import BaseProvider
+from batchling.providers import BaseProvider
 
 log = structlog.get_logger(__name__)
 QueueKey = tuple[str, str, str]

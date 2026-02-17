@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-import batchling.batching.hooks as hooks_module
-from batchling.batching.api import batchify
-from batchling.batching.core import Batcher
-from batchling.batching.hooks import active_batcher
+import batchling.hooks as hooks_module
+from batchling.api import batchify
+from batchling.core import Batcher
+from batchling.hooks import active_batcher
 
 
 @pytest.mark.asyncio
@@ -51,7 +51,7 @@ async def test_batchify_returns_context_manager(reset_hooks, reset_context):
     """Test that batchify returns a BatchingContext."""
     wrapped = batchify(batch_size=10)
 
-    from batchling.batching.context import BatchingContext
+    from batchling.context import BatchingContext
 
     assert isinstance(wrapped, BatchingContext)
 
@@ -61,7 +61,7 @@ async def test_batchify_without_target_returns_context(reset_hooks, reset_contex
     """Test that batchify returns a context manager that yields None."""
     wrapped = batchify()
 
-    from batchling.batching.context import BatchingContext
+    from batchling.context import BatchingContext
 
     assert isinstance(wrapped, BatchingContext)
 
