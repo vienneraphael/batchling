@@ -1,5 +1,5 @@
 """
-Tests for the Batcher class in batchling.batching.core.
+Tests for the Batcher class in batchling.core.
 """
 
 import asyncio
