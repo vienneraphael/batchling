@@ -4,7 +4,7 @@
 <img src="./docs/assets/images/batchling.png" alt="batchling logo" width="500" role="img">
 </div>
 <p align="center">
-    <em>Save 50% off GenAI costs in two lines of code!</em>
+    <em>Save 50% off GenAI costs in two lines of code</em>
 </p>
 <p align="center">
 <a href="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml" target="_blank">
@@ -16,14 +16,130 @@
 
 ---
 
-batchling intercepts supported provider HTTP requests, groups them by `(provider, endpoint, model)`, and submits them through provider batch APIs.
+batchling is a frictionless, batteries-included plugin to convert any GenAI async function or script into half-cost deferred jobs.
 
-## What it does
+Key features:
 
-- Unified batch routing across providers
-- Automatic queueing with `batch_size` and `batch_window_seconds`
-- Hook-based interception for `httpx` and `aiohttp`
-- `dry_run` mode for non-I/O validation of batching flows
+- **Simplicity**: a simple 2-liner gets you 50% off your GenAI bill instantly.
+- **Transparent**: Your code remains the same, no added behaviors. Track sent batches easily.
+- **Global**: Integrates with most providers and all frameworks.
+- **Safe**: Get a complete breakdown of your cost savings before launching a single batch.
+- **Lightweight**: Very few dependencies.
+
+<details>
+
+**<summary>What's the catch?</summary>**
+
+The catch is the Batch API!
+
+Batch APIs enable you to process large volumes of requests asynchronously (usually at 50% lower cost compared to real-time API calls). It's perfect for workloads that don't need immediate responses such as:
+
+- Running mass offline evaluations
+- Classifying large datasets
+- Generating large-scale embeddings
+- Offline summarization
+- Synthetic data generation
+- Structured data extraction (e.g. OCR)
+- Audio transcriptions/translations at scale
+
+Compared to using standard endpoints directly, Batch API offers:
+
+- **Better cost efficiency**: usually 50% cost discount compared to synchronous APIs
+- **Higher rate limits**: Substantially more headroom with separate rate limit pools
+- **Large-scale support**: Process thousands of requests per batch
+- **Flexible completion**: Best-effort completion within 24 hours with progress tracking, batches usually complete within an hour.
+
+</details>
+
+## Installation
+
+```bash
+pip install batchling
+```
+
+## Get Started
+
+### Using the async context manager (recommended)
+
+```python
+import asyncio
+from batchling import batchify
+from openai import AsyncOpenAI
+
+async def generate():
+    client = AsyncOpenAI()
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    tasks = [
+        client.responses.create(
+            input=messages,
+            model="gpt-4o-mini",
+        ),
+        client.responses.create(
+            input=messages,
+            model="gpt-5-nano",
+        ),
+    ]
+    with batchify(): # Runs your tasks as batches, save 50%
+        responses = await asyncio.gather(*tasks)
+```
+
+### Using the CLI wrapper
+
+Create a file `main.py` with:
+
+```python
+import asyncio
+from openai import AsyncOpenAI
+
+async def generate():
+    client = AsyncOpenAI()
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    tasks = [
+        client.responses.create(
+            input=messages,
+            model="gpt-4o-mini",
+        ),
+        client.responses.create(
+            input=messages,
+            model="gpt-5-nano",
+        ),
+    ]
+    responses = await asyncio.gather(*tasks)
+```
+
+Run your function in batch mode:
+
+```bash
+batchling main.py:generate
+```
+
+## How it works
+
+### Request interception
+
+batchling patches `httpx` and `aiohttp`, the two main async request utilities to capture certain requests based on batchable endpoint detection for GenAI providers exposing a batch API.
+
+### Batch Management
+
+Relevant requests are routed to a batch manager, which orchestrates batch queues.
+Batch queues behaviors are parametrized by user-defined parameters `batch_size` and `batch_window_size`.
+Each batch queue is associated with a unique `(provider, endpoint, model)` key.
+
+### Requests repurposing
+
+Once batches are ready to go, the received requests are repurposed into batch-compatible requests and sent to the provider.
+Batches are automatically polled every `batch_poll_interval_seconds` seconds.
+Once all batches have been processed, the data is returned through the `httpx` or `aiohttp` patch like a regular request would have been, letting the rest of the script execute.
 
 ## Supported providers
 
@@ -36,54 +152,3 @@ batchling intercepts supported provider HTTP requests, groups them by `(provider
 | Mistral     | <https://docs.mistral.ai/capabilities/batch/>                            |
 | Together AI | <https://docs.together.ai/docs/batch-inference>                          |
 | Doubleword  | <https://docs.doubleword.ai/batches/getting-started-with-batched-api>    |
-
-## Installation
-
-```bash
-pip install batchling
-```
-
-## Python usage
-
-Use `batchify` as a scope-only context manager around code that triggers provider HTTP calls.
-
-```python
-import httpx
-
-from batchling import batchify
-
-
-async def run() -> None:
-    async with batchify(batch_size=10, batch_window_seconds=1.0, dry_run=False):
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                url="https://api.openai.com/v1/chat/completions",
-                json={
-                    "model": "gpt-4o-mini",
-                    "messages": [{"role": "user", "content": "Say hi"}],
-                },
-            )
-```
-
-## CLI usage
-
-Run an async function from a script inside a `batchify` context:
-
-```bash
-batchling path/to/script.py:run_job --batch-size 10 --batch-window-seconds 1.0 arg1 --name alice
-```
-
-Notes:
-
-- Script target must follow `path/to/script.py:function_name`.
-- Target function must be `async def`.
-- Extra args are forwarded to the target function.
-
-## Documentation
-
-- Architecture overview: `docs/architecture/overview.md`
-- API surface: `docs/architecture/api.md`
-- Core engine: `docs/architecture/core.md`
-- Hooks: `docs/architecture/hooks.md`
-- Context manager: `docs/architecture/context.md`
-- Providers: `docs/architecture/providers.md`
