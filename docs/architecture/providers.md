@@ -16,7 +16,7 @@ batch results.
 
 ## Registry and lookup
 
-- Providers are auto-discovered from `batchling/batching/providers/*.py` files
+- Providers are auto-discovered from `batchling/providers/*.py` files
   (excluding `__init__.py` and `base.py`).
 - `get_provider_for_batch_request()` resolves a provider only when the request's
   `POST + path` is explicitly batchable for that provider.
@@ -113,7 +113,7 @@ Provider configuration on `BaseProvider` includes:
 ## Extension notes
 
 - Add new provider classes by subclassing `BaseProvider` in a new module under
-  `src/batchling/batching/providers/`.
+  `src/batchling/providers/`.
 - Override provider methods as needed (`build_jsonl_lines()`,
   `build_file_based_batch_payload()`, `build_inline_batch_payload()`,
   `build_api_headers()`, `from_batch_result()`).
@@ -123,6 +123,6 @@ Provider configuration on `BaseProvider` includes:
 
 ## Code reference
 
-- `src/batchling/batching/providers/base.py`
-- `src/batchling/batching/providers/openai.py`
-- `src/batchling/batching/providers/__init__.py`
+- `src/batchling/providers/base.py`
+- `src/batchling/providers/openai.py`
+- `src/batchling/providers/__init__.py`

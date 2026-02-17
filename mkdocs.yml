@@ -23,5 +23,5 @@ nav:
       - API Surface: architecture/api.md
       - Core Engine: architecture/core.md
       - Hooks: architecture/hooks.md
-      - Proxy: architecture/proxy.md
+      - Context: architecture/context.md
       - Providers: architecture/providers.md

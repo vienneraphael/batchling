@@ -20,4 +20,4 @@ a context variable.
 
 ## Code reference
 
-- `src/batchling/batching/context.py`
+- `src/batchling/context.py`

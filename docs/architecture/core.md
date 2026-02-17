@@ -49,4 +49,4 @@ synthetic `httpx.Response` (`200`) marked with `x-batchling-dry-run: 1`.
 
 ## Code reference
 
-- `src/batchling/batching/core.py`
+- `src/batchling/core.py`

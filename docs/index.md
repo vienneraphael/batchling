@@ -2,7 +2,7 @@
 
 ![Batchling logo](assets/images/batchling.png)
 
-Batchling is a Python library to run large-scale GenAI batch experiments across providers with a unified API. It helps with batch creation, file management, error handling, and structured outputs while keeping experiments reproducible.
+Batchling is a Python library that intercepts supported HTTP calls and routes them through provider batch APIs with a unified interface.
 
 ## Get started
 

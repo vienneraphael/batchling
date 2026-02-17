@@ -34,7 +34,7 @@ implementation targets `httpx.AsyncClient.send` and `aiohttp.ClientSession._requ
 Batch routing currently relies on `active_batcher` (a context variable) as an opt-in gate.
 There are two main strategies to keep batching behavior correct and ergonomic:
 
-- Context manager scoping (`with` / `async with` on the proxy): reliably sets the active
+- Context manager scoping (`with` / `async with` on `BatchingContext`): reliably sets the active
   batcher for the entire block so any tasks spawned inside inherit it. This is simple,
   predictable, and keeps batching opt-in, but it requires callers to adopt the context
   manager pattern.
@@ -48,4 +48,4 @@ integration can be added selectively where ergonomics matter most.
 
 ## Code reference
 
-- `src/batchling/batching/hooks.py`
+- `src/batchling/hooks.py`

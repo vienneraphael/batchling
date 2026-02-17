@@ -2,7 +2,7 @@
 
 `batchify` is the public entry point that activates batching for a scoped context.
 It installs global hooks, creates a `Batcher`, and returns a `BatchingContext` that
-yields `None`. Import it from `batchling` or `batchling.batching`.
+yields `None`. Import it from `batchling`.
 
 ## Responsibilities
 
@@ -50,4 +50,4 @@ Behavior:
 
 ## Code reference
 
-- `src/batchling/batching/api.py`
+- `src/batchling/api.py`

@@ -29,8 +29,8 @@ flowchart TB
         decode[Response Decoding]
     end
 
-    app -->|calls wrapped function or client| batchify
-    batchify -->|returns wrapper or context| app
+    app -->|enters batching scope| batchify
+    batchify -->|returns BatchingContext| app
 
     batchify -->|returns context for| proxy
     batchify -->|installs hooks and seeds| ctx
@@ -49,7 +49,7 @@ flowchart TB
 
 ## Notes
 
-1. `batchify` wraps a function or client instance and installs hooks.
+1. `batchify` creates a `Batcher`, installs hooks, and returns a `BatchingContext`.
 2. `BatchingContext` activates the context variable that holds the active `Batcher`.
 3. HTTP hooks capture supported requests and enqueue them into the `Batcher`.
 4. The `Batcher` batches pending requests, submits them, and resolves per-request futures.
