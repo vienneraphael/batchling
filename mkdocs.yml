@@ -3,6 +3,7 @@ site_url: https://vienneraphael.github.io/batchling/
 repo_name: vienneraphael/batchling
 repo_url: https://github.com/vienneraphael/batchling
 site_dir: docs-site
+strict: true
 
 theme:
   name: material
@@ -10,18 +11,44 @@ theme:
     scheme: default
     primary: indigo
     accent: indigo
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
 
 plugins:
   - search
   - mkdocstrings:
       default_handler: python
 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - toc:
+      permalink: true
+
 nav:
   - Home: index.md
+  - Guide:
+      - Getting Started: getting-started.md
+      - Usage Patterns: usage-patterns.md
+      - Configuration: configuration.md
+      - Providers: providers.md
+      - Troubleshooting: troubleshooting.md
   - Architecture:
       - Overview: architecture/overview.md
       - API Surface: architecture/api.md
       - Core Engine: architecture/core.md
       - Hooks: architecture/hooks.md
       - Context: architecture/context.md
-      - Providers: architecture/providers.md
+      - Provider Adapters: architecture/providers.md
