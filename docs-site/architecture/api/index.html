@@ -149,6 +149,8 @@
         </button>
       </nav>
 
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+
     </form>
     <div class="md-search__output">
       <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
@@ -265,14 +267,246 @@
 
 
 
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
 
 
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+
+
+
+
+
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+
+
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Guide
+
+
+
+  </span>
+
+
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+
+
+    Guide
+
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Getting Started
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../usage-patterns/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Usage Patterns
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Configuration
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../providers/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Providers
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Troubleshooting
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+          </ul>
+        </nav>
+
+    </li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+
+
+
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+
+
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
 
 
 
@@ -290,8 +524,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -418,6 +652,17 @@
 </li>
 
         <li class="md-nav__item">
+  <a href="#cli-callable-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        CLI callable usage
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
   <a href="#extension-notes" class="md-nav__link">
     <span class="md-ellipsis">
 
@@ -511,14 +756,14 @@
 
 
     <li class="md-nav__item">
-      <a href="../proxy/" class="md-nav__link">
+      <a href="../context/" class="md-nav__link">
 
 
 
   <span class="md-ellipsis">
 
 
-    Proxy
+    Context
 
 
 
@@ -546,7 +791,7 @@
   <span class="md-ellipsis">
 
 
-    Providers
+    Provider Adapters
 
 
 
@@ -616,6 +861,17 @@
 </li>
 
         <li class="md-nav__item">
+  <a href="#cli-callable-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        CLI callable usage
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
   <a href="#extension-notes" class="md-nav__link">
     <span class="md-ellipsis">
 
@@ -657,30 +913,53 @@
 
 
 
-<h1 id="api-surface-batchify">API surface: <code>batchify</code></h1>
-<p><code>batchify</code> is the public entry point that activates batching for either a callable or an
-object instance. It installs global hooks, creates a <code>Batcher</code>, and then returns either a
-decorated function or a <code>BatchingProxy</code> for instances.</p>
-<h2 id="responsibilities">Responsibilities</h2>
+<h1 id="api-surface-batchify">API surface: <code>batchify</code><a class="headerlink" href="#api-surface-batchify" title="Permanent link">&para;</a></h1>
+<p><code>batchify</code> is the public entry point that activates batching for a scoped context.
+It installs global hooks, creates a <code>Batcher</code>, and returns a <code>BatchingContext</code> that
+yields <code>None</code>. Import it from <code>batchling</code>.</p>
+<h2 id="responsibilities">Responsibilities<a class="headerlink" href="#responsibilities" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Install HTTP hooks once (idempotent).</li>
-<li>Construct a <code>Batcher</code> with configuration such as <code>batch_size</code> and <code>batch_window_seconds</code>.</li>
-<li>Wrap callables with a decorator that sets the active batcher in a context variable.</li>
-<li>Wrap objects with <code>BatchingProxy</code> so all method calls inherit the batching context.</li>
+<li>Construct a <code>Batcher</code> with configuration such as <code>batch_size</code>,
+  <code>batch_window_seconds</code>, <code>batch_poll_interval_seconds</code>, and <code>dry_run</code>.</li>
+<li>Return a <code>BatchingContext</code> to scope batching to a context manager.</li>
 </ul>
-<h2 id="inputs-and-outputs">Inputs and outputs</h2>
+<h2 id="inputs-and-outputs">Inputs and outputs<a class="headerlink" href="#inputs-and-outputs" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Inputs</strong>: a callable or instance plus batcher configuration keyword arguments.</li>
-<li><strong>Outputs</strong>: a decorated callable or <code>BatchingProxy[T]</code> instance that preserves the wrapped type.</li>
+<li><strong>Inputs</strong>: batcher configuration arguments.</li>
+<li><strong>Queue semantics</strong>: <code>batch_size</code> and <code>batch_window_seconds</code> are applied per
+  strict queue key <code>(provider, endpoint, model)</code>.</li>
+<li><strong><code>dry_run</code> behavior</strong>: when <code>dry_run=True</code>, requests are still intercepted, queued,
+  and grouped using normal window/size triggers, but provider batch submission and polling
+  are skipped. Requests resolve with synthetic <code>httpx.Response</code> objects marked with
+  <code>x-batchling-dry-run: 1</code>.</li>
+<li><strong>Outputs</strong>: <code>BatchingContext[None]</code> instance that yields <code>None</code>.</li>
 </ul>
-<h2 id="extension-notes">Extension notes</h2>
+<h2 id="cli-callable-usage">CLI callable usage<a class="headerlink" href="#cli-callable-usage" title="Permanent link">&para;</a></h2>
+<p>The <code>batchling</code> CLI can execute an async callable from a script inside <code>batchify</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>batchling<span class="w"> </span>path/to/my_script.py:foo<span class="w"> </span>arg1<span class="w"> </span>--name<span class="w"> </span>alice<span class="w"> </span>--count<span class="o">=</span><span class="m">3</span><span class="w"> </span>--dry-run
+</code></pre></div>
+<p>Behavior:</p>
+<ul>
+<li>CLI options map directly to <code>batchify</code> arguments:
+  <code>batch_size</code>, <code>batch_window_seconds</code>, <code>batch_poll_interval_seconds</code>, and <code>dry_run</code>.</li>
+<li>Script target must use <code>module_path:function_name</code> syntax.</li>
+<li>Forwarded callable arguments are mapped as:
+  positional tokens are passed as positional arguments;
+  <code>--name value</code> and <code>--name=value</code> are passed as keyword arguments.</li>
+<li>Standalone <code>--flag</code> tokens are passed as boolean keyword arguments with <code>True</code>.</li>
+<li>The script file is loaded with <code>runpy.run_path(..., run_name="batchling.runtime")</code>
+  and the target async callable is awaited.</li>
+</ul>
+<h2 id="extension-notes">Extension notes<a class="headerlink" href="#extension-notes" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Any new hook types should be installed by <code>install_hooks()</code> so the behavior stays centralized.</li>
-<li>Configuration changes to <code>Batcher</code> should be surfaced through keyword arguments on <code>batchify</code>.</li>
+<li>Configuration changes to <code>Batcher</code> should be surfaced through arguments on <code>batchify</code>.</li>
+<li><code>batchify</code> only supports a pure context-manager lifecycle and does not accept a target.</li>
 </ul>
-<h2 id="code-reference">Code reference</h2>
+<h2 id="code-reference">Code reference<a class="headerlink" href="#code-reference" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>src/batchling/batching/api.py</code></li>
+<li><code>src/batchling/api.py</code></li>
 </ul>
 
 
@@ -701,6 +980,12 @@ decorated function or a <code>BatchingProxy</code> for instances.</p>
 
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
+
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
 
       </main>
 
@@ -731,7 +1016,7 @@ decorated function or a <code>BatchingProxy</code> for instances.</p>
 
 
 
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
 
 
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>

@@ -14,7 +14,7 @@
         <link rel="prev" href="../core/">
 
 
-        <link rel="next" href="../proxy/">
+        <link rel="next" href="../context/">
 
 
 
@@ -149,6 +149,8 @@
         </button>
       </nav>
 
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+
     </form>
     <div class="md-search__output">
       <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
@@ -265,14 +267,246 @@
 
 
 
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
 
 
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+
+
+
+
+
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+
+
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Guide
+
+
+
+  </span>
+
+
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+
+
+    Guide
+
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Getting Started
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../usage-patterns/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Usage Patterns
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Configuration
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../providers/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Providers
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Troubleshooting
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+          </ul>
+        </nav>
+
+    </li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+
+
+
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+
+
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
 
 
 
@@ -290,8 +524,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -522,14 +756,14 @@
 
 
     <li class="md-nav__item">
-      <a href="../proxy/" class="md-nav__link">
+      <a href="../context/" class="md-nav__link">
 
 
 
   <span class="md-ellipsis">
 
 
-    Proxy
+    Context
 
 
 
@@ -557,7 +791,7 @@
   <span class="md-ellipsis">
 
 
-    Providers
+    Provider Adapters
 
 
 
@@ -679,39 +913,40 @@
 
 
 
-<h1 id="http-hooks-request-interception">HTTP hooks: request interception</h1>
+<h1 id="http-hooks-request-interception">HTTP hooks: request interception<a class="headerlink" href="#http-hooks-request-interception" title="Permanent link">&para;</a></h1>
 <p>Hooks intercept HTTP client requests and decide whether to batch them. The current
-implementation targets <code>httpx.AsyncClient.send</code>, but the hook mechanism is intended to
-expand to other clients.</p>
-<h2 id="responsibilities">Responsibilities</h2>
+implementation targets <code>httpx.AsyncClient.send</code> and <code>aiohttp.ClientSession._request</code>.</p>
+<h2 id="responsibilities">Responsibilities<a class="headerlink" href="#responsibilities" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Patch supported HTTP client methods once globally (idempotent install).</li>
-<li>Capture request details for logging and diagnostics.</li>
-<li>Look up the active <code>Batcher</code> context and route supported URLs into batching.</li>
+<li>Capture request details for logging and diagnostics (request headers are redacted
+  in logs only).</li>
+<li>Look up the active <code>Batcher</code> context and route supported provider endpoints into batching.</li>
 <li>Fall back to the original client behavior for unsupported URLs or when no active
   batcher is set.</li>
 </ul>
-<h2 id="flow-summary">Flow summary</h2>
+<h2 id="flow-summary">Flow summary<a class="headerlink" href="#flow-summary" title="Permanent link">&para;</a></h2>
 <ol>
-<li><code>install_hooks()</code> stores the original method and patches <code>httpx.AsyncClient.send</code>.</li>
-<li><code>_httpx_async_send_hook()</code> logs request details and checks <code>active_batcher</code>.</li>
+<li><code>install_hooks()</code> stores original methods and patches both <code>httpx</code> and <code>aiohttp</code>.</li>
+<li>Hook handlers (<code>_httpx_async_send_hook()</code> and <code>_aiohttp_async_request_hook()</code>) log request
+   details and check <code>active_batcher</code>.</li>
 <li>If the request is marked as internal (<code>x-batchling-internal: 1</code>), the hook bypasses
    batching to avoid recursion.</li>
-<li>If a provider supports the URL and a batcher is active, the request is enqueued via
-   <code>batcher.submit()</code> and the resolved response is returned (often an <code>httpx.Response</code>,
-   but providers can return other shapes).</li>
+<li>If a provider marks the <code>method + endpoint</code> as batchable and a batcher is active,
+   the request is enqueued via <code>batcher.submit()</code> and the resolved response is returned
+   (usually an <code>httpx.Response</code>; aiohttp callers receive an aiohttp-compatible wrapper).</li>
 <li>Otherwise, the original request is invoked.</li>
 </ol>
-<h2 id="extension-notes">Extension notes</h2>
+<h2 id="extension-notes">Extension notes<a class="headerlink" href="#extension-notes" title="Permanent link">&para;</a></h2>
 <ul>
 <li>When adding new HTTP client support, mirror the <code>httpx</code> pattern: store the original
   method, patch it, and route to <code>batcher.submit()</code> when eligible.</li>
 </ul>
-<h2 id="context-vs-provider-integration-tradeoff">Context vs provider integration tradeoff</h2>
+<h2 id="context-vs-provider-integration-tradeoff">Context vs provider integration tradeoff<a class="headerlink" href="#context-vs-provider-integration-tradeoff" title="Permanent link">&para;</a></h2>
 <p>Batch routing currently relies on <code>active_batcher</code> (a context variable) as an opt-in gate.
 There are two main strategies to keep batching behavior correct and ergonomic:</p>
 <ul>
-<li>Context manager scoping (<code>with</code> / <code>async with</code> on the proxy): reliably sets the active
+<li>Context manager scoping (<code>with</code> / <code>async with</code> on <code>BatchingContext</code>): reliably sets the active
   batcher for the entire block so any tasks spawned inside inherit it. This is simple,
   predictable, and keeps batching opt-in, but it requires callers to adopt the context
   manager pattern.</li>
@@ -722,9 +957,9 @@ There are two main strategies to keep batching behavior correct and ergonomic:</
 </ul>
 <p>In practice, the context manager is the most stable default, and provider-specific
 integration can be added selectively where ergonomics matter most.</p>
-<h2 id="code-reference">Code reference</h2>
+<h2 id="code-reference">Code reference<a class="headerlink" href="#code-reference" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>src/batchling/batching/hooks.py</code></li>
+<li><code>src/batchling/hooks.py</code></li>
 </ul>
 
 
@@ -745,6 +980,12 @@ integration can be added selectively where ergonomics matter most.</p>
 
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
+
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
 
       </main>
 
@@ -775,7 +1016,7 @@ integration can be added selectively where ergonomics matter most.</p>
 
 
 
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
 
 
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>

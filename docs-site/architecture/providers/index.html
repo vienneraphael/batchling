@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://vienneraphael.github.io/batchling/architecture/providers/">
 
 
-        <link rel="prev" href="../proxy/">
+        <link rel="prev" href="../context/">
 
 
 
@@ -23,7 +23,7 @@
 
 
 
-        <title>Providers - Batchling</title>
+        <title>Provider Adapters - Batchling</title>
 
 
 
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
 
-              Providers
+              Provider Adapters
 
           </span>
         </div>
@@ -146,6 +146,8 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </nav>
+
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
 
     </form>
     <div class="md-search__output">
@@ -263,14 +265,246 @@
 
 
 
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
 
 
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+
+
+
+
+
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+
+
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Guide
+
+
+
+  </span>
+
+
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+
+
+    Guide
+
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Getting Started
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../usage-patterns/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Usage Patterns
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Configuration
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../providers/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Providers
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Troubleshooting
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+          </ul>
+        </nav>
+
+    </li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+
+
+
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+
+
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
 
 
 
@@ -288,8 +522,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -418,14 +652,14 @@
 
 
     <li class="md-nav__item">
-      <a href="../proxy/" class="md-nav__link">
+      <a href="../context/" class="md-nav__link">
 
 
 
   <span class="md-ellipsis">
 
 
-    Proxy
+    Context
 
 
 
@@ -462,7 +696,7 @@
   <span class="md-ellipsis">
 
 
-    Providers
+    Provider Adapters
 
 
 
@@ -480,7 +714,7 @@
   <span class="md-ellipsis">
 
 
-    Providers
+    Provider Adapters
 
 
 
@@ -532,6 +766,61 @@
     <span class="md-ellipsis">
 
         OpenAI provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#gemini-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Gemini provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#anthropic-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Anthropic provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#mistral-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Mistral provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#together-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Together provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#doubleword-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Doubleword provider
 
     </span>
   </a>
@@ -636,6 +925,61 @@
 </li>
 
         <li class="md-nav__item">
+  <a href="#gemini-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Gemini provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#anthropic-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Anthropic provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#mistral-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Mistral provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#together-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Together provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#doubleword-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Doubleword provider
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
   <a href="#extension-notes" class="md-nav__link">
     <span class="md-ellipsis">
 
@@ -677,41 +1021,125 @@
 
 
 
-<h1 id="provider-adapters">Provider adapters</h1>
+<h1 id="provider-adapters">Provider adapters<a class="headerlink" href="#provider-adapters" title="Permanent link">&para;</a></h1>
 <p>Providers translate between ordinary HTTP requests and provider-specific batch APIs. They
 are responsible for URL matching and for reconstructing <code>httpx.Response</code> objects from
 batch results.</p>
-<h2 id="responsibilities">Responsibilities</h2>
+<h2 id="responsibilities">Responsibilities<a class="headerlink" href="#responsibilities" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Declare supported hostnames and path prefixes.</li>
+<li>Declare supported hostnames.</li>
+<li>Declare explicit batchable HTTP endpoints (<code>path</code>) for hook routing.</li>
+<li>Declare provider-specific terminal batch states used by the core poller.</li>
 <li>Identify whether a URL belongs to a provider.</li>
-<li>Normalize request URLs if required by the provider's batch API.</li>
+<li>Submit provider batches via <code>process_batch()</code> (file-based or inline).</li>
+<li>Normalize request URLs for provider batch endpoints.</li>
 <li>Convert JSONL batch result lines into <code>httpx.Response</code> objects for callers.</li>
 </ul>
-<h2 id="registry-and-lookup">Registry and lookup</h2>
+<h2 id="registry-and-lookup">Registry and lookup<a class="headerlink" href="#registry-and-lookup" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Providers are registered in <code>batchling.batching.providers</code>.</li>
-<li><code>get_provider_for_url()</code> indexes providers by hostname and path prefix for efficient
-  lookup, with a fallback match if indices do not produce a candidate.</li>
+<li>Providers are auto-discovered from <code>batchling/providers/*.py</code> files
+  (excluding <code>__init__.py</code> and <code>base.py</code>).</li>
+<li><code>get_provider_for_batch_request()</code> resolves a provider only when the request's
+  <code>POST + path</code> is explicitly batchable for that provider.</li>
 </ul>
-<h2 id="openai-provider">OpenAI provider</h2>
-<p>The OpenAI provider implements <code>from_batch_result()</code> to:</p>
+<h2 id="openai-provider">OpenAI provider<a class="headerlink" href="#openai-provider" title="Permanent link">&para;</a></h2>
+<p>The OpenAI provider implements:</p>
 <ul>
-<li>Extract success or error payloads from a batch result line.</li>
-<li>Convert payloads into raw bytes.</li>
-<li>Return an <code>httpx.Response</code> with appropriate headers.</li>
+<li><code>build_api_headers()</code> for auth + provider-specific passthrough headers.</li>
+<li>file-based batch submission (<code>/v1/files</code> then <code>/v1/batches</code>).</li>
+<li><code>from_batch_result()</code> to decode batch output lines.</li>
 </ul>
-<h2 id="extension-notes">Extension notes</h2>
+<h2 id="gemini-provider">Gemini provider<a class="headerlink" href="#gemini-provider" title="Permanent link">&para;</a></h2>
+<p>The Gemini provider implements:</p>
 <ul>
-<li>Add new provider classes by subclassing <code>BaseProvider</code> and registering them in
-  <code>PROVIDERS</code>.</li>
-<li>Keep <code>matches_url()</code> conservative to avoid batch-routing unsupported URLs.</li>
+<li>dynamic batchable endpoint matching (<code>/v1beta/models/{model}:generateContent</code>).</li>
+<li>model extraction from the request endpoint path (for strict queue partitioning).</li>
+<li>file upload via Gemini resumable uploads (<code>/upload/v1beta/files</code>).</li>
+<li>model-scoped batch submission path (<code>/v1beta/models/{model}:batchGenerateContent</code>).</li>
+<li>poll path override (<code>/v1beta/batches/{batch_id}</code>) with <code>metadata.state</code> status extraction.</li>
+<li>output file extraction from poll payload (<code>response.responsesFile</code>).</li>
+<li>provider-specific result row key mapping (<code>custom_id_field_name = "key"</code>).</li>
 </ul>
-<h2 id="code-reference">Code reference</h2>
+<h2 id="anthropic-provider">Anthropic provider<a class="headerlink" href="#anthropic-provider" title="Permanent link">&para;</a></h2>
+<p>The Anthropic provider implements:</p>
 <ul>
-<li><code>src/batchling/batching/providers/base.py</code></li>
-<li><code>src/batchling/batching/providers/openai.py</code></li>
-<li><code>src/batchling/batching/providers/__init__.py</code></li>
+<li>inline batch submission to <code>/v1/messages/batches</code> (no file upload step).</li>
+<li>provider-specific status polling field (<code>processing_status</code>).</li>
+<li><code>x-api-key</code> passthrough via <code>build_api_headers()</code>.</li>
+<li><code>from_batch_result()</code> to decode batch output lines.</li>
+</ul>
+<h2 id="mistral-provider">Mistral provider<a class="headerlink" href="#mistral-provider" title="Permanent link">&para;</a></h2>
+<p>The Mistral provider reuses the file-based flow with provider-specific endpoints:</p>
+<ul>
+<li><code>hostnames = ("api.mistral.ai",)</code></li>
+<li><code>batch_endpoint = "/v1/batch/jobs"</code></li>
+<li><code>file_upload_endpoint = "/v1/files"</code></li>
+<li><code>file_content_endpoint = "/v1/files"</code></li>
+</ul>
+<h2 id="together-provider">Together provider<a class="headerlink" href="#together-provider" title="Permanent link">&para;</a></h2>
+<p>The Together provider follows the same batch lifecycle with provider-specific upload and
+batch response shapes:</p>
+<ul>
+<li><code>hostnames = ("api.together.xyz",)</code></li>
+<li><code>batchable_endpoints = ("/v1/chat/completions", "/v1/audio/transcriptions")</code></li>
+<li><code>file_upload_endpoint = "/v1/files/upload"</code></li>
+<li><code>file_content_endpoint = "/v1/files"</code></li>
+<li>overrides batch file upload form fields (<code>file_name</code>, <code>purpose=batch-api</code>)</li>
+<li>extracts batch id from nested response payload (<code>job.id</code>)</li>
+</ul>
+<h2 id="doubleword-provider">Doubleword provider<a class="headerlink" href="#doubleword-provider" title="Permanent link">&para;</a></h2>
+<p>The Doubleword provider reuses the OpenAI provider implementation and only changes:</p>
+<ul>
+<li><code>hostnames = ("api.doubleword.ai",)</code></li>
+<li><code>batchable_endpoints = ("/v1/chat/completions",)</code></li>
+</ul>
+<p>Terminal states are inherited unchanged from the OpenAI provider.</p>
+<p>Common helpers now live on <code>BaseProvider</code> and can be reused by all providers:</p>
+<ul>
+<li><code>matches_url()</code></li>
+<li><code>is_batchable_request()</code></li>
+<li><code>matches_batchable_endpoint()</code></li>
+<li><code>normalize_url()</code></li>
+<li><code>extract_base_and_endpoint()</code></li>
+<li><code>extract_model_name()</code></li>
+<li><code>build_jsonl_lines()</code></li>
+<li><code>build_batch_submit_path()</code></li>
+<li><code>build_batch_poll_path()</code></li>
+<li><code>build_batch_results_path()</code></li>
+<li><code>extract_batch_status()</code></li>
+<li><code>get_output_file_id_from_poll_response()</code></li>
+<li><code>encode_body()</code></li>
+</ul>
+<p>Provider configuration on <code>BaseProvider</code> includes:</p>
+<ul>
+<li><code>hostnames</code></li>
+<li><code>batch_method</code></li>
+<li><code>batchable_endpoints</code></li>
+<li><code>is_file_based</code> (switch between file upload flow and inline flow)</li>
+<li><code>file_upload_endpoint</code> (where JSONL input files are uploaded)</li>
+<li><code>file_content_endpoint</code> (where output/error file content is fetched)</li>
+<li><code>batch_endpoint</code> (where the batch job is created)</li>
+<li><code>batch_terminal_states</code> (statuses that stop polling and trigger result resolution)</li>
+<li><code>batch_status_field_name</code> (status field read from poll responses)</li>
+<li><code>custom_id_field_name</code> (result key used to map output rows back to requests)</li>
+<li><code>output_file_field_name</code> / <code>error_file_field_name</code></li>
+</ul>
+<h2 id="extension-notes">Extension notes<a class="headerlink" href="#extension-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Add new provider classes by subclassing <code>BaseProvider</code> in a new module under
+  <code>src/batchling/providers/</code>.</li>
+<li>Override provider methods as needed (<code>build_jsonl_lines()</code>,
+  <code>build_file_based_batch_payload()</code>, <code>build_inline_batch_payload()</code>,
+  <code>build_api_headers()</code>, <code>from_batch_result()</code>).</li>
+<li>Define <code>batch_terminal_states</code> for the provider so <code>Batcher</code> can stop polling at the
+  correct lifecycle states.</li>
+<li>Keep <code>matches_url()</code> conservative if you override it.</li>
+</ul>
+<h2 id="code-reference">Code reference<a class="headerlink" href="#code-reference" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>src/batchling/providers/base.py</code></li>
+<li><code>src/batchling/providers/openai.py</code></li>
+<li><code>src/batchling/providers/__init__.py</code></li>
 </ul>
 
 
@@ -732,6 +1160,12 @@ batch results.</p>
 
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
+
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
 
       </main>
 
@@ -762,7 +1196,7 @@ batch results.</p>
 
 
 
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
 
 
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>

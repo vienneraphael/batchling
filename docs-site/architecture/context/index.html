@@ -25,7 +25,7 @@
 
 
 
-        <title>Proxy - Batchling</title>
+        <title>Context - Batchling</title>
 
 
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
 
 
-        <a href="#proxy-wrapper-batchingproxy" class="md-skip">
+        <a href="#context-manager-batchingcontext" class="md-skip">
           Skip to content
         </a>
 
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
 
-              Proxy
+              Context
 
           </span>
         </div>
@@ -148,6 +148,8 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </nav>
+
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
 
     </form>
     <div class="md-search__output">
@@ -265,14 +267,246 @@
 
 
 
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
 
 
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+
+
+
+
+
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+
+
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Guide
+
+
+
+  </span>
+
+
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+
+
+    Guide
+
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Getting Started
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../usage-patterns/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Usage Patterns
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Configuration
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../providers/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Providers
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Troubleshooting
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+          </ul>
+        </nav>
+
+    </li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+
+
+
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+
+
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
 
 
 
@@ -290,8 +524,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -436,7 +670,7 @@
   <span class="md-ellipsis">
 
 
-    Proxy
+    Context
 
 
 
@@ -454,7 +688,7 @@
   <span class="md-ellipsis">
 
 
-    Proxy
+    Context
 
 
 
@@ -535,7 +769,7 @@
   <span class="md-ellipsis">
 
 
-    Providers
+    Provider Adapters
 
 
 
@@ -635,32 +869,27 @@
 
 
 
-<h1 id="proxy-wrapper-batchingproxy">Context manager: <code>BatchingProxy</code></h1>
-<p><code>BatchingProxy</code> wraps an object instance and ensures every method call runs with the
-active <code>Batcher</code> set in a context variable. It uses <code>wrapt.ObjectProxy</code> to preserve
-introspection and <code>isinstance</code> behavior while supporting recursive attribute access.</p>
-<h2 id="responsibilities">Responsibilities</h2>
+<h1 id="context-manager-batchingcontext">Context manager: <code>BatchingContext</code><a class="headerlink" href="#context-manager-batchingcontext" title="Permanent link">&para;</a></h1>
+<p><code>BatchingContext</code> is a lightweight context manager that activates an active <code>Batcher</code>
+for a scoped block. It yields <code>None</code>, while all HTTP hooks read the active batcher from
+a context variable.</p>
+<h2 id="responsibilities">Responsibilities<a class="headerlink" href="#responsibilities" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Preserve the wrapped object's type for IDE autocomplete and type checking.</li>
-<li>Set the <code>active_batcher</code> context around every method invocation (sync or async).</li>
-<li>Recurse into nested attributes (e.g., <code>client.chat.completions</code>) to keep batching
-  active across namespaces.</li>
+<li>Activate the <code>active_batcher</code> context for the duration of a context block.</li>
+<li>Yield <code>None</code> for scope-only lifecycle control.</li>
 <li>Support sync and async context manager patterns for cleanup and context scoping.</li>
 </ul>
-<h2 id="flow-summary">Flow summary</h2>
+<h2 id="flow-summary">Flow summary<a class="headerlink" href="#flow-summary" title="Permanent link">&para;</a></h2>
 <ol>
-<li><code>BatchingProxy</code> stores the <code>Batcher</code> on initialization.</li>
-<li><code>__getattr__</code> resolves the attribute on the wrapped object.</li>
-<li>Callable attributes are wrapped with a context-setting wrapper.</li>
-<li>Non-primitive attributes are wrapped recursively in another <code>BatchingProxy</code>.</li>
+<li><code>BatchingContext</code> stores the <code>Batcher</code> on initialization.</li>
 <li><code>__enter__</code>/<code>__aenter__</code> set the active batcher for the entire context block.</li>
 <li><code>__exit__</code> resets the context and schedules <code>batcher.close()</code> if an event loop is
    running (otherwise it warns).</li>
 <li><code>__aexit__</code> resets the context and awaits <code>batcher.close()</code> to flush pending work.</li>
 </ol>
-<h2 id="code-reference">Code reference</h2>
+<h2 id="code-reference">Code reference<a class="headerlink" href="#code-reference" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>src/batchling/batching/context.py</code></li>
+<li><code>src/batchling/context.py</code></li>
 </ul>
 
 
@@ -681,6 +910,12 @@ introspection and <code>isinstance</code> behavior while supporting recursive at
 
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
+
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
 
       </main>
 
@@ -711,7 +946,7 @@ introspection and <code>isinstance</code> behavior while supporting recursive at
 
 
 
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
 
 
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
