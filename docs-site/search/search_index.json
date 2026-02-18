@@ -23,27 +23,57 @@
     {
       "location": "",
       "title": "Batchling",
-      "text": "<p>Batchling helps you run supported GenAI calls through provider batch APIs with minimal code changes.</p>"
+      "text": "<p>Batch API calls from familiar clients.</p> <p>Batchling intercepts supported requests, groups them by provider, and   returns normal responses while reducing cost and latency overhead.</p> Quickstart Install and run the first async batching flow in minutes. Configuration Tune batch sizes, windows, and dry-run behavior safely. Architecture Understand context flow, hook interception, and provider adapters."
     },
     {
-      "location": "#who-this-is-for",
-      "title": "Who this is for",
-      "text": "<ul> <li>Teams running async AI workloads that can complete later (minutes to hours).</li> <li>Developers who want lower API costs for offline or deferred jobs.</li> <li>Python users integrating OpenAI-compatible or supported provider clients.</li> </ul>"
+      "location": "#batchling_1",
+      "title": "batchling",
+      "text": "<p> Save 50% off GenAI costs in two lines of code </p> <p> <p>batchling is a frictionless, batteries-included plugin to convert any GenAI async function or script into half-cost deferred jobs.</p> <p>Key features:</p> <ul> <li>Simplicity: a simple 2-liner gets you 50% off your GenAI bill instantly.</li> <li>Transparent: Your code remains the same, no added behaviors. Track sent batches easily.</li> <li>Global: Integrates with most providers and all frameworks.</li> <li>Safe: Get a complete breakdown of your cost savings before launching a single batch.</li> <li>Lightweight: Very few dependencies.</li> </ul> What's the catch? <p>The catch is the Batch API!</p> <p>Batch APIs enable you to process large volumes of requests asynchronously (usually at 50% lower cost compared to real-time API calls). It's perfect for workloads that don't need immediate responses such as:</p> <ul> <li>Running mass offline evaluations</li> <li>Classifying large datasets</li> <li>Generating large-scale embeddings</li> <li>Offline summarization</li> <li>Synthetic data generation</li> <li>Structured data extraction (e.g. OCR)</li> <li>Audio transcriptions/translations at scale</li> </ul> <p>Compared to using standard endpoints directly, Batch API offers:</p> <ul> <li>Better cost efficiency: usually 50% cost discount compared to synchronous APIs</li> <li>Higher rate limits: Substantially more headroom with separate rate limit pools</li> <li>Large-scale support: Process thousands of requests per batch</li> <li>Flexible completion: Best-effort completion within 24 hours with progress tracking, batches usually complete within an hour.</li> </ul>"
     },
     {
-      "location": "#fastest-path-to-value",
-      "title": "Fastest path to value",
-      "text": "<ol> <li>Install <code>batchling</code>.</li> <li>Wrap your async workload in <code>batchify()</code>.</li> <li>Run and let Batchling route supported requests to provider batch APIs.</li> </ol>"
+      "location": "#installation",
+      "title": "Installation",
+      "text": "<pre><code>pip install batchling\n</code></pre>"
     },
     {
-      "location": "#start-here",
-      "title": "Start here",
-      "text": "<ul> <li>Quickstart: Getting Started</li> <li>Runtime and queue tuning: Configuration</li> <li>Provider compatibility: Providers</li> <li>Issue resolution: Troubleshooting</li> </ul>"
+      "location": "#get-started",
+      "title": "Get Started",
+      "text": ""
     },
     {
-      "location": "#need-internals",
-      "title": "Need internals?",
-      "text": "<p>Implementation details are in the Architecture section.</p>"
+      "location": "#using-the-async-context-manager-recommended",
+      "title": "Using the async context manager (recommended)",
+      "text": "<pre><code>import asyncio\nfrom batchling import batchify\nfrom openai import AsyncOpenAI\n\nasync def generate():\n    client = AsyncOpenAI()\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    tasks = [\n        client.responses.create(\n            input=messages,\n            model=\"gpt-4o-mini\",\n        ),\n        client.responses.create(\n            input=messages,\n            model=\"gpt-5-nano\",\n        ),\n    ]\n    with batchify(): # Runs your tasks as batches, save 50%\n        responses = await asyncio.gather(*tasks)\n</code></pre>"
+    },
+    {
+      "location": "#using-the-cli-wrapper",
+      "title": "Using the CLI wrapper",
+      "text": "<p>Create a file <code>main.py</code> with:</p> <pre><code>import asyncio\nfrom openai import AsyncOpenAI\n\nasync def generate():\n    client = AsyncOpenAI()\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    tasks = [\n        client.responses.create(\n            input=messages,\n            model=\"gpt-4o-mini\",\n        ),\n        client.responses.create(\n            input=messages,\n            model=\"gpt-5-nano\",\n        ),\n    ]\n    responses = await asyncio.gather(*tasks)\n</code></pre> <p>Run your function in batch mode:</p> <pre><code>batchling main.py:generate\n</code></pre>"
+    },
+    {
+      "location": "#how-it-works",
+      "title": "How it works",
+      "text": ""
+    },
+    {
+      "location": "#request-interception",
+      "title": "Request interception",
+      "text": "<p>batchling patches <code>httpx</code> and <code>aiohttp</code>, the two main async request utilities to capture certain requests based on batchable endpoint detection for GenAI providers exposing a batch API.</p>"
+    },
+    {
+      "location": "#batch-management",
+      "title": "Batch Management",
+      "text": "<p>Relevant requests are routed to a batch manager, which orchestrates batch queues. Batch queues behaviors are parametrized by user-defined parameters <code>batch_size</code> and <code>batch_window_size</code>. Each batch queue is associated with a unique <code>(provider, endpoint, model)</code> key.</p>"
+    },
+    {
+      "location": "#requests-repurposing",
+      "title": "Requests repurposing",
+      "text": "<p>Once batches are ready to go, the received requests are repurposed into batch-compatible requests and sent to the provider. Batches are automatically polled every <code>batch_poll_interval_seconds</code> seconds. Once all batches have been processed, the data is returned through the <code>httpx</code> or <code>aiohttp</code> patch like a regular request would have been, letting the rest of the script execute.</p>"
+    },
+    {
+      "location": "#supported-providers",
+      "title": "Supported providers",
+      "text": "Name Batch API Docs URL OpenAI https://platform.openai.com/docs/guides/batch Anthropic https://docs.anthropic.com/en/docs/build-with-claude/batch-processing Gemini https://ai.google.dev/gemini-api/docs/batch-mode Groq https://console.groq.com/docs/batch Mistral https://docs.mistral.ai/capabilities/batch/ Together AI https://docs.together.ai/docs/batch-inference Doubleword https://docs.doubleword.ai/batches/getting-started-with-batched-api"
     },
     {
       "location": "configuration/",
