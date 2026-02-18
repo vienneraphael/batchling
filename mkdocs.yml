@@ -8,9 +8,20 @@ strict: true
 theme:
   name: material
   palette:
-    scheme: default
-    primary: indigo
-    accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: brown
+      accent: brown
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: brown
+      accent: brown
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.expand
@@ -36,6 +47,9 @@ markdown_extensions:
       anchor_linenums: true
   - toc:
       permalink: true
+
+extra_css:
+  - assets/stylesheets/extra.css
 
 nav:
   - Home: index.md

@@ -1,0 +1,31 @@
+/*
+ * Custom Batchling palette.
+ * Light mode uses warm paper tones (#f8eedf, #f2dbb9) with dark browns (#301c10, #3a2215).
+ * Dark mode uses deep brown surfaces (#301c10, #3a2215) with warm highlights (#e0b986, #f8eedf).
+ */
+:root {
+  --md-primary-fg-color: #3a2215;
+  --md-primary-fg-color--light: #574132;
+  --md-primary-fg-color--dark: #301c10;
+  --md-accent-fg-color: #e0b986;
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #f8eedf;
+  --md-default-bg-color--light: #f2dbb9;
+  --md-default-fg-color: #301c10;
+  --md-default-fg-color--light: #3a2215;
+  --md-typeset-a-color: #574132;
+  --md-code-bg-color: #f2dbb9;
+  --md-typeset-mark-color: #e0b98666;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #301c10;
+  --md-default-bg-color--light: #3a2215;
+  --md-default-fg-color: #f8eedf;
+  --md-default-fg-color--light: #e0b986;
+  --md-typeset-a-color: #e0b986;
+  --md-code-bg-color: #3a2215;
+  --md-typeset-mark-color: #e0b98640;
+}
