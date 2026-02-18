@@ -1,28 +1,24 @@
 # Batchling
 
-![Batchling logo](assets/images/batchling.png)
+<div class="home-hero">
+  <p><strong>Batch API calls from familiar clients.</strong></p>
+  <p>Batchling intercepts supported requests, groups them by provider, and
+  returns normal responses while reducing cost and latency overhead.</p>
+</div>
 
-Batchling helps you run supported GenAI calls through provider batch APIs with minimal code changes.
+<div class="home-grid">
+  <a class="home-card" href="getting-started/">
+    <strong>Quickstart</strong>
+    <span>Install and run the first async batching flow in minutes.</span>
+  </a>
+  <a class="home-card" href="configuration/">
+    <strong>Configuration</strong>
+    <span>Tune batch sizes, windows, and dry-run behavior safely.</span>
+  </a>
+  <a class="home-card" href="architecture/overview/">
+    <strong>Architecture</strong>
+    <span>Understand context flow, hook interception, and provider adapters.</span>
+  </a>
+</div>
 
-## Who this is for
-
-- Teams running async AI workloads that can complete later (minutes to hours).
-- Developers who want lower API costs for offline or deferred jobs.
-- Python users integrating OpenAI-compatible or supported provider clients.
-
-## Fastest path to value
-
-1. Install `batchling`.
-2. Wrap your async workload in `batchify()`.
-3. Run and let Batchling route supported requests to provider batch APIs.
-
-## Start here
-
-- Quickstart: [Getting Started](getting-started.md)
-- Runtime and queue tuning: [Configuration](configuration.md)
-- Provider compatibility: [Providers](providers.md)
-- Issue resolution: [Troubleshooting](troubleshooting.md)
-
-## Need internals?
-
-Implementation details are in the [Architecture](architecture/overview.md) section.
+--8<-- "README.md"

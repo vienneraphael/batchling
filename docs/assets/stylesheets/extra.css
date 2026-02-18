@@ -1,31 +1,264 @@
 /*
- * Custom Batchling palette.
- * Light mode uses warm paper tones (#f8eedf, #f2dbb9) with dark browns (#301c10, #3a2215).
- * Dark mode uses deep brown surfaces (#301c10, #3a2215) with warm highlights (#e0b986, #f8eedf).
+ * Technical Editorial visual system for MkDocs Material.
  */
 :root {
-  --md-primary-fg-color: #3a2215;
-  --md-primary-fg-color--light: #574132;
-  --md-primary-fg-color--dark: #301c10;
-  --md-accent-fg-color: #e0b986;
+  --brand: #6b3f24;
+  --brand-muted: #8b694f;
+  --surface-1: #f8f5f1;
+  --surface-2: #efe8e0;
+  --border: #dccfc2;
+  --link: #5a351e;
+  --code-bg: #f2ece5;
+  --text-main: #1b1612;
+  --text-soft: #5d544b;
+  --shadow-soft: 0 10px 24px rgba(34, 23, 16, 0.08);
+  --radius: 0.7rem;
+  --hero-glow: radial-gradient(circle at top right, rgba(107, 63, 36, 0.18), transparent 55%);
+  --md-primary-fg-color: var(--brand);
+  --md-primary-fg-color--light: #7f4f31;
+  --md-primary-fg-color--dark: #4f2f1a;
+  --md-accent-fg-color: var(--brand-muted);
 }
 
 [data-md-color-scheme="default"] {
-  --md-default-bg-color: #f8eedf;
-  --md-default-bg-color--light: #f2dbb9;
-  --md-default-fg-color: #301c10;
-  --md-default-fg-color--light: #3a2215;
-  --md-typeset-a-color: #574132;
-  --md-code-bg-color: #f2dbb9;
-  --md-typeset-mark-color: #e0b98666;
+  --md-default-bg-color: var(--surface-1);
+  --md-default-bg-color--light: #fff;
+  --md-default-fg-color: var(--text-main);
+  --md-default-fg-color--light: var(--text-soft);
+  --md-typeset-a-color: var(--link);
+  --md-code-bg-color: var(--code-bg);
+  --md-typeset-mark-color: rgba(107, 63, 36, 0.15);
 }
 
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color: #301c10;
-  --md-default-bg-color--light: #3a2215;
-  --md-default-fg-color: #f8eedf;
-  --md-default-fg-color--light: #e0b986;
-  --md-typeset-a-color: #e0b986;
-  --md-code-bg-color: #3a2215;
-  --md-typeset-mark-color: #e0b98640;
+  --brand: #d5af8f;
+  --brand-muted: #c39a79;
+  --surface-1: #161311;
+  --surface-2: #1e1916;
+  --border: #3a3028;
+  --link: #f0c8a5;
+  --code-bg: #211b17;
+  --text-main: #f4ece3;
+  --text-soft: #cdbda9;
+  --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.38);
+  --hero-glow: radial-gradient(circle at top right, rgba(213, 175, 143, 0.18), transparent 55%);
+  --md-default-bg-color: var(--surface-1);
+  --md-default-bg-color--light: #1b1613;
+  --md-default-fg-color: var(--text-main);
+  --md-default-fg-color--light: var(--text-soft);
+  --md-typeset-a-color: var(--link);
+  --md-code-bg-color: var(--code-bg);
+  --md-typeset-mark-color: rgba(213, 175, 143, 0.22);
+}
+
+.md-main {
+  background:
+    var(--hero-glow),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(107, 63, 36, 0.02) 100%);
+}
+
+.md-header {
+  box-shadow: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-header,
+.md-tabs {
+  background-color: color-mix(in srgb, var(--surface-2) 88%, transparent);
+}
+
+.md-content__inner {
+  margin-top: clamp(1rem, 0.9rem + 0.5vw, 1.45rem);
+}
+
+.md-typeset {
+  line-height: 1.68;
+}
+
+.md-typeset h1 {
+  font-size: clamp(2rem, 1.65rem + 1.4vw, 2.8rem);
+  margin: 0 0 0.8rem;
+  letter-spacing: -0.03em;
+}
+
+.md-typeset h2 {
+  font-size: clamp(1.45rem, 1.35rem + 0.5vw, 1.8rem);
+  margin-top: 2.35rem;
+  margin-bottom: 0.7rem;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset h3 {
+  font-size: clamp(1.15rem, 1.09rem + 0.3vw, 1.35rem);
+  margin-top: 1.7rem;
+}
+
+.md-typeset p,
+.md-typeset ul,
+.md-typeset ol,
+.md-typeset blockquote,
+.md-typeset .admonition,
+.md-typeset details {
+  max-width: 74ch;
+}
+
+.md-typeset a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18rem;
+}
+
+.md-nav--primary .md-nav__title {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+
+.md-nav__link {
+  border-left: 2px solid transparent;
+  padding-left: 0.5rem;
+}
+
+.md-nav__link--active {
+  border-left-color: var(--brand);
+  font-weight: 600;
+}
+
+.md-typeset pre,
+.md-typeset .highlight pre {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.md-typeset code {
+  font-size: 0.86em;
+}
+
+.md-typeset pre code {
+  font-size: 0.92em;
+  line-height: 1.62;
+}
+
+.md-clipboard {
+  color: var(--brand-muted);
+}
+
+.md-clipboard:hover {
+  color: var(--brand);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  background-color: color-mix(in srgb, var(--surface-2) 68%, transparent);
+}
+
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-left: 0.22rem solid #446378;
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-left: 0.22rem solid #3f6a47;
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-left: 0.22rem solid #8d5e1f;
+}
+
+.home-hero {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: clamp(1.05rem, 0.9rem + 0.8vw, 1.65rem);
+  margin-bottom: 1.5rem;
+  background: linear-gradient(
+    130deg,
+    color-mix(in srgb, var(--surface-2) 90%, transparent),
+    color-mix(in srgb, var(--surface-1) 70%, transparent)
+  );
+  box-shadow: var(--shadow-soft);
+}
+
+.home-hero p {
+  margin: 0.5rem 0 0;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.85rem;
+  margin: 1rem 0 1.8rem;
+}
+
+.home-card {
+  display: block;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.9rem 1rem;
+  background-color: color-mix(in srgb, var(--surface-2) 75%, transparent);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.home-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+}
+
+.home-card strong {
+  color: var(--text-main);
+}
+
+.home-card span {
+  display: block;
+  color: var(--text-soft);
+  margin-top: 0.2rem;
+}
+
+.md-content__button.md-icon,
+.md-top {
+  border-radius: 999px;
+}
+
+.md-content h1,
+.md-sidebar--secondary .md-nav {
+  animation: rise-in 260ms ease-out both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-content h1,
+  .md-sidebar--secondary .md-nav,
+  .home-card {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media screen and (max-width: 76.1875em) {
+  .md-nav--primary .md-nav__link {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .md-typeset pre code {
+    font-size: 0.88em;
+  }
 }

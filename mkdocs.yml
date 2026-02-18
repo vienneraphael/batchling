@@ -7,18 +7,23 @@ strict: true
 
 theme:
   name: material
+  logo: assets/images/batchling.png
+  favicon: assets/images/batchling.png
+  font:
+    text: IBM Plex Sans
+    code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: brown
-      accent: brown
+      primary: grey
+      accent: grey
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: brown
-      accent: brown
+      primary: grey
+      accent: grey
       toggle:
         icon: material/weather-night
         name: Switch to light mode
@@ -30,6 +35,9 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
 
 plugins:
   - search
@@ -38,6 +46,11 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - md_in_html
+  - pymdownx.snippets:
+      base_path:
+        - .
+        - docs
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:
