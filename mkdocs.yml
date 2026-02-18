@@ -1,0 +1,75 @@
+site_name: batchling
+site_url: https://vienneraphael.github.io/batchling/
+repo_name: vienneraphael/batchling
+repo_url: https://github.com/vienneraphael/batchling
+site_dir: docs-site
+strict: true
+exclude_docs: architecture/**
+
+theme:
+  name: material
+  logo: assets/images/batchling.png
+  favicon: assets/images/batchling.png
+  font:
+    text: IBM Plex Sans
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: grey
+      accent: grey
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: grey
+      accent: grey
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+
+markdown_extensions:
+  - admonition
+  - md_in_html
+  - pymdownx.snippets:
+      base_path:
+        - .
+        - docs
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - toc:
+      permalink: true
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Guide:
+      - Getting Started: getting-started.md
+      - Usage Patterns: usage-patterns.md
+      - Configuration: configuration.md
+      - Providers: providers.md
+      - Troubleshooting: troubleshooting.md

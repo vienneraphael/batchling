@@ -17,6 +17,9 @@ TODO.md
 profile_reports/
 .pytest_cache/
 .ruff_cache/
+.skylos/
+skylos_report.json
+complexipy.json
 
 output/
 *.jsonl

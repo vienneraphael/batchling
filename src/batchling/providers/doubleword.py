@@ -1,5 +1,14 @@
-from batchling.providers.openai import OpenAIExperiment
+from batchling.providers.openai import OpenAIProvider
 
 
-class DoublewordExperiment(OpenAIExperiment):
-    BASE_URL: str = "https://api.doubleword.ai/v1"
+class DoublewordProvider(OpenAIProvider):
+    """Provider adapter for Doubleword's OpenAI-compatible Batch API."""
+
+    name = "doubleword"
+    hostnames = ("api.doubleword.ai",)
+    batchable_endpoints = (
+        "/v1/chat/completions",
+        "/v1/embeddings",
+        "/v1/moderations",
+        "/v1/completions",
+    )

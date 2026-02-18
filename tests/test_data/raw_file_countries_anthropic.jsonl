@@ -1,2 +1,0 @@
-{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of France?"}], "max_tokens": 2000}
-{"system_prompt": "You are a helpful assistant.", "messages": [{"role": "user", "content": "What is the capital of Italy?"}], "max_tokens": 2000}

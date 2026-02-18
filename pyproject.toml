@@ -6,14 +6,13 @@ authors = [{ name = "Raphael Vienne", email = "raphaelvienne.work@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
+    "aiohttp>=3.13.3",
     "click>=8.3.0",
     "httpx>=0.28.1",
-    "platformdirs>=4.5.0",
-    "pydantic>=2.12.3",
     "python-dotenv>=1.1.1",
-    "sqlalchemy>=2.0.44",
     "structlog>=25.5.0",
     "typer>=0.20.0",
+    "wrapt",
 ]
 
 [project.scripts]
@@ -24,14 +23,26 @@ source = "https://github.com/vienneraphael/batchling"
 
 [dependency-groups]
 dev = [
+    "anthropic>=0.79.0",
+    "complexipy>=5.2.0",
     "coverage>=7.11.0",
+    "google-genai>=1.63.0",
+    "groq>=1.0.0",
     "ipykernel>=7.0.1",
+    "mistralai>=1.12.2",
+    "mkdocs-material>=9.7.1",
+    "mkdocstrings[python]>=1.0.3",
+    "openai>=2.17.0",
     "prek>=0.2.10",
+    "pydantic>=2.12.3",
     "pyinstrument>=5.1.1",
     "pytest>=8.4.2",
+    "pytest-asyncio",
     "python-dotenv>=1.1.1",
     "respx>=0.22.0",
     "ruff>=0.14.2",
+    "skylos>=3.2.3",
+    "together>=2.1.1",
 ]
 
 [build-system]
