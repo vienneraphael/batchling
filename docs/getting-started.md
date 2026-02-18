@@ -43,7 +43,7 @@ asyncio.run(generate())
 
 ## What to expect at runtime
 
-- Batchling installs request hooks and watches supported HTTP requests.
+- batchling installs request hooks and watches supported HTTP requests.
 - Supported requests are grouped by `(provider, endpoint, model)`.
 - A batch is submitted when either queue size or window threshold is hit.
 - Batch results are polled and mapped back to each original request.

@@ -22,8 +22,8 @@
   "docs": [
     {
       "location": "",
-      "title": "Batchling",
-      "text": "<p>Batch API calls from familiar clients.</p> <p>Batchling intercepts supported requests, groups them by provider, and   returns normal responses while reducing cost and latency overhead.</p> Quickstart Install and run the first async batching flow in minutes. Configuration Tune batch sizes, windows, and dry-run behavior safely. Architecture Understand context flow, hook interception, and provider adapters."
+      "title": "batchling",
+      "text": "<p>Batch API calls from familiar clients.</p> <p>batchling intercepts supported requests, groups them by provider, and   returns normal responses while reducing cost and latency overhead.</p> Quickstart Install and run the first async batching flow in minutes. Configuration Tune batch sizes, windows, and dry-run behavior safely. Providers Check supported adapters and compatibility notes."
     },
     {
       "location": "#batchling_1",
@@ -78,7 +78,7 @@
     {
       "location": "configuration/",
       "title": "Configuration",
-      "text": "<p>Batchling exposes four user-facing controls.</p>"
+      "text": "<p>batchling exposes four user-facing controls.</p>"
     },
     {
       "location": "configuration/#batch_size",
@@ -128,7 +128,7 @@
     {
       "location": "getting-started/#what-to-expect-at-runtime",
       "title": "What to expect at runtime",
-      "text": "<ul> <li>Batchling installs request hooks and watches supported HTTP requests.</li> <li>Supported requests are grouped by <code>(provider, endpoint, model)</code>.</li> <li>A batch is submitted when either queue size or window threshold is hit.</li> <li>Batch results are polled and mapped back to each original request.</li> </ul>"
+      "text": "<ul> <li>batchling installs request hooks and watches supported HTTP requests.</li> <li>Supported requests are grouped by <code>(provider, endpoint, model)</code>.</li> <li>A batch is submitted when either queue size or window threshold is hit.</li> <li>Batch results are polled and mapped back to each original request.</li> </ul>"
     },
     {
       "location": "getting-started/#cli-wrapper-option",
@@ -138,12 +138,12 @@
     {
       "location": "providers/",
       "title": "Providers",
-      "text": "<p>Batchling currently supports these provider adapters.</p> Provider Batch docs OpenAI https://platform.openai.com/docs/guides/batch Anthropic https://docs.anthropic.com/en/docs/build-with-claude/batch-processing Gemini https://ai.google.dev/gemini-api/docs/batch-mode Groq https://console.groq.com/docs/batch Mistral https://docs.mistral.ai/capabilities/batch/ Together AI https://docs.together.ai/docs/batch-inference Doubleword https://docs.doubleword.ai/batches/getting-started-with-batched-api"
+      "text": "<p>batchling currently supports these provider adapters.</p> Provider Batch docs OpenAI https://platform.openai.com/docs/guides/batch Anthropic https://docs.anthropic.com/en/docs/build-with-claude/batch-processing Gemini https://ai.google.dev/gemini-api/docs/batch-mode Groq https://console.groq.com/docs/batch Mistral https://docs.mistral.ai/capabilities/batch/ Together AI https://docs.together.ai/docs/batch-inference Doubleword https://docs.doubleword.ai/batches/getting-started-with-batched-api"
     },
     {
       "location": "providers/#compatibility-notes",
       "title": "Compatibility notes",
-      "text": "<ul> <li>Matching is based on provider hostname plus supported batchable endpoints.</li> <li>Requests that are not recognized as batchable are not routed through the batch engine.</li> <li>Provider response decoding is normalized back into request-level responses.</li> </ul> <p>For implementation details, see Architecture: Provider Adapters.</p>"
+      "text": "<ul> <li>Matching is based on provider hostname plus supported batchable endpoints.</li> <li>Requests that are not recognized as batchable are not routed through the batch engine.</li> <li>Provider response decoding is normalized back into request-level responses.</li> </ul> <p>Implementation details for adapters are kept in AGENTS-oriented internal docs.</p>"
     },
     {
       "location": "troubleshooting/",
@@ -199,181 +199,6 @@
       "location": "usage-patterns/#dry-run-pattern",
       "title": "Dry run pattern",
       "text": "<p>Use dry-run before production launch:</p> <pre><code>async with batchify(dry_run=True):\n    ...\n</code></pre> <p>Dry-run still intercepts and queues supported requests, but it skips provider submission and polling.</p>"
-    },
-    {
-      "location": "architecture/api/",
-      "title": "API surface: <code>batchify</code>",
-      "text": "<p><code>batchify</code> is the public entry point that activates batching for a scoped context. It installs global hooks, creates a <code>Batcher</code>, and returns a <code>BatchingContext</code> that yields <code>None</code>. Import it from <code>batchling</code>.</p>"
-    },
-    {
-      "location": "architecture/api/#responsibilities",
-      "title": "Responsibilities",
-      "text": "<ul> <li>Install HTTP hooks once (idempotent).</li> <li>Construct a <code>Batcher</code> with configuration such as <code>batch_size</code>,   <code>batch_window_seconds</code>, <code>batch_poll_interval_seconds</code>, and <code>dry_run</code>.</li> <li>Return a <code>BatchingContext</code> to scope batching to a context manager.</li> </ul>"
-    },
-    {
-      "location": "architecture/api/#inputs-and-outputs",
-      "title": "Inputs and outputs",
-      "text": "<ul> <li>Inputs: batcher configuration arguments.</li> <li>Queue semantics: <code>batch_size</code> and <code>batch_window_seconds</code> are applied per   strict queue key <code>(provider, endpoint, model)</code>.</li> <li><code>dry_run</code> behavior: when <code>dry_run=True</code>, requests are still intercepted, queued,   and grouped using normal window/size triggers, but provider batch submission and polling   are skipped. Requests resolve with synthetic <code>httpx.Response</code> objects marked with   <code>x-batchling-dry-run: 1</code>.</li> <li>Outputs: <code>BatchingContext[None]</code> instance that yields <code>None</code>.</li> </ul>"
-    },
-    {
-      "location": "architecture/api/#cli-callable-usage",
-      "title": "CLI callable usage",
-      "text": "<p>The <code>batchling</code> CLI can execute an async callable from a script inside <code>batchify</code>:</p> <pre><code>batchling path/to/my_script.py:foo arg1 --name alice --count=3 --dry-run\n</code></pre> <p>Behavior:</p> <ul> <li>CLI options map directly to <code>batchify</code> arguments:   <code>batch_size</code>, <code>batch_window_seconds</code>, <code>batch_poll_interval_seconds</code>, and <code>dry_run</code>.</li> <li>Script target must use <code>module_path:function_name</code> syntax.</li> <li>Forwarded callable arguments are mapped as:   positional tokens are passed as positional arguments;   <code>--name value</code> and <code>--name=value</code> are passed as keyword arguments.</li> <li>Standalone <code>--flag</code> tokens are passed as boolean keyword arguments with <code>True</code>.</li> <li>The script file is loaded with <code>runpy.run_path(..., run_name=\"batchling.runtime\")</code>   and the target async callable is awaited.</li> </ul>"
-    },
-    {
-      "location": "architecture/api/#extension-notes",
-      "title": "Extension notes",
-      "text": "<ul> <li>Any new hook types should be installed by <code>install_hooks()</code> so the behavior stays centralized.</li> <li>Configuration changes to <code>Batcher</code> should be surfaced through arguments on <code>batchify</code>.</li> <li><code>batchify</code> only supports a pure context-manager lifecycle and does not accept a target.</li> </ul>"
-    },
-    {
-      "location": "architecture/api/#code-reference",
-      "title": "Code reference",
-      "text": "<ul> <li><code>src/batchling/api.py</code></li> </ul>"
-    },
-    {
-      "location": "architecture/context/",
-      "title": "Context manager: <code>BatchingContext</code>",
-      "text": "<p><code>BatchingContext</code> is a lightweight context manager that activates an active <code>Batcher</code> for a scoped block. It yields <code>None</code>, while all HTTP hooks read the active batcher from a context variable.</p>"
-    },
-    {
-      "location": "architecture/context/#responsibilities",
-      "title": "Responsibilities",
-      "text": "<ul> <li>Activate the <code>active_batcher</code> context for the duration of a context block.</li> <li>Yield <code>None</code> for scope-only lifecycle control.</li> <li>Support sync and async context manager patterns for cleanup and context scoping.</li> </ul>"
-    },
-    {
-      "location": "architecture/context/#flow-summary",
-      "title": "Flow summary",
-      "text": "<ol> <li><code>BatchingContext</code> stores the <code>Batcher</code> on initialization.</li> <li><code>__enter__</code>/<code>__aenter__</code> set the active batcher for the entire context block.</li> <li><code>__exit__</code> resets the context and schedules <code>batcher.close()</code> if an event loop is    running (otherwise it warns).</li> <li><code>__aexit__</code> resets the context and awaits <code>batcher.close()</code> to flush pending work.</li> </ol>"
-    },
-    {
-      "location": "architecture/context/#code-reference",
-      "title": "Code reference",
-      "text": "<ul> <li><code>src/batchling/context.py</code></li> </ul>"
-    },
-    {
-      "location": "architecture/core/",
-      "title": "Batching engine: <code>Batcher</code>",
-      "text": "<p><code>Batcher</code> is the core queueing and lifecycle manager for batching requests. It collects pending requests, triggers batch submission when size/time thresholds are reached, and resolves futures back to callers.</p>"
-    },
-    {
-      "location": "architecture/core/#responsibilities",
-      "title": "Responsibilities",
-      "text": "<ul> <li>Maintain pending queues protected by an async lock, partitioned by   <code>(provider, endpoint, model)</code>.</li> <li>Start a per-queue window timer when the first request arrives and submit when it elapses.</li> <li>Submit immediately when a queue reaches <code>batch_size</code>.</li> <li>Delegate provider-specific batch submission to <code>provider.process_batch()</code>.</li> <li>Track active batches and resolve per-request futures with provider-parsed responses.</li> <li>Provide cleanup via <code>close()</code> to flush remaining work.</li> </ul>"
-    },
-    {
-      "location": "architecture/core/#key-data-structures",
-      "title": "Key data structures",
-      "text": "<ul> <li><code>_PendingRequest</code>: per-request data (custom ID, parameters, provider, and future).</li> <li><code>_ActiveBatch</code>: a submitted batch with result tracking and request mapping.</li> </ul>"
-    },
-    {
-      "location": "architecture/core/#lifecycle-outline",
-      "title": "Lifecycle outline",
-      "text": "<ol> <li><code>submit()</code> builds a <code>_PendingRequest</code>, computes a strict queue key, and enqueues    the request. Every request is partitioned by <code>(provider, endpoint, model)</code> and    resolves <code>model</code> via provider-specific extraction (for example, from request body or    endpoint path). The extracted <code>QueueKey</code>    is stored on each <code>_PendingRequest</code> and propagated through <code>_submit_requests()</code>    and provider <code>process_batch()</code> calls so endpoint/model context is resolved once    at enqueue time.</li> <li>When thresholds are hit, <code>_submit_requests()</code> starts a provider-specific batch submission task.</li> <li>The provider submits the batch job and returns poll metadata (<code>base_url</code>, headers,    batch ID).</li> <li>The batcher creates <code>_ActiveBatch</code>, polls for completion using    <code>provider.terminal_states</code>, and resolves futures.</li> <li>Provider adapters convert batch results back into HTTP responses for each request.</li> <li><code>close()</code> flushes remaining requests and cancels timers.</li> </ol> <p>In <code>dry_run</code> mode, step 3 and provider polling are bypassed: <code>_process_batch()</code> still creates <code>_ActiveBatch</code> for tracking, then resolves each request immediately with a synthetic <code>httpx.Response</code> (<code>200</code>) marked with <code>x-batchling-dry-run: 1</code>.</p>"
-    },
-    {
-      "location": "architecture/core/#extension-notes",
-      "title": "Extension notes",
-      "text": "<ul> <li>Add new provider adapters by implementing <code>process_batch()</code> in the provider class.</li> <li>Ensure each provider declares <code>terminal_states</code> so polling termination is   provider-specific.</li> <li>Keep polling/result resolution behavior in <code>Batcher</code> unless provider APIs diverge.</li> </ul>"
-    },
-    {
-      "location": "architecture/core/#code-reference",
-      "title": "Code reference",
-      "text": "<ul> <li><code>src/batchling/core.py</code></li> </ul>"
-    },
-    {
-      "location": "architecture/hooks/",
-      "title": "HTTP hooks: request interception",
-      "text": "<p>Hooks intercept HTTP client requests and decide whether to batch them. The current implementation targets <code>httpx.AsyncClient.send</code> and <code>aiohttp.ClientSession._request</code>.</p>"
-    },
-    {
-      "location": "architecture/hooks/#responsibilities",
-      "title": "Responsibilities",
-      "text": "<ul> <li>Patch supported HTTP client methods once globally (idempotent install).</li> <li>Capture request details for logging and diagnostics (request headers are redacted   in logs only).</li> <li>Look up the active <code>Batcher</code> context and route supported provider endpoints into batching.</li> <li>Fall back to the original client behavior for unsupported URLs or when no active   batcher is set.</li> </ul>"
-    },
-    {
-      "location": "architecture/hooks/#flow-summary",
-      "title": "Flow summary",
-      "text": "<ol> <li><code>install_hooks()</code> stores original methods and patches both <code>httpx</code> and <code>aiohttp</code>.</li> <li>Hook handlers (<code>_httpx_async_send_hook()</code> and <code>_aiohttp_async_request_hook()</code>) log request    details and check <code>active_batcher</code>.</li> <li>If the request is marked as internal (<code>x-batchling-internal: 1</code>), the hook bypasses    batching to avoid recursion.</li> <li>If a provider marks the <code>method + endpoint</code> as batchable and a batcher is active,    the request is enqueued via <code>batcher.submit()</code> and the resolved response is returned    (usually an <code>httpx.Response</code>; aiohttp callers receive an aiohttp-compatible wrapper).</li> <li>Otherwise, the original request is invoked.</li> </ol>"
-    },
-    {
-      "location": "architecture/hooks/#extension-notes",
-      "title": "Extension notes",
-      "text": "<ul> <li>When adding new HTTP client support, mirror the <code>httpx</code> pattern: store the original   method, patch it, and route to <code>batcher.submit()</code> when eligible.</li> </ul>"
-    },
-    {
-      "location": "architecture/hooks/#context-vs-provider-integration-tradeoff",
-      "title": "Context vs provider integration tradeoff",
-      "text": "<p>Batch routing currently relies on <code>active_batcher</code> (a context variable) as an opt-in gate. There are two main strategies to keep batching behavior correct and ergonomic:</p> <ul> <li>Context manager scoping (<code>with</code> / <code>async with</code> on <code>BatchingContext</code>): reliably sets the active   batcher for the entire block so any tasks spawned inside inherit it. This is simple,   predictable, and keeps batching opt-in, but it requires callers to adopt the context   manager pattern.</li> <li>Provider/framework-specific integration: attach the batcher directly to a provider's   client (or intercept a framework-specific call path) so routing does not rely on task   context propagation. This is seamless for callers but requires deeper per-provider   maintenance and is more fragile to upstream SDK changes.</li> </ul> <p>In practice, the context manager is the most stable default, and provider-specific integration can be added selectively where ergonomics matter most.</p>"
-    },
-    {
-      "location": "architecture/hooks/#code-reference",
-      "title": "Code reference",
-      "text": "<ul> <li><code>src/batchling/hooks.py</code></li> </ul>"
-    },
-    {
-      "location": "architecture/overview/",
-      "title": "Architecture Overview",
-      "text": "<pre><code>flowchart TB\n    subgraph Caller[Caller Code]\n        app[Application or Client Code]\n        batchify[batchify adapter]\n    end\n\n    subgraph Runtime[Runtime Context]\n        proxy[BatchingContext]\n        ctx[ContextVar: active Batcher]\n    end\n\n    subgraph Hooks[HTTP Hooks]\n        intercept[Request Interception]\n        enqueue[Enqueue Requests]\n    end\n\n    subgraph Engine[Batching Engine]\n        batcher[Batcher lifecycle]\n        pending[Pending Requests]\n        submit[Submit Batch]\n        resolve[Resolve Futures]\n    end\n\n    subgraph Providers[Provider Adapters]\n        match[URL Matching]\n        decode[Response Decoding]\n    end\n\n    app --&gt;|enters batching scope| batchify\n    batchify --&gt;|returns BatchingContext| app\n\n    batchify --&gt;|returns context for| proxy\n    batchify --&gt;|installs hooks and seeds| ctx\n    proxy --&gt;|activates| ctx\n\n    ctx --&gt;|scopes hooks to active batcher| intercept\n    intercept --&gt;|captures supported requests| enqueue\n    enqueue --&gt;|adds request to| pending\n    pending --&gt;|drains into| submit\n\n    submit --&gt;|select adapter by URL| match\n    match --&gt;|decode batch response| decode\n    decode --&gt;|resolve per-request futures| resolve\n    resolve --&gt;|returns results to caller| app\n</code></pre>"
-    },
-    {
-      "location": "architecture/overview/#notes",
-      "title": "Notes",
-      "text": "<ol> <li><code>batchify</code> creates a <code>Batcher</code>, installs hooks, and returns a <code>BatchingContext</code>.</li> <li><code>BatchingContext</code> activates the context variable that holds the active <code>Batcher</code>.</li> <li>HTTP hooks capture supported requests and enqueue them into the <code>Batcher</code>.</li> <li>The <code>Batcher</code> batches pending requests, submits them, and resolves per-request futures.</li> <li>Provider adapters normalize URLs and decode batch results into responses.</li> </ol>"
-    },
-    {
-      "location": "architecture/providers/",
-      "title": "Provider adapters",
-      "text": "<p>Providers translate between ordinary HTTP requests and provider-specific batch APIs. They are responsible for URL matching and for reconstructing <code>httpx.Response</code> objects from batch results.</p>"
-    },
-    {
-      "location": "architecture/providers/#responsibilities",
-      "title": "Responsibilities",
-      "text": "<ul> <li>Declare supported hostnames.</li> <li>Declare explicit batchable HTTP endpoints (<code>path</code>) for hook routing.</li> <li>Declare provider-specific terminal batch states used by the core poller.</li> <li>Identify whether a URL belongs to a provider.</li> <li>Submit provider batches via <code>process_batch()</code> (file-based or inline).</li> <li>Normalize request URLs for provider batch endpoints.</li> <li>Convert JSONL batch result lines into <code>httpx.Response</code> objects for callers.</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#registry-and-lookup",
-      "title": "Registry and lookup",
-      "text": "<ul> <li>Providers are auto-discovered from <code>batchling/providers/*.py</code> files   (excluding <code>__init__.py</code> and <code>base.py</code>).</li> <li><code>get_provider_for_batch_request()</code> resolves a provider only when the request's   <code>POST + path</code> is explicitly batchable for that provider.</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#openai-provider",
-      "title": "OpenAI provider",
-      "text": "<p>The OpenAI provider implements:</p> <ul> <li><code>build_api_headers()</code> for auth + provider-specific passthrough headers.</li> <li>file-based batch submission (<code>/v1/files</code> then <code>/v1/batches</code>).</li> <li><code>from_batch_result()</code> to decode batch output lines.</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#gemini-provider",
-      "title": "Gemini provider",
-      "text": "<p>The Gemini provider implements:</p> <ul> <li>dynamic batchable endpoint matching (<code>/v1beta/models/{model}:generateContent</code>).</li> <li>model extraction from the request endpoint path (for strict queue partitioning).</li> <li>file upload via Gemini resumable uploads (<code>/upload/v1beta/files</code>).</li> <li>model-scoped batch submission path (<code>/v1beta/models/{model}:batchGenerateContent</code>).</li> <li>poll path override (<code>/v1beta/batches/{batch_id}</code>) with <code>metadata.state</code> status extraction.</li> <li>output file extraction from poll payload (<code>response.responsesFile</code>).</li> <li>provider-specific result row key mapping (<code>custom_id_field_name = \"key\"</code>).</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#anthropic-provider",
-      "title": "Anthropic provider",
-      "text": "<p>The Anthropic provider implements:</p> <ul> <li>inline batch submission to <code>/v1/messages/batches</code> (no file upload step).</li> <li>provider-specific status polling field (<code>processing_status</code>).</li> <li><code>x-api-key</code> passthrough via <code>build_api_headers()</code>.</li> <li><code>from_batch_result()</code> to decode batch output lines.</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#mistral-provider",
-      "title": "Mistral provider",
-      "text": "<p>The Mistral provider reuses the file-based flow with provider-specific endpoints:</p> <ul> <li><code>hostnames = (\"api.mistral.ai\",)</code></li> <li><code>batch_endpoint = \"/v1/batch/jobs\"</code></li> <li><code>file_upload_endpoint = \"/v1/files\"</code></li> <li><code>file_content_endpoint = \"/v1/files\"</code></li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#together-provider",
-      "title": "Together provider",
-      "text": "<p>The Together provider follows the same batch lifecycle with provider-specific upload and batch response shapes:</p> <ul> <li><code>hostnames = (\"api.together.xyz\",)</code></li> <li><code>batchable_endpoints = (\"/v1/chat/completions\", \"/v1/audio/transcriptions\")</code></li> <li><code>file_upload_endpoint = \"/v1/files/upload\"</code></li> <li><code>file_content_endpoint = \"/v1/files\"</code></li> <li>overrides batch file upload form fields (<code>file_name</code>, <code>purpose=batch-api</code>)</li> <li>extracts batch id from nested response payload (<code>job.id</code>)</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#doubleword-provider",
-      "title": "Doubleword provider",
-      "text": "<p>The Doubleword provider reuses the OpenAI provider implementation and only changes:</p> <ul> <li><code>hostnames = (\"api.doubleword.ai\",)</code></li> <li><code>batchable_endpoints = (\"/v1/chat/completions\",)</code></li> </ul> <p>Terminal states are inherited unchanged from the OpenAI provider.</p> <p>Common helpers now live on <code>BaseProvider</code> and can be reused by all providers:</p> <ul> <li><code>matches_url()</code></li> <li><code>is_batchable_request()</code></li> <li><code>matches_batchable_endpoint()</code></li> <li><code>normalize_url()</code></li> <li><code>extract_base_and_endpoint()</code></li> <li><code>extract_model_name()</code></li> <li><code>build_jsonl_lines()</code></li> <li><code>build_batch_submit_path()</code></li> <li><code>build_batch_poll_path()</code></li> <li><code>build_batch_results_path()</code></li> <li><code>extract_batch_status()</code></li> <li><code>get_output_file_id_from_poll_response()</code></li> <li><code>encode_body()</code></li> </ul> <p>Provider configuration on <code>BaseProvider</code> includes:</p> <ul> <li><code>hostnames</code></li> <li><code>batch_method</code></li> <li><code>batchable_endpoints</code></li> <li><code>is_file_based</code> (switch between file upload flow and inline flow)</li> <li><code>file_upload_endpoint</code> (where JSONL input files are uploaded)</li> <li><code>file_content_endpoint</code> (where output/error file content is fetched)</li> <li><code>batch_endpoint</code> (where the batch job is created)</li> <li><code>batch_terminal_states</code> (statuses that stop polling and trigger result resolution)</li> <li><code>batch_status_field_name</code> (status field read from poll responses)</li> <li><code>custom_id_field_name</code> (result key used to map output rows back to requests)</li> <li><code>output_file_field_name</code> / <code>error_file_field_name</code></li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#extension-notes",
-      "title": "Extension notes",
-      "text": "<ul> <li>Add new provider classes by subclassing <code>BaseProvider</code> in a new module under   <code>src/batchling/providers/</code>.</li> <li>Override provider methods as needed (<code>build_jsonl_lines()</code>,   <code>build_file_based_batch_payload()</code>, <code>build_inline_batch_payload()</code>,   <code>build_api_headers()</code>, <code>from_batch_result()</code>).</li> <li>Define <code>batch_terminal_states</code> for the provider so <code>Batcher</code> can stop polling at the   correct lifecycle states.</li> <li>Keep <code>matches_url()</code> conservative if you override it.</li> </ul>"
-    },
-    {
-      "location": "architecture/providers/#code-reference",
-      "title": "Code reference",
-      "text": "<ul> <li><code>src/batchling/providers/base.py</code></li> <li><code>src/batchling/providers/openai.py</code></li> <li><code>src/batchling/providers/__init__.py</code></li> </ul>"
     }
   ]
 }

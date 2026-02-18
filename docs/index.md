@@ -1,8 +1,8 @@
-# Batchling
+# batchling
 
 <div class="home-hero">
   <p><strong>Batch API calls from familiar clients.</strong></p>
-  <p>Batchling intercepts supported requests, groups them by provider, and
+  <p>batchling intercepts supported requests, groups them by provider, and
   returns normal responses while reducing cost and latency overhead.</p>
 </div>
 
@@ -15,9 +15,9 @@
     <strong>Configuration</strong>
     <span>Tune batch sizes, windows, and dry-run behavior safely.</span>
   </a>
-  <a class="home-card" href="architecture/overview/">
-    <strong>Architecture</strong>
-    <span>Understand context flow, hook interception, and provider adapters.</span>
+  <a class="home-card" href="providers/">
+    <strong>Providers</strong>
+    <span>Check supported adapters and compatibility notes.</span>
   </a>
 </div>
 

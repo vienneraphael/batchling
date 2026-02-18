@@ -1,6 +1,6 @@
 # Providers
 
-Batchling currently supports these provider adapters.
+batchling currently supports these provider adapters.
 
 | Provider | Batch docs |
 | --- | --- |
@@ -18,4 +18,4 @@ Batchling currently supports these provider adapters.
 - Requests that are not recognized as batchable are not routed through the batch engine.
 - Provider response decoding is normalized back into request-level responses.
 
-For implementation details, see [Architecture: Provider Adapters](architecture/providers.md).
+Implementation details for adapters are kept in AGENTS-oriented internal docs.

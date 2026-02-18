@@ -1,6 +1,6 @@
 # Configuration
 
-Batchling exposes four user-facing controls.
+batchling exposes four user-facing controls.
 
 ## `batch_size`
 

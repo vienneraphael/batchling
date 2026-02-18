@@ -252,6 +252,29 @@
   }
 }
 
+@media screen and (min-width: 76.25em) {
+  /* Give sidebars a bit more room outward and widen the reading lane. */
+  .md-grid {
+    max-width: 86rem;
+  }
+
+  .md-main__inner {
+    column-gap: 1.3rem;
+  }
+
+  .md-sidebar--primary {
+    margin-left: -0.15rem;
+  }
+
+  .md-sidebar--secondary {
+    margin-right: -0.15rem;
+  }
+
+  .md-content {
+    max-width: none;
+  }
+}
+
 @media screen and (max-width: 76.1875em) {
   .md-nav--primary .md-nav__link {
     padding-top: 0.45rem;

@@ -1,9 +1,10 @@
-site_name: Batchling
+site_name: batchling
 site_url: https://vienneraphael.github.io/batchling/
 repo_name: vienneraphael/batchling
 repo_url: https://github.com/vienneraphael/batchling
 site_dir: docs-site
 strict: true
+exclude_docs: architecture/**
 
 theme:
   name: material
@@ -72,10 +73,3 @@ nav:
       - Configuration: configuration.md
       - Providers: providers.md
       - Troubleshooting: troubleshooting.md
-  - Architecture:
-      - Overview: architecture/overview.md
-      - API Surface: architecture/api.md
-      - Core Engine: architecture/core.md
-      - Hooks: architecture/hooks.md
-      - Context: architecture/context.md
-      - Provider Adapters: architecture/providers.md
