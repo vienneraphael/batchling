@@ -2,6 +2,7 @@
 
 ## Repository Expectations
 
+- use ripgrep (through `rg` command) in place of grep.
 - Document public utilities in `docs/` when you change behavior.
 - Whenever you import typing, use: `import typing as t`
 - Use as much typing as possible on your function definitions

@@ -33,6 +33,75 @@ class BatchSubmission:
     batch_id: str
 
 
+@dataclass(frozen=True)
+class ProviderRequestSpec:
+    """
+    Provider-defined HTTP request shape executed by the batcher transport.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method.
+    path : str
+        Relative provider path.
+    headers : dict[str, str]
+        Request headers.
+    json_body : dict[str, typing.Any] | None
+        Optional JSON payload.
+    content : bytes | None
+        Optional raw request body.
+    files : dict[str, typing.Any] | None
+        Optional multipart files payload.
+    data : dict[str, typing.Any] | None
+        Optional form data payload.
+    """
+
+    method: str
+    path: str
+    headers: dict[str, str]
+    json_body: dict[str, t.Any] | None = None
+    content: bytes | None = None
+    files: dict[str, t.Any] | None = None
+    data: dict[str, t.Any] | None = None
+
+
+@dataclass(frozen=True)
+class PollSnapshot:
+    """
+    Normalized provider poll snapshot.
+
+    Parameters
+    ----------
+    status : str
+        Provider status value.
+    output_file_id : str
+        Output file identifier when available.
+    error_file_id : str
+        Error file identifier when available.
+    """
+
+    status: str
+    output_file_id: str
+    error_file_id: str
+
+
+@dataclass(frozen=True)
+class ResumeContext:
+    """
+    Resumed-polling context derived from an intercepted cache-hit request.
+
+    Parameters
+    ----------
+    base_url : str
+        Provider base URL used for resumed polling.
+    api_headers : dict[str, str]
+        Provider API headers used for resumed polling.
+    """
+
+    base_url: str
+    api_headers: dict[str, str]
+
+
 class PendingRequestLike(t.Protocol):
     """
     Minimal shape required by providers to serialize batch input.
@@ -273,6 +342,37 @@ class BaseProvider(ABC):
         """
         return f"{self.batch_endpoint}/{batch_id}"
 
+    def build_poll_request_spec(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        """
+        Build poll request metadata for the batcher transport.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        batch_id : str
+            Provider batch ID.
+
+        Returns
+        -------
+        ProviderRequestSpec
+            Poll request specification.
+        """
+        del base_url
+        return ProviderRequestSpec(
+            method="GET",
+            path=self.build_batch_poll_path(batch_id=batch_id),
+            headers=api_headers,
+        )
+
     def build_batch_results_path(self, *, file_id: str | None, batch_id: str) -> str:
         """
         Build the provider path used to download batch results.
@@ -299,6 +399,40 @@ class BaseProvider(ABC):
             raise ValueError("Batch completed without output or error file")
         return self.file_content_endpoint.format(id=file_id)
 
+    def build_results_request_spec(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        file_id: str | None,
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        """
+        Build results download request metadata for the batcher transport.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        file_id : str | None
+            Provider output or error file identifier.
+        batch_id : str
+            Provider batch identifier.
+
+        Returns
+        -------
+        ProviderRequestSpec
+            Results request specification.
+        """
+        del base_url
+        return ProviderRequestSpec(
+            method="GET",
+            path=self.build_batch_results_path(file_id=file_id, batch_id=batch_id),
+            headers=api_headers,
+        )
+
     def extract_batch_status(self, *, payload: dict[str, t.Any]) -> str:
         """
         Extract provider batch status from a poll payload.
@@ -315,6 +449,33 @@ class BaseProvider(ABC):
         """
         status = payload.get(self.batch_status_field_name, "created")
         return str(object=status)
+
+    async def parse_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> PollSnapshot:
+        """
+        Normalize poll payload into a provider-independent snapshot.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Provider poll payload.
+
+        Returns
+        -------
+        PollSnapshot
+            Poll snapshot.
+        """
+        status = self.extract_batch_status(payload=payload)
+        output_file_id = await self.get_output_file_id_from_poll_response(payload=payload)
+        error_file_id = await self.get_error_file_id_from_poll_response(payload=payload)
+        return PollSnapshot(
+            status=status,
+            output_file_id=str(object=output_file_id),
+            error_file_id=str(object=error_file_id),
+        )
 
     def build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """
@@ -413,6 +574,35 @@ class BaseProvider(ABC):
             elif lower_key.startswith(f"{self.name}-"):
                 api_headers[key] = value
         return api_headers
+
+    def build_resume_context(
+        self,
+        *,
+        host: str,
+        headers: dict[str, str] | None,
+    ) -> ResumeContext:
+        """
+        Build resumed-polling context for cache-hit routing.
+
+        Parameters
+        ----------
+        host : str
+            Intercepted request host.
+        headers : dict[str, str] | None
+            Intercepted request headers.
+
+        Returns
+        -------
+        ResumeContext
+            Resumed polling context.
+        """
+        api_headers = self.build_internal_headers(
+            headers=self.build_api_headers(headers=headers or {}),
+        )
+        return ResumeContext(
+            base_url=self._normalize_base_url(url=host),
+            api_headers=api_headers,
+        )
 
     def _build_batch_file_files_payload(
         self, *, file_content: bytes
@@ -523,6 +713,16 @@ class BaseProvider(ABC):
         Get the output file ID from the poll response.
         """
         return payload.get(self.output_file_field_name) or ""
+
+    async def get_error_file_id_from_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> str:
+        """
+        Get the error file ID from the poll response.
+        """
+        return payload.get(self.error_file_field_name) or ""
 
     def _get_batch_id_from_response(self, *, response_json: dict) -> str:
         """
@@ -742,3 +942,40 @@ class BaseProvider(ABC):
             headers=headers,
             content=content,
         )
+
+    def decode_results_content(
+        self,
+        *,
+        batch_id: str,
+        content: str,
+    ) -> dict[str, httpx.Response]:
+        """
+        Decode provider JSONL batch content into responses keyed by custom ID.
+
+        Parameters
+        ----------
+        batch_id : str
+            Batch ID for observability.
+        content : str
+            Raw JSONL content.
+
+        Returns
+        -------
+        dict[str, httpx.Response]
+            Responses keyed by provider custom ID.
+        """
+        decoded: dict[str, httpx.Response] = {}
+        for line in content.splitlines():
+            if not line.strip():
+                continue
+            result_item = json.loads(s=line)
+            custom_id = result_item.get(self.custom_id_field_name)
+            if custom_id is None:
+                log.debug(
+                    event="Batch result missing custom_id",
+                    provider=self.name,
+                    batch_id=batch_id,
+                )
+                continue
+            decoded[str(object=custom_id)] = self.from_batch_result(result_item=result_item)
+        return decoded

@@ -11,9 +11,10 @@ import httpx
 import pytest
 
 from batchling.cache import CacheEntry
-from batchling.core import Batcher, _PendingRequest
+from batchling.core import Batcher, _ActiveBatch, _PendingRequest
 from batchling.exceptions import DeferredExit
 from batchling.providers.anthropic import AnthropicProvider
+from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
@@ -1175,6 +1176,188 @@ def test_gemini_batch_status_extraction_uses_metadata_state_field() -> None:
         == "BATCH_STATE_SUCCEEDED"
     )
     assert provider.extract_batch_status(payload={}) == "created"
+
+
+@pytest.mark.asyncio
+async def test_poll_batch_once_uses_provider_request_spec_and_parser() -> None:
+    """Ensure _poll_batch_once delegates request shape and parsing to provider contract."""
+    provider = OpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, cache=False)
+    seen: dict[str, t.Any] = {}
+
+    def fake_build_poll_request_spec(
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        seen["base_url"] = base_url
+        seen["api_headers"] = api_headers
+        seen["batch_id"] = batch_id
+        return ProviderRequestSpec(
+            method="GET",
+            path="/poll/path",
+            headers={"Authorization": "Bearer override"},
+        )
+
+    async def fake_parse_poll_response(*, payload: dict[str, t.Any]) -> PollSnapshot:
+        seen["payload"] = payload
+        return PollSnapshot(status="completed", output_file_id="out-1", error_file_id="")
+
+    provider.build_poll_request_spec = fake_build_poll_request_spec  # type: ignore[method-assign]
+    provider.parse_poll_response = fake_parse_poll_response  # type: ignore[method-assign]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["request_url"] = str(object=request.url)
+        seen["request_auth"] = request.headers.get("Authorization")
+        return httpx.Response(
+            status_code=200,
+            json={"status": "processing", "output_file_id": "ignored"},
+        )
+
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    snapshot = await batcher._poll_batch_once(
+        provider=provider,
+        base_url="https://api.openai.com",
+        api_headers={"Authorization": "Bearer token"},
+        batch_id="batch-1",
+    )
+
+    assert snapshot.status == "completed"
+    assert snapshot.output_file_id == "out-1"
+    assert seen["base_url"] == "https://api.openai.com"
+    assert seen["request_url"] == "https://api.openai.com/poll/path"
+    assert seen["request_auth"] == "Bearer override"
+    assert seen["payload"]["status"] == "processing"
+
+
+@pytest.mark.asyncio
+async def test_attach_cached_request_uses_provider_resume_context() -> None:
+    """Ensure resume context is provider-owned when attaching cache-hit requests."""
+    provider = OpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, cache=False)
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+
+    def fake_build_resume_context(
+        *,
+        host: str,
+        headers: dict[str, str] | None,
+    ) -> ResumeContext:
+        assert host == "api.openai.com"
+        assert headers == {"authorization": "Bearer token"}
+        return ResumeContext(
+            base_url="https://custom.example",
+            api_headers={"X-Custom": "1"},
+        )
+
+    provider.build_resume_context = fake_build_resume_context  # type: ignore[method-assign]
+
+    await batcher._attach_cached_request(
+        provider=provider,
+        host="api.openai.com",
+        headers={"authorization": "Bearer token"},
+        cache_entry=CacheEntry(
+            request_hash="hash-1",
+            provider="openai",
+            endpoint="/v1/chat/completions",
+            model="model-a",
+            host="api.openai.com",
+            batch_id="batch-1",
+            custom_id="custom-1",
+            created_at=time.time(),
+        ),
+        request_hash="hash-1",
+        future=future,
+    )
+
+    resume_key = ("openai", "api.openai.com", "batch-1")
+    resumed_batch = batcher._resumed_batches[resume_key]
+    assert resumed_batch.base_url == "https://custom.example"
+    assert resumed_batch.api_headers == {"X-Custom": "1"}
+
+    for task in list(batcher._resumed_poll_tasks):
+        task.cancel()
+    _ = await asyncio.gather(*batcher._resumed_poll_tasks, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_resolve_batch_results_uses_provider_decoder() -> None:
+    """Ensure active batch resolution uses provider decode_results_content contract."""
+    provider = OpenAIProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, cache=False)
+    loop = asyncio.get_running_loop()
+    request = _PendingRequest(
+        custom_id="custom-1",
+        queue_key=_queue_key(provider_name=provider.name),
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.openai.com",
+            "endpoint": "/v1/chat/completions",
+            "body": b'{"model":"model-a","messages":[]}',
+        },
+        provider=provider,
+        future=loop.create_future(),
+        request_hash="hash-custom-1",
+    )
+    active_batch = _ActiveBatch(
+        batch_id="batch-1",
+        output_file_id="file-1",
+        error_file_id="",
+        requests={"custom-1": request},
+    )
+
+    def fake_build_results_request_spec(
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        file_id: str | None,
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        assert base_url == "https://api.openai.com"
+        assert api_headers == {"Authorization": "Bearer token"}
+        assert file_id == "file-1"
+        assert batch_id == "batch-1"
+        return ProviderRequestSpec(method="GET", path="/results/path", headers=api_headers)
+
+    def fake_decode_results_content(
+        *,
+        batch_id: str,
+        content: str,
+    ) -> dict[str, httpx.Response]:
+        assert batch_id == "batch-1"
+        assert content == "raw-content"
+        return {
+            "custom-1": httpx.Response(
+                status_code=200,
+                json={"ok": True},
+            )
+        }
+
+    async def fake_download_batch_content(
+        *,
+        base_url: str,
+        request_spec: ProviderRequestSpec,
+    ) -> str:
+        assert base_url == "https://api.openai.com"
+        assert request_spec.path == "/results/path"
+        return "raw-content"
+
+    provider.build_results_request_spec = fake_build_results_request_spec  # type: ignore[method-assign]
+    provider.decode_results_content = fake_decode_results_content  # type: ignore[method-assign]
+    batcher._download_batch_content = fake_download_batch_content  # type: ignore[method-assign]
+
+    await batcher._resolve_batch_results(
+        base_url="https://api.openai.com",
+        api_headers={"Authorization": "Bearer token"},
+        provider=provider,
+        active_batch=active_batch,
+    )
+
+    resolved = await request.future
+    assert isinstance(resolved, httpx.Response)
+    assert resolved.status_code == 200
 
 
 @pytest.mark.asyncio

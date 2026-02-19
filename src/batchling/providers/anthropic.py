@@ -8,6 +8,9 @@ from batchling.providers.base import (
     BaseProvider,
     BatchTerminalStatesLike,
     PendingRequestLike,
+    PollSnapshot,
+    ProviderRequestSpec,
+    ResumeContext,
 )
 
 
@@ -28,6 +31,73 @@ class AnthropicProvider(BaseProvider):
     batch_status_field_name: str = "processing_status"
     output_file_field_name: str = "id"
     error_file_field_name: str = "id"
+
+    def build_poll_request_spec(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        """
+        Build Anthropic poll request metadata.
+        """
+        return super().build_poll_request_spec(
+            base_url=base_url,
+            api_headers=api_headers,
+            batch_id=batch_id,
+        )
+
+    async def parse_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> PollSnapshot:
+        """
+        Parse Anthropic poll payload into normalized snapshot.
+        """
+        return await super().parse_poll_response(payload=payload)
+
+    def build_results_request_spec(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        file_id: str | None,
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        """
+        Build Anthropic results request metadata.
+        """
+        del base_url
+        del file_id
+        return ProviderRequestSpec(
+            method="GET",
+            path=self.file_content_endpoint.format(id=batch_id),
+            headers=api_headers,
+        )
+
+    def decode_results_content(
+        self,
+        *,
+        batch_id: str,
+        content: str,
+    ) -> dict[str, httpx.Response]:
+        """
+        Decode Anthropic JSONL results into responses keyed by custom ID.
+        """
+        return super().decode_results_content(batch_id=batch_id, content=content)
+
+    def build_resume_context(
+        self,
+        *,
+        host: str,
+        headers: dict[str, str] | None,
+    ) -> ResumeContext:
+        """
+        Build Anthropic resumed-polling context.
+        """
+        return super().build_resume_context(host=host, headers=headers)
 
     def build_jsonl_lines(
         self,

@@ -10,6 +10,9 @@ from batchling.providers.base import (
     BaseProvider,
     BatchTerminalStatesLike,
     PendingRequestLike,
+    PollSnapshot,
+    ProviderRequestSpec,
+    ResumeContext,
 )
 
 log = structlog.get_logger(__name__)
@@ -123,6 +126,22 @@ class GeminiProvider(BaseProvider):
         """
         return f"/v1beta/batches/{batch_id}"
 
+    def build_poll_request_spec(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        """
+        Build Gemini poll request metadata.
+        """
+        return super().build_poll_request_spec(
+            base_url=base_url,
+            api_headers=api_headers,
+            batch_id=batch_id,
+        )
+
     def build_batch_results_path(self, *, file_id: str | None, batch_id: str) -> str:
         """
         Build Gemini batch results path.
@@ -158,6 +177,16 @@ class GeminiProvider(BaseProvider):
         metadata_payload = payload.get("metadata") or {}
         return metadata_payload.get("state") or "created"
 
+    async def parse_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> PollSnapshot:
+        """
+        Parse Gemini poll payload into normalized snapshot.
+        """
+        return await super().parse_poll_response(payload=payload)
+
     async def get_output_file_id_from_poll_response(
         self,
         *,
@@ -169,6 +198,46 @@ class GeminiProvider(BaseProvider):
 
         response = payload.get("response") or {}
         return response.get("responsesFile") or ""
+
+    def build_results_request_spec(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        file_id: str | None,
+        batch_id: str,
+    ) -> ProviderRequestSpec:
+        """
+        Build Gemini results request metadata.
+        """
+        return super().build_results_request_spec(
+            base_url=base_url,
+            api_headers=api_headers,
+            file_id=file_id,
+            batch_id=batch_id,
+        )
+
+    def decode_results_content(
+        self,
+        *,
+        batch_id: str,
+        content: str,
+    ) -> dict[str, httpx.Response]:
+        """
+        Decode Gemini JSONL results into responses keyed by custom ID.
+        """
+        return super().decode_results_content(batch_id=batch_id, content=content)
+
+    def build_resume_context(
+        self,
+        *,
+        host: str,
+        headers: dict[str, str] | None,
+    ) -> ResumeContext:
+        """
+        Build Gemini resumed-polling context.
+        """
+        return super().build_resume_context(host=host, headers=headers)
 
     def _get_batch_id_from_response(self, *, response_json: dict) -> str:
         """
