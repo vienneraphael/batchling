@@ -21,6 +21,7 @@ import structlog
 from batchling.cache import CacheEntry, RequestCacheStore
 from batchling.exceptions import DeferredExit
 from batchling.providers import BaseProvider
+from batchling.providers.base import PollSnapshot, ProviderRequestSpec
 
 log = structlog.get_logger(__name__)
 QueueKey = tuple[str, str, str]
@@ -639,13 +640,14 @@ class Batcher:
         async with self._resumed_lock:
             resumed_batch = self._resumed_batches.get(resume_key)
             if resumed_batch is None:
-                api_headers = provider.build_internal_headers(
-                    headers=provider.build_api_headers(headers=headers or {}),
+                resume_context = provider.build_resume_context(
+                    host=host,
+                    headers=headers,
                 )
                 resumed_batch = _ResumedBatch(
                     provider=provider,
-                    base_url=provider._normalize_base_url(url=host),
-                    api_headers=api_headers,
+                    base_url=resume_context.base_url,
+                    api_headers=resume_context.api_headers,
                     requests_by_custom_id={},
                 )
                 self._resumed_batches[resume_key] = resumed_batch
@@ -1222,7 +1224,7 @@ class Batcher:
         base_url: str,
         api_headers: dict[str, str],
         batch_id: str,
-    ) -> tuple[str, str, str]:
+    ) -> PollSnapshot:
         """
         Execute one provider batch poll request.
 
@@ -1239,23 +1241,20 @@ class Batcher:
 
         Returns
         -------
-        tuple[str, str, str]
-            Tuple of ``(status, output_file_id, error_file_id)``.
+        PollSnapshot
+            Snapshot of provider batch status and output/error file IDs.
         """
-        poll_path = provider.build_batch_poll_path(batch_id=batch_id)
-        async with self._client_factory() as client:
-            response = await client.get(
-                url=f"{base_url}{poll_path}",
-                headers=api_headers,
-            )
-            response.raise_for_status()
-            payload = response.json()
-        status = provider.extract_batch_status(payload=payload)
-        output_file_id = await provider.get_output_file_id_from_poll_response(
-            payload=payload,
+        poll_request_spec = provider.build_poll_request_spec(
+            base_url=base_url,
+            api_headers=api_headers,
+            batch_id=batch_id,
         )
-        error_file_id = payload.get(provider.error_file_field_name) or ""
-        return status, output_file_id, error_file_id
+        response = await self._execute_provider_request(
+            base_url=base_url,
+            request_spec=poll_request_spec,
+        )
+        payload = response.json()
+        return await provider.parse_poll_response(payload=payload)
 
     async def _poll_batch(
         self,
@@ -1288,29 +1287,29 @@ class Batcher:
         while True:
             await self._raise_if_deferred_exit_triggered()
 
-            status, output_file_id, error_file_id = await self._poll_batch_once(
+            poll_snapshot = await self._poll_batch_once(
                 provider=provider,
                 base_url=base_url,
                 api_headers=api_headers,
                 batch_id=active_batch.batch_id,
             )
-            active_batch.output_file_id = output_file_id
-            active_batch.error_file_id = error_file_id
+            active_batch.output_file_id = poll_snapshot.output_file_id
+            active_batch.error_file_id = poll_snapshot.error_file_id
             log.debug(
                 event="Batch poll tick",
                 provider=provider.name,
                 batch_id=active_batch.batch_id,
-                status=status,
-                has_output_file=bool(output_file_id),
-                has_error_file=bool(error_file_id),
+                status=poll_snapshot.status,
+                has_output_file=bool(poll_snapshot.output_file_id),
+                has_error_file=bool(poll_snapshot.error_file_id),
             )
 
-            if status in provider.batch_terminal_states:
+            if poll_snapshot.status in provider.batch_terminal_states:
                 log.info(
                     event="Batch reached terminal state",
                     provider=provider.name,
                     batch_id=active_batch.batch_id,
-                    status=status,
+                    status=poll_snapshot.status,
                 )
                 await self._resolve_batch_results(
                     base_url=base_url,
@@ -1352,7 +1351,7 @@ class Batcher:
             while True:
                 await self._raise_if_deferred_exit_triggered()
 
-                status, output_file_id, error_file_id = await self._poll_batch_once(
+                poll_snapshot = await self._poll_batch_once(
                     provider=provider,
                     base_url=resumed_batch.base_url,
                     api_headers=resumed_batch.api_headers,
@@ -1362,15 +1361,15 @@ class Batcher:
                     event="Resumed batch poll tick",
                     provider=provider.name,
                     batch_id=batch_id,
-                    status=status,
-                    has_output_file=bool(output_file_id),
-                    has_error_file=bool(error_file_id),
+                    status=poll_snapshot.status,
+                    has_output_file=bool(poll_snapshot.output_file_id),
+                    has_error_file=bool(poll_snapshot.error_file_id),
                 )
-                if status in provider.batch_terminal_states:
+                if poll_snapshot.status in provider.batch_terminal_states:
                     await self._resolve_cached_batch_results(
                         resume_key=resume_key,
-                        output_file_id=output_file_id,
-                        error_file_id=error_file_id,
+                        output_file_id=poll_snapshot.output_file_id,
+                        error_file_id=poll_snapshot.error_file_id,
                     )
                     return
 
@@ -1421,7 +1420,9 @@ class Batcher:
         provider = resumed_batch.provider
         file_id = output_file_id or error_file_id
         try:
-            results_path = provider.build_batch_results_path(
+            results_request_spec = provider.build_results_request_spec(
+                base_url=resumed_batch.base_url,
+                api_headers=resumed_batch.api_headers,
                 file_id=file_id,
                 batch_id=batch_id,
             )
@@ -1435,17 +1436,12 @@ class Batcher:
 
         content = await self._download_batch_content(
             base_url=resumed_batch.base_url,
-            api_headers=resumed_batch.api_headers,
-            results_path=results_path,
+            request_spec=results_request_spec,
         )
-        responses_by_custom_id = {
-            custom_id: response
-            for custom_id, response in self._iter_batch_result_responses(
-                provider=provider,
-                batch_id=batch_id,
-                content=content,
-            )
-        }
+        responses_by_custom_id = provider.decode_results_content(
+            batch_id=batch_id,
+            content=content,
+        )
 
         missing_hashes: set[str] = set()
         async with self._resumed_lock:
@@ -1470,49 +1466,6 @@ class Batcher:
 
         if missing_hashes:
             _ = self._invalidate_cache_hashes(request_hashes=missing_hashes)
-
-    def _iter_batch_result_responses(
-        self,
-        *,
-        provider: BaseProvider,
-        batch_id: str,
-        content: str,
-    ) -> t.Iterator[tuple[str, httpx.Response]]:
-        """
-        Decode provider JSONL batch content into iterable response items.
-
-        Parameters
-        ----------
-        provider : BaseProvider
-            Provider adapter.
-        batch_id : str
-            Batch ID for logging.
-        content : str
-            Raw JSONL content.
-
-        Yields
-        ------
-        tuple[str, httpx.Response]
-            Decoded ``(custom_id, response)`` items.
-        """
-        for line in content.splitlines():
-            if not line.strip():
-                continue
-            result_item = json.loads(s=line)
-            custom_id = result_item.get(provider.custom_id_field_name)
-            if custom_id is None:
-                log.debug(
-                    event="Batch result missing custom_id",
-                    provider=provider.name,
-                    batch_id=batch_id,
-                )
-                continue
-            yield (
-                str(custom_id),
-                provider.from_batch_result(
-                    result_item=result_item,
-                ),
-            )
 
     async def _fail_resumed_batch_requests(
         self,
@@ -1572,7 +1525,9 @@ class Batcher:
         """
         file_id = active_batch.output_file_id or active_batch.error_file_id
         try:
-            results_path = provider.build_batch_results_path(
+            results_request_spec = provider.build_results_request_spec(
+                base_url=base_url,
+                api_headers=api_headers,
                 file_id=file_id,
                 batch_id=active_batch.batch_id,
             )
@@ -1594,19 +1549,18 @@ class Batcher:
             provider=provider.name,
             batch_id=active_batch.batch_id,
             file_id=file_id,
-            results_path=results_path,
+            results_path=results_request_spec.path,
         )
         content = await self._download_batch_content(
             base_url=base_url,
-            api_headers=api_headers,
-            results_path=results_path,
+            request_spec=results_request_spec,
         )
-        seen: set[str] = set()
-        for custom_id, resolved_response in self._iter_batch_result_responses(
-            provider=provider,
+        responses_by_custom_id = provider.decode_results_content(
             batch_id=active_batch.batch_id,
             content=content,
-        ):
+        )
+        seen = set(responses_by_custom_id.keys())
+        for custom_id, resolved_response in responses_by_custom_id.items():
             seen.add(custom_id)
             pending = active_batch.requests.get(custom_id)
             if pending and not pending.future.done():
@@ -1624,8 +1578,7 @@ class Batcher:
         self,
         *,
         base_url: str,
-        api_headers: dict[str, str],
-        results_path: str,
+        request_spec: ProviderRequestSpec,
     ) -> str:
         """
         Download batch results file content.
@@ -1634,23 +1587,61 @@ class Batcher:
         ----------
         base_url : str
             Provider base URL.
-        api_headers : dict[str, str]
-            Provider API headers.
-        results_path : str
-            Provider results endpoint path.
+        request_spec : ProviderRequestSpec
+            Provider request specification for result download.
 
         Returns
         -------
         str
             Raw JSONL content.
         """
+        response = await self._execute_provider_request(
+            base_url=base_url,
+            request_spec=request_spec,
+        )
+        return response.text
+
+    async def _execute_provider_request(
+        self,
+        *,
+        base_url: str,
+        request_spec: ProviderRequestSpec,
+    ) -> httpx.Response:
+        """
+        Execute a provider request using the shared batcher client factory.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        request_spec : ProviderRequestSpec
+            Provider request metadata.
+
+        Returns
+        -------
+        httpx.Response
+            Provider HTTP response.
+        """
+        request_kwargs: dict[str, t.Any] = {
+            "url": f"{base_url}{request_spec.path}",
+            "headers": request_spec.headers,
+        }
+        if request_spec.json_body is not None:
+            request_kwargs["json"] = request_spec.json_body
+        if request_spec.content is not None:
+            request_kwargs["content"] = request_spec.content
+        if request_spec.files is not None:
+            request_kwargs["files"] = request_spec.files
+        if request_spec.data is not None:
+            request_kwargs["data"] = request_spec.data
+
         async with self._client_factory() as client:
-            response = await client.get(
-                url=f"{base_url}{results_path}",
-                headers=api_headers,
+            response = await client.request(
+                method=request_spec.method,
+                **request_kwargs,
             )
             response.raise_for_status()
-            return response.text
+            return response
 
     def _fail_missing_results(
         self,
