@@ -470,7 +470,7 @@ class BaseProvider(ABC):
         """
         status = self.extract_batch_status(payload=payload)
         output_file_id = await self.get_output_file_id_from_poll_response(payload=payload)
-        error_file_id = payload.get(self.error_file_field_name) or ""
+        error_file_id = await self.get_error_file_id_from_poll_response(payload=payload)
         return PollSnapshot(
             status=status,
             output_file_id=str(object=output_file_id),
@@ -713,6 +713,16 @@ class BaseProvider(ABC):
         Get the output file ID from the poll response.
         """
         return payload.get(self.output_file_field_name) or ""
+
+    async def get_error_file_id_from_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> str:
+        """
+        Get the error file ID from the poll response.
+        """
+        return payload.get(self.error_file_field_name) or ""
 
     def _get_batch_id_from_response(self, *, response_json: dict) -> str:
         """
