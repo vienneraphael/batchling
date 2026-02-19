@@ -52,8 +52,6 @@ class _ActiveBatch:
     output_file_id: str
     error_file_id: str
     requests: dict[str, _PendingRequest]  # custom_id -> request
-    created_at: float
-    last_offset: int = 0  # Track offset for partial result streaming
 
 
 @dataclass
@@ -1067,7 +1065,6 @@ class Batcher:
                     output_file_id="",
                     error_file_id="",
                     requests={req.custom_id: req for req in requests},
-                    created_at=time.time(),
                 )
                 self._active_batches.append(active_batch)
                 for req in requests:
@@ -1122,7 +1119,6 @@ class Batcher:
                 output_file_id="",
                 error_file_id="",
                 requests={req.custom_id: req for req in requests},
-                created_at=time.time(),
             )
             self._active_batches.append(active_batch)
             log.debug(

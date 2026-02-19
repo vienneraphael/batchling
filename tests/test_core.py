@@ -714,8 +714,6 @@ async def test_active_batch_tracking(batcher: Batcher, provider: OpenAIProvider)
     batch = batcher._active_batches[0]
 
     assert batch.batch_id is not None
-    assert isinstance(batch.created_at, float)
-    assert batch.created_at > 0
     assert len(batch.requests) == 3
 
 
