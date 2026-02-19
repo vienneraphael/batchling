@@ -33,6 +33,7 @@ dev = [
     "openai>=2.17.0",
     "prek>=0.2.10",
     "pydantic>=2.12.3",
+    "pydantic-ai>=1.60.0",
     "pyinstrument>=5.1.1",
     "pytest>=8.4.2",
     "pytest-asyncio",
