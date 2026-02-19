@@ -371,7 +371,6 @@ class Batcher:
             future.set_result(
                 self._build_dry_run_response(
                     request=dry_run_request,
-                    provider_name=provider_name,
                     cache_hit=True,
                 )
             )
@@ -1072,7 +1071,6 @@ class Batcher:
                         req.future.set_result(
                             self._build_dry_run_response(
                                 request=req,
-                                provider_name=provider.name,
                             )
                         )
                 log.info(
@@ -1175,7 +1173,6 @@ class Batcher:
         self,
         *,
         request: _PendingRequest,
-        provider_name: str,
         cache_hit: bool = False,
     ) -> httpx.Response:
         """
@@ -1185,8 +1182,6 @@ class Batcher:
         ----------
         request : _PendingRequest
             Pending request metadata.
-        provider_name : str
-            Provider name for observability.
         cache_hit : bool, optional
             Whether this dry-run response came from a cache lookup.
 
@@ -1204,7 +1199,7 @@ class Batcher:
             json={
                 "dry_run": True,
                 "custom_id": request.custom_id,
-                "provider": provider_name,
+                "provider": request.provider.name,
                 "status": "simulated",
                 "cache_hit": cache_hit,
             },
