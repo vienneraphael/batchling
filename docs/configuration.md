@@ -39,6 +39,7 @@ batchling exposes user-facing controls for queueing, polling, caching, and defer
 - Default: `False`
 - Meaning: allow early termination when runtime becomes polling-only and idle.
 - Behavior: raises `DeferredExit` for library usage; CLI catches it and exits successfully.
+- HTTP hooks return a tagged synthetic response (`x-batchling-deferred: 1`) for deferred exits so SDKs do not present it as a transport-connection failure.
 
 ## `deferred_idle_seconds`
 

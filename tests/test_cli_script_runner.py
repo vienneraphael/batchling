@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import httpx
 from typer.testing import CliRunner
 
 import batchling.cli.main as cli_main
@@ -126,6 +127,38 @@ def test_cli_catches_deferred_exit(tmp_path: Path, monkeypatch):
     async def failing_run_script_with_batchify(**kwargs):
         del kwargs
         raise DeferredExit("deferred")
+
+    monkeypatch.setattr(
+        cli_main,
+        "run_script_with_batchify",
+        failing_run_script_with_batchify,
+    )
+
+    result = runner.invoke(
+        app,
+        [f"{script_path.as_posix()}:foo", "--deferred"],
+    )
+
+    assert result.exit_code == 0
+    assert "Deferred mode: batches are underway" in result.output
+
+
+def test_cli_catches_deferred_wrapped_error(tmp_path: Path, monkeypatch):
+    script_path = tmp_path / "script.py"
+    script_path.write_text("async def foo():\n    return None\n")
+
+    async def failing_run_script_with_batchify(**kwargs):
+        del kwargs
+        deferred_response = httpx.Response(
+            status_code=499,
+            headers={"x-batchling-deferred": "1"},
+            json={"error": {"type": "deferred_exit"}},
+        )
+        raise RuntimeError("wrapped") from httpx.HTTPStatusError(
+            message="deferred",
+            request=httpx.Request(method="POST", url="https://api.anthropic.com/v1/messages"),
+            response=deferred_response,
+        )
 
     monkeypatch.setattr(
         cli_main,

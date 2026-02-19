@@ -19,6 +19,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
 from batchling.core import Batcher
+from batchling.exceptions import DEFERRED_RESPONSE_HEADER, DeferredExit
 from batchling.providers import get_provider_for_batch_request
 from batchling.providers.base import BaseProvider
 
@@ -239,6 +240,54 @@ def _ensure_response_request(
     return response
 
 
+def _build_deferred_response(
+    *,
+    method: str,
+    url: str,
+    headers: dict[str, str] | None,
+    reason: str,
+) -> httpx.Response:
+    """
+    Build a synthetic response used for deferred-mode early exits.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method for the original request.
+    url : str
+        Request URL.
+    headers : dict[str, str] | None
+        Original request headers.
+    reason : str
+        Human-readable deferred reason.
+
+    Returns
+    -------
+    httpx.Response
+        Tagged synthetic response that avoids transport-level retry handling.
+    """
+    response = httpx.Response(
+        status_code=499,
+        headers={
+            DEFERRED_RESPONSE_HEADER: "1",
+            "content-type": "application/json",
+            "retry-after": "0",
+        },
+        json={
+            "error": {
+                "type": "deferred_exit",
+                "message": reason,
+            }
+        },
+    )
+    return _ensure_response_request(
+        response=response,
+        method=method,
+        url=url,
+        headers=headers,
+    )
+
+
 def _log_httpx_request(
     *,
     method: str,
@@ -434,7 +483,15 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
     )
     if routed is not None:
         batcher, provider, submit_kwargs = routed
-        response = await batcher.submit(provider=provider, **submit_kwargs)
+        try:
+            response = await batcher.submit(provider=provider, **submit_kwargs)
+        except DeferredExit as error:
+            return _build_deferred_response(
+                method=request.method,
+                url=url_str,
+                headers=headers,
+                reason=str(object=error),
+            )
         if isinstance(response, httpx.Response):
             return _ensure_response_request(
                 response=response,
@@ -489,7 +546,15 @@ async def _aiohttp_async_request_hook(
     )
     if routed is not None:
         batcher, provider, submit_kwargs = routed
-        response = await batcher.submit(provider=provider, **submit_kwargs)
+        try:
+            response = await batcher.submit(provider=provider, **submit_kwargs)
+        except DeferredExit as error:
+            response = _build_deferred_response(
+                method=method,
+                url=url_str,
+                headers=headers,
+                reason=str(object=error),
+            )
         if isinstance(response, httpx.Response):
             return _BatchedAiohttpResponse.from_httpx_response(
                 response=response,

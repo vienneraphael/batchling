@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 
 from batchling import DeferredExit, batchify
+from batchling.exceptions import is_deferred_exit_error
 
 # syncify = lambda f: wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
@@ -199,3 +200,10 @@ def main(
             "Deferred mode: batches are underway. Re-run this command later to fetch results."
         )
         raise typer.Exit(code=0)
+    except Exception as error:
+        if is_deferred_exit_error(error=error):
+            typer.echo(
+                "Deferred mode: batches are underway. Re-run this command later to fetch results."
+            )
+            raise typer.Exit(code=0)
+        raise
