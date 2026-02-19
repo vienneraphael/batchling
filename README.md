@@ -123,6 +123,18 @@ Run your function in batch mode:
 batchling main.py:generate
 ```
 
+Disable cache explicitly:
+
+```bash
+batchling main.py:generate --no-cache
+```
+
+Enable deferred idle exit:
+
+```bash
+batchling main.py:generate --deferred --deferred-idle-seconds 60
+```
+
 ## How it works
 
 ### Request interception
@@ -140,6 +152,13 @@ Each batch queue is associated with a unique `(provider, endpoint, model)` key.
 Once batches are ready to go, the received requests are repurposed into batch-compatible requests and sent to the provider.
 Batches are automatically polled every `batch_poll_interval_seconds` seconds.
 Once all batches have been processed, the data is returned through the `httpx` or `aiohttp` patch like a regular request would have been, letting the rest of the script execute.
+
+### Request cache and deferred mode
+
+- Request cache is enabled by default and can be disabled with `--no-cache` or `cache=False`.
+- Cache entries are cleaned with a one-month retention window.
+- Deferred mode (`--deferred` or `deferred=True`) can stop runtime when only polling remains idle.
+- CLI mode exits successfully with a deferred message; Python usage raises `DeferredExit`.
 
 ## Supported providers
 
