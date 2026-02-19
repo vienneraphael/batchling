@@ -301,94 +301,6 @@ class Batcher:
             return None
         return self._cache_store.get_by_hash(request_hash=request_hash)
 
-    @staticmethod
-    def _build_request_params(
-        *,
-        client_type: str,
-        method: str,
-        url: str,
-        endpoint: str,
-        headers: dict[str, str] | None,
-        body: bytes | None,
-        kwargs: dict[str, t.Any],
-    ) -> dict[str, t.Any]:
-        """
-        Build request parameter payload stored on pending requests.
-
-        Parameters
-        ----------
-        client_type : str
-            Type of client (e.g., ``"httpx"`` or ``"aiohttp"``).
-        method : str
-            HTTP method.
-        url : str
-            Request URL.
-        endpoint : str
-            Request endpoint.
-        headers : dict[str, str] | None
-            Request headers.
-        body : bytes | None
-            Request body bytes.
-        kwargs : dict[str, typing.Any]
-            Additional request parameters.
-
-        Returns
-        -------
-        dict[str, typing.Any]
-            Pending request parameter payload.
-        """
-        return {
-            "client_type": client_type,
-            "method": method,
-            "url": url,
-            "endpoint": endpoint,
-            "headers": headers,
-            "body": body,
-            **kwargs,
-        }
-
-    @staticmethod
-    def _build_pending_request(
-        *,
-        custom_id: str,
-        queue_key: QueueKey,
-        params: dict[str, t.Any],
-        provider: BaseProvider,
-        future: asyncio.Future[t.Any],
-        request_hash: str,
-    ) -> _PendingRequest:
-        """
-        Build pending request metadata entry.
-
-        Parameters
-        ----------
-        custom_id : str
-            Request custom ID in provider batch payload.
-        queue_key : QueueKey
-            Queue partition key.
-        params : dict[str, typing.Any]
-            Request parameters captured at interception time.
-        provider : BaseProvider
-            Provider adapter handling this request.
-        future : asyncio.Future[typing.Any]
-            Future resolved when request output is available.
-        request_hash : str
-            Request fingerprint used for cache identity.
-
-        Returns
-        -------
-        _PendingRequest
-            Pending request record.
-        """
-        return _PendingRequest(
-            custom_id=custom_id,
-            queue_key=queue_key,
-            params=params,
-            provider=provider,
-            future=future,
-            request_hash=request_hash,
-        )
-
     async def _try_submit_from_cache(
         self,
         *,
@@ -450,7 +362,7 @@ class Batcher:
             custom_id=cache_entry.custom_id,
         )
         if self._dry_run:
-            dry_run_request = self._build_pending_request(
+            dry_run_request = _PendingRequest(
                 custom_id=cache_entry.custom_id,
                 queue_key=queue_key,
                 params=request_params,
@@ -602,15 +514,15 @@ class Batcher:
 
         provider_name = provider.name
         host = self._resolve_host(url=url)
-        request_params = self._build_request_params(
-            client_type=client_type,
-            method=method,
-            url=url,
-            endpoint=endpoint,
-            headers=headers,
-            body=body,
-            kwargs=kwargs,
-        )
+        request_params = {
+            "client_type": client_type,
+            "method": method,
+            "url": url,
+            "endpoint": endpoint,
+            "headers": headers,
+            "body": body,
+            **kwargs,
+        }
         try:
             queue_key = self._build_queue_key(provider=provider, endpoint=endpoint, body=body)
             request_hash = self._build_request_hash(queue_key=queue_key, host=host, body=body)
@@ -656,7 +568,7 @@ class Batcher:
                 custom_id = str(object=uuid.uuid4())
                 future = loop.create_future()
 
-        request = self._build_pending_request(
+        request = _PendingRequest(
             custom_id=custom_id,
             queue_key=queue_key,
             params=request_params,
@@ -1535,11 +1447,14 @@ class Batcher:
             api_headers=resumed_batch.api_headers,
             results_path=results_path,
         )
-        responses_by_custom_id = self._decode_batch_result_responses(
-            provider=provider,
-            batch_id=batch_id,
-            content=content,
-        )
+        responses_by_custom_id = {
+            custom_id: response
+            for custom_id, response in self._iter_batch_result_responses(
+                provider=provider,
+                batch_id=batch_id,
+                content=content,
+            )
+        }
 
         missing_hashes: set[str] = set()
         async with self._resumed_lock:
@@ -1565,15 +1480,15 @@ class Batcher:
         if missing_hashes:
             _ = self._invalidate_cache_hashes(request_hashes=missing_hashes)
 
-    def _decode_batch_result_responses(
+    def _iter_batch_result_responses(
         self,
         *,
         provider: BaseProvider,
         batch_id: str,
         content: str,
-    ) -> dict[str, httpx.Response]:
+    ) -> t.Iterator[tuple[str, httpx.Response]]:
         """
-        Decode provider JSONL batch content into response map.
+        Decode provider JSONL batch content into iterable response items.
 
         Parameters
         ----------
@@ -1584,12 +1499,11 @@ class Batcher:
         content : str
             Raw JSONL content.
 
-        Returns
-        -------
-        dict[str, httpx.Response]
-            Response mapped by custom ID.
+        Yields
+        ------
+        tuple[str, httpx.Response]
+            Decoded ``(custom_id, response)`` items.
         """
-        responses_by_custom_id: dict[str, httpx.Response] = {}
         for line in content.splitlines():
             if not line.strip():
                 continue
@@ -1602,10 +1516,12 @@ class Batcher:
                     batch_id=batch_id,
                 )
                 continue
-            responses_by_custom_id[str(custom_id)] = provider.from_batch_result(
-                result_item=result_item,
+            yield (
+                str(custom_id),
+                provider.from_batch_result(
+                    result_item=result_item,
+                ),
             )
-        return responses_by_custom_id
 
     async def _fail_resumed_batch_requests(
         self,
@@ -1694,11 +1610,16 @@ class Batcher:
             api_headers=api_headers,
             results_path=results_path,
         )
-        seen = self._apply_batch_results(
+        seen: set[str] = set()
+        for custom_id, resolved_response in self._iter_batch_result_responses(
             provider=provider,
-            active_batch=active_batch,
+            batch_id=active_batch.batch_id,
             content=content,
-        )
+        ):
+            seen.add(custom_id)
+            pending = active_batch.requests.get(custom_id)
+            if pending and not pending.future.done():
+                pending.future.set_result(resolved_response)
         log.info(
             event="Mapped batch results to output requests",
             provider=provider.name,
@@ -1739,53 +1660,6 @@ class Batcher:
             )
             response.raise_for_status()
             return response.text
-
-    def _apply_batch_results(
-        self,
-        *,
-        provider: BaseProvider,
-        active_batch: _ActiveBatch,
-        content: str,
-    ) -> set[str]:
-        """
-        Apply batch results to pending futures.
-
-        Parameters
-        ----------
-        provider : BaseProvider
-            Provider adapter.
-        active_batch : _ActiveBatch
-            Active batch metadata.
-        content : str
-            Raw JSONL content.
-
-        Returns
-        -------
-        set[str]
-            Custom IDs that were resolved.
-        """
-        seen: set[str] = set()
-        for line in content.splitlines():
-            if not line.strip():
-                continue
-            result_item = json.loads(s=line)
-            custom_id = result_item.get(
-                provider.custom_id_field_name,
-            )
-            if custom_id is None:
-                log.debug(
-                    event="Batch result missing custom_id",
-                    provider=provider.name,
-                    batch_id=active_batch.batch_id,
-                )
-                continue
-            seen.add(custom_id)
-            pending = active_batch.requests.get(custom_id)
-            if pending and not pending.future.done():
-                pending.future.set_result(
-                    provider.from_batch_result(result_item=result_item),
-                )
-        return seen
 
     def _fail_missing_results(
         self,

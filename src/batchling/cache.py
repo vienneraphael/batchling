@@ -302,12 +302,13 @@ class RequestCacheStore:
         if not unique_hashes:
             return 0
 
+        placeholders = ", ".join(["?"] * len(unique_hashes))
+        query = f"DELETE FROM request_cache WHERE request_hash IN ({placeholders})"  # nosec B608
         with self._connect() as connection:
-            previous_changes = connection.total_changes
-            connection.executemany(
-                "DELETE FROM request_cache WHERE request_hash = ?",
-                [(request_hash,) for request_hash in unique_hashes],
+            cursor = connection.execute(
+                query,
+                unique_hashes,
             )
-            deleted_count = connection.total_changes - previous_changes
+            deleted_count = cursor.rowcount if cursor.rowcount is not None else 0
             connection.commit()
         return deleted_count
