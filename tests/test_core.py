@@ -3,6 +3,7 @@ Tests for the Batcher class in batchling.core.
 """
 
 import asyncio
+import contextlib
 import time
 import typing as t
 
@@ -1780,12 +1781,15 @@ async def test_deferred_idle_triggers_deferred_exit():
         deferred=True,
         deferred_idle_seconds=0.01,
     )
-    batcher._poller_count = 1
+    active_task = asyncio.create_task(asyncio.sleep(delay=10.0))
+    batcher._batch_tasks.add(active_task)
     batcher._last_intercepted_at = time.time() - 1.0
 
     await batcher._maybe_trigger_deferred_exit()
 
     assert isinstance(batcher._deferred_exit_error, DeferredExit)
+    with contextlib.suppress(asyncio.CancelledError):
+        await active_task
     provider = OpenAIProvider()
     with pytest.raises(DeferredExit):
         await batcher.submit(

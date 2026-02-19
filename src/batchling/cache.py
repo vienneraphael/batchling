@@ -142,6 +142,58 @@ class RequestCacheStore:
             )
             connection.commit()
 
+    @staticmethod
+    def _row_to_entry(*, row: sqlite3.Row) -> CacheEntry:
+        """
+        Map one SQLite row to a cache entry.
+
+        Parameters
+        ----------
+        row : sqlite3.Row
+            Database row from ``request_cache``.
+
+        Returns
+        -------
+        CacheEntry
+            Parsed cache entry.
+        """
+        return CacheEntry(
+            request_hash=str(row["request_hash"]),
+            provider=str(row["provider"]),
+            endpoint=str(row["endpoint"]),
+            model=str(row["model"]),
+            host=str(row["host"]),
+            batch_id=str(row["batch_id"]),
+            custom_id=str(row["custom_id"]),
+            created_at=float(row["created_at"]),
+        )
+
+    @staticmethod
+    def _entry_values(*, entry: CacheEntry) -> tuple[str, str, str, str, str, str, str, float]:
+        """
+        Convert cache entry to SQLite parameter tuple.
+
+        Parameters
+        ----------
+        entry : CacheEntry
+            Cache row model.
+
+        Returns
+        -------
+        tuple[str, str, str, str, str, str, str, float]
+            Tuple ordered for ``INSERT`` statements.
+        """
+        return (
+            entry.request_hash,
+            entry.provider,
+            entry.endpoint,
+            entry.model,
+            entry.host,
+            entry.batch_id,
+            entry.custom_id,
+            entry.created_at,
+        )
+
     def get_by_hash(self, *, request_hash: str) -> CacheEntry | None:
         """
         Load one cache row by request hash.
@@ -169,16 +221,7 @@ class RequestCacheStore:
         if row is None:
             return None
 
-        return CacheEntry(
-            request_hash=str(row["request_hash"]),
-            provider=str(row["provider"]),
-            endpoint=str(row["endpoint"]),
-            model=str(row["model"]),
-            host=str(row["host"]),
-            batch_id=str(row["batch_id"]),
-            custom_id=str(row["custom_id"]),
-            created_at=float(row["created_at"]),
-        )
+        return self._row_to_entry(row=row)
 
     def upsert_many(self, *, entries: t.Sequence[CacheEntry]) -> int:
         """
@@ -212,19 +255,7 @@ class RequestCacheStore:
                     custom_id=excluded.custom_id,
                     created_at=excluded.created_at
                 """,
-                [
-                    (
-                        entry.request_hash,
-                        entry.provider,
-                        entry.endpoint,
-                        entry.model,
-                        entry.host,
-                        entry.batch_id,
-                        entry.custom_id,
-                        entry.created_at,
-                    )
-                    for entry in entries
-                ],
+                [self._entry_values(entry=entry) for entry in entries],
             )
             affected = connection.total_changes
             connection.commit()

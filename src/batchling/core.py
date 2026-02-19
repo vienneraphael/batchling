@@ -141,7 +141,6 @@ class Batcher:
             timeout=30.0
         )
         self._poll_interval_seconds = batch_poll_interval_seconds
-        self._poller_count = 0
         self._batch_tasks: set[asyncio.Task[None]] = set()
         self._resumed_poll_tasks: set[asyncio.Task[None]] = set()
         self._resumed_batches: dict[ResumedBatchKey, _ResumedBatch] = {}
@@ -302,6 +301,259 @@ class Batcher:
             return None
         return self._cache_store.get_by_hash(request_hash=request_hash)
 
+    @staticmethod
+    def _build_request_params(
+        *,
+        client_type: str,
+        method: str,
+        url: str,
+        endpoint: str,
+        headers: dict[str, str] | None,
+        body: bytes | None,
+        kwargs: dict[str, t.Any],
+    ) -> dict[str, t.Any]:
+        """
+        Build request parameter payload stored on pending requests.
+
+        Parameters
+        ----------
+        client_type : str
+            Type of client (e.g., ``"httpx"`` or ``"aiohttp"``).
+        method : str
+            HTTP method.
+        url : str
+            Request URL.
+        endpoint : str
+            Request endpoint.
+        headers : dict[str, str] | None
+            Request headers.
+        body : bytes | None
+            Request body bytes.
+        kwargs : dict[str, typing.Any]
+            Additional request parameters.
+
+        Returns
+        -------
+        dict[str, typing.Any]
+            Pending request parameter payload.
+        """
+        return {
+            "client_type": client_type,
+            "method": method,
+            "url": url,
+            "endpoint": endpoint,
+            "headers": headers,
+            "body": body,
+            **kwargs,
+        }
+
+    @staticmethod
+    def _build_pending_request(
+        *,
+        custom_id: str,
+        queue_key: QueueKey,
+        params: dict[str, t.Any],
+        provider: BaseProvider,
+        future: asyncio.Future[t.Any],
+        request_hash: str,
+    ) -> _PendingRequest:
+        """
+        Build pending request metadata entry.
+
+        Parameters
+        ----------
+        custom_id : str
+            Request custom ID in provider batch payload.
+        queue_key : QueueKey
+            Queue partition key.
+        params : dict[str, typing.Any]
+            Request parameters captured at interception time.
+        provider : BaseProvider
+            Provider adapter handling this request.
+        future : asyncio.Future[typing.Any]
+            Future resolved when request output is available.
+        request_hash : str
+            Request fingerprint used for cache identity.
+
+        Returns
+        -------
+        _PendingRequest
+            Pending request record.
+        """
+        return _PendingRequest(
+            custom_id=custom_id,
+            queue_key=queue_key,
+            params=params,
+            provider=provider,
+            future=future,
+            request_hash=request_hash,
+        )
+
+    async def _try_submit_from_cache(
+        self,
+        *,
+        queue_key: QueueKey,
+        endpoint: str,
+        provider: BaseProvider,
+        host: str,
+        headers: dict[str, str] | None,
+        request_hash: str,
+        request_params: dict[str, t.Any],
+        future: asyncio.Future[t.Any],
+    ) -> CacheEntry | None:
+        """
+        Try resolving an intercepted request via cache-hit routing.
+
+        Parameters
+        ----------
+        queue_key : QueueKey
+            Queue partition key.
+        endpoint : str
+            Request endpoint.
+        provider : BaseProvider
+            Provider adapter for this request.
+        host : str
+            Provider host.
+        headers : dict[str, str] | None
+            Request headers.
+        request_hash : str
+            Request fingerprint.
+        request_params : dict[str, typing.Any]
+            Captured request parameters.
+        future : asyncio.Future[typing.Any]
+            Future to resolve.
+
+        Returns
+        -------
+        CacheEntry | None
+            Matched cache entry when routed through cache.
+        """
+        cache_entry = self._lookup_cache_entry(request_hash=request_hash)
+        provider_name, _, model_name = queue_key
+        if cache_entry is None:
+            log.debug(
+                event="Cache miss for intercepted request",
+                provider=provider_name,
+                endpoint=endpoint,
+                model=model_name,
+                host=host,
+            )
+            return None
+
+        log.info(
+            event="Cache hit for intercepted request",
+            provider=provider_name,
+            endpoint=endpoint,
+            model=model_name,
+            host=host,
+            batch_id=cache_entry.batch_id,
+            custom_id=cache_entry.custom_id,
+        )
+        if self._dry_run:
+            dry_run_request = self._build_pending_request(
+                custom_id=cache_entry.custom_id,
+                queue_key=queue_key,
+                params=request_params,
+                provider=provider,
+                future=future,
+                request_hash=request_hash,
+            )
+            future.set_result(
+                self._build_dry_run_response(
+                    request=dry_run_request,
+                    provider_name=provider_name,
+                    cache_hit=True,
+                )
+            )
+            return cache_entry
+
+        await self._attach_cached_request(
+            provider=provider,
+            host=host,
+            headers=headers,
+            cache_entry=cache_entry,
+            request_hash=request_hash,
+            future=future,
+        )
+        return cache_entry
+
+    async def _enqueue_pending_request(
+        self,
+        *,
+        request: _PendingRequest,
+    ) -> None:
+        """
+        Enqueue pending request and trigger submission when thresholds are reached.
+
+        Parameters
+        ----------
+        request : _PendingRequest
+            Request to queue.
+        """
+        queue_key = request.queue_key
+        provider_name, queue_endpoint, model_name = queue_key
+        queue_name = self._format_queue_key(queue_key=queue_key)
+        requests_to_submit: list[_PendingRequest] = []
+
+        log.debug(
+            event="Queued request for batch",
+            provider=provider_name,
+            queue_endpoint=queue_endpoint,
+            model=model_name,
+            queue_key=queue_name,
+            custom_id=request.custom_id,
+            client_type=request.params["client_type"],
+            method=request.params["method"],
+            url=request.params["url"],
+            endpoint=request.params["endpoint"],
+        )
+
+        async with self._pending_lock:
+            queue = self._pending_by_provider.setdefault(queue_key, [])
+            queue.append(request)
+            pending_count = len(queue)
+            log.debug(
+                event="Pending queue updated",
+                provider=provider_name,
+                queue_endpoint=queue_endpoint,
+                model=model_name,
+                queue_key=queue_name,
+                pending_count=pending_count,
+            )
+
+            if pending_count == 1:
+                log.debug(
+                    event="Starting batch window timer",
+                    provider=provider_name,
+                    queue_endpoint=queue_endpoint,
+                    model=model_name,
+                    queue_key=queue_name,
+                    batch_window_seconds=self._batch_window_seconds,
+                )
+                self._window_tasks[queue_key] = asyncio.create_task(
+                    coro=self._window_timer(queue_key=queue_key),
+                    name=f"batch_window_timer_{queue_name}",
+                )
+
+            if pending_count >= self._batch_size:
+                log.debug(
+                    event="Batch size reached",
+                    provider=provider_name,
+                    queue_endpoint=queue_endpoint,
+                    model=model_name,
+                    queue_key=queue_name,
+                    batch_size=self._batch_size,
+                )
+                requests_to_submit = self._drain_provider_queue(
+                    queue_key=queue_key,
+                )
+
+        if requests_to_submit:
+            await self._submit_requests(
+                queue_key=queue_key,
+                requests=requests_to_submit,
+            )
+
     async def submit(
         self,
         client_type: str,
@@ -346,11 +598,19 @@ class Batcher:
         self._last_intercepted_at = time.time()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[t.Any] = loop.create_future()
-
         custom_id = str(object=uuid.uuid4())
 
         provider_name = provider.name
         host = self._resolve_host(url=url)
+        request_params = self._build_request_params(
+            client_type=client_type,
+            method=method,
+            url=url,
+            endpoint=endpoint,
+            headers=headers,
+            body=body,
+            kwargs=kwargs,
+        )
         try:
             queue_key = self._build_queue_key(provider=provider, endpoint=endpoint, body=body)
             request_hash = self._build_request_hash(queue_key=queue_key, host=host, body=body)
@@ -364,51 +624,17 @@ class Batcher:
             future.set_exception(error)
             return await future
 
-        cache_entry = self._lookup_cache_entry(request_hash=request_hash)
+        cache_entry = await self._try_submit_from_cache(
+            queue_key=queue_key,
+            endpoint=endpoint,
+            provider=provider,
+            host=host,
+            headers=headers,
+            request_hash=request_hash,
+            request_params=request_params,
+            future=future,
+        )
         if cache_entry is not None:
-            log.info(
-                event="Cache hit for intercepted request",
-                provider=provider_name,
-                endpoint=endpoint,
-                model=queue_key[2],
-                host=host,
-                batch_id=cache_entry.batch_id,
-                custom_id=cache_entry.custom_id,
-            )
-            if self._dry_run:
-                dry_run_request = _PendingRequest(
-                    custom_id=cache_entry.custom_id,
-                    queue_key=queue_key,
-                    params={
-                        "client_type": client_type,
-                        "method": method,
-                        "url": url,
-                        "endpoint": endpoint,
-                        "headers": headers,
-                        "body": body,
-                        **kwargs,
-                    },
-                    provider=provider,
-                    future=future,
-                    request_hash=request_hash,
-                )
-                future.set_result(
-                    self._build_dry_run_response(
-                        request=dry_run_request,
-                        provider_name=provider_name,
-                        cache_hit=True,
-                    )
-                )
-                return await future
-
-            await self._attach_cached_request(
-                provider=provider,
-                host=host,
-                headers=headers,
-                cache_entry=cache_entry,
-                request_hash=request_hash,
-                future=future,
-            )
             try:
                 return await future
             except DeferredExit:
@@ -429,96 +655,16 @@ class Batcher:
                 _ = self._invalidate_cache_hashes(request_hashes=[request_hash])
                 custom_id = str(object=uuid.uuid4())
                 future = loop.create_future()
-        log.debug(
-            event="Cache miss for intercepted request",
-            provider=provider_name,
-            endpoint=endpoint,
-            model=queue_key[2],
-            host=host,
-        )
 
-        request = _PendingRequest(
+        request = self._build_pending_request(
             custom_id=custom_id,
             queue_key=queue_key,
-            params={
-                "client_type": client_type,
-                "method": method,
-                "url": url,
-                "endpoint": endpoint,
-                "headers": headers,
-                "body": body,
-                **kwargs,
-            },
+            params=request_params,
             provider=provider,
             future=future,
             request_hash=request_hash,
         )
-
-        queue_name = self._format_queue_key(queue_key=queue_key)
-        _, queue_endpoint, model_name = queue_key
-        requests_to_submit: list[_PendingRequest] = []
-
-        log.debug(
-            event="Queued request for batch",
-            provider=provider_name,
-            queue_endpoint=queue_endpoint,
-            model=model_name,
-            queue_key=queue_name,
-            custom_id=custom_id,
-            client_type=client_type,
-            method=method,
-            url=url,
-            endpoint=endpoint,
-        )
-
-        async with self._pending_lock:
-            queue = self._pending_by_provider.setdefault(queue_key, [])
-            queue.append(request)
-            pending_count = len(queue)
-            log.debug(
-                event="Pending queue updated",
-                provider=provider_name,
-                queue_endpoint=queue_endpoint,
-                model=model_name,
-                queue_key=queue_name,
-                pending_count=pending_count,
-            )
-
-            # Start window timer if this is the first request
-            if pending_count == 1:
-                log.debug(
-                    event="Starting batch window timer",
-                    provider=provider_name,
-                    queue_endpoint=queue_endpoint,
-                    model=model_name,
-                    queue_key=queue_name,
-                    batch_window_seconds=self._batch_window_seconds,
-                )
-                self._window_tasks[queue_key] = asyncio.create_task(
-                    coro=self._window_timer(queue_key=queue_key),
-                    name=f"batch_window_timer_{queue_name}",
-                )
-
-            # Check if we've hit the size threshold
-            if pending_count >= self._batch_size:
-                log.debug(
-                    event="Batch size reached",
-                    provider=provider_name,
-                    queue_endpoint=queue_endpoint,
-                    model=model_name,
-                    queue_key=queue_name,
-                    batch_size=self._batch_size,
-                )
-                requests_to_submit = self._drain_provider_queue(
-                    queue_key=queue_key,
-                )
-
-        if requests_to_submit:
-            await self._submit_requests(
-                queue_key=queue_key,
-                requests=requests_to_submit,
-            )
-
+        await self._enqueue_pending_request(request=request)
         return await future
 
     @staticmethod
@@ -879,6 +1025,19 @@ class Batcher:
             )
         return deleted_rows
 
+    def _has_active_pollers(self) -> bool:
+        """
+        Return whether batch submission/polling tasks are currently running.
+
+        Returns
+        -------
+        bool
+            ``True`` when at least one background polling-related task is active.
+        """
+        return any(not task.done() for task in self._batch_tasks) or any(
+            not task.done() for task in self._resumed_poll_tasks
+        )
+
     async def _maybe_trigger_deferred_exit(self) -> None:
         """
         Trigger deferred early exit if polling-only idle conditions are met.
@@ -894,7 +1053,7 @@ class Batcher:
             has_window = any(
                 bool(task is not None and not task.done()) for task in self._window_tasks.values()
             )
-        if has_pending or has_window or self._poller_count <= 0:
+        if has_pending or has_window or not self._has_active_pollers():
             return
 
         await self._trigger_deferred_exit(
@@ -1223,46 +1382,42 @@ class Batcher:
             batch_id=active_batch.batch_id,
             poll_interval_seconds=self._poll_interval_seconds,
         )
-        self._poller_count += 1
-        try:
-            while True:
-                await self._raise_if_deferred_exit_triggered()
+        while True:
+            await self._raise_if_deferred_exit_triggered()
 
-                status, output_file_id, error_file_id = await self._poll_batch_once(
-                    provider=provider,
-                    base_url=base_url,
-                    api_headers=api_headers,
-                    batch_id=active_batch.batch_id,
-                )
-                active_batch.output_file_id = output_file_id
-                active_batch.error_file_id = error_file_id
-                log.debug(
-                    event="Batch poll tick",
+            status, output_file_id, error_file_id = await self._poll_batch_once(
+                provider=provider,
+                base_url=base_url,
+                api_headers=api_headers,
+                batch_id=active_batch.batch_id,
+            )
+            active_batch.output_file_id = output_file_id
+            active_batch.error_file_id = error_file_id
+            log.debug(
+                event="Batch poll tick",
+                provider=provider.name,
+                batch_id=active_batch.batch_id,
+                status=status,
+                has_output_file=bool(output_file_id),
+                has_error_file=bool(error_file_id),
+            )
+
+            if status in provider.batch_terminal_states:
+                log.info(
+                    event="Batch reached terminal state",
                     provider=provider.name,
                     batch_id=active_batch.batch_id,
                     status=status,
-                    has_output_file=bool(output_file_id),
-                    has_error_file=bool(error_file_id),
                 )
+                await self._resolve_batch_results(
+                    base_url=base_url,
+                    api_headers=api_headers,
+                    provider=provider,
+                    active_batch=active_batch,
+                )
+                return
 
-                if status in provider.batch_terminal_states:
-                    log.info(
-                        event="Batch reached terminal state",
-                        provider=provider.name,
-                        batch_id=active_batch.batch_id,
-                        status=status,
-                    )
-                    await self._resolve_batch_results(
-                        base_url=base_url,
-                        api_headers=api_headers,
-                        provider=provider,
-                        active_batch=active_batch,
-                    )
-                    return
-
-                await asyncio.sleep(delay=self._poll_interval_seconds)
-        finally:
-            self._poller_count = max(0, self._poller_count - 1)
+            await asyncio.sleep(delay=self._poll_interval_seconds)
 
     async def _poll_cached_batch(
         self,
@@ -1284,7 +1439,6 @@ class Batcher:
 
         provider = resumed_batch.provider
         _, host, batch_id = resume_key
-        self._poller_count += 1
         try:
             log.info(
                 event="Polling resumed cached batch",
@@ -1335,7 +1489,6 @@ class Batcher:
         finally:
             async with self._resumed_lock:
                 self._resumed_batches.pop(resume_key, None)
-            self._poller_count = max(0, self._poller_count - 1)
 
     async def _resolve_cached_batch_results(
         self,
