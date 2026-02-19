@@ -6,7 +6,7 @@ from pathlib import Path
 
 import typer
 
-from batchling import batchify
+from batchling import DeferredExit, batchify
 
 # syncify = lambda f: wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
@@ -74,6 +74,9 @@ async def run_script_with_batchify(
     batch_window_seconds: float,
     batch_poll_interval_seconds: float,
     dry_run: bool,
+    cache: bool,
+    deferred: bool,
+    deferred_idle_seconds: float,
 ):
     """
     Execute a Python script under a batchify context.
@@ -94,6 +97,12 @@ async def run_script_with_batchify(
         Polling interval passed to ``batchify``.
     dry_run : bool
         Dry run mode passed to ``batchify``.
+    cache : bool
+        Cache mode passed to ``batchify``.
+    deferred : bool
+        Deferred mode passed to ``batchify``.
+    deferred_idle_seconds : float
+        Deferred idle threshold passed to ``batchify``.
     """
     if not module_path.exists():
         typer.echo(f"Script not found: {module_path}")
@@ -108,6 +117,9 @@ async def run_script_with_batchify(
         batch_window_seconds=batch_window_seconds,
         batch_poll_interval_seconds=batch_poll_interval_seconds,
         dry_run=dry_run,
+        cache=cache,
+        deferred=deferred,
+        deferred_idle_seconds=deferred_idle_seconds,
     ):
         ns = runpy.run_path(path_name=script_path_as_posix, run_name="batchling.runtime")
         func = ns.get(func_name)
@@ -147,24 +159,43 @@ def main(
         bool,
         typer.Option(help="Intercept and batch requests without sending provider batches"),
     ] = False,
+    cache: t.Annotated[
+        bool,
+        typer.Option("--cache/--no-cache", help="Enable persistent request caching"),
+    ] = True,
+    deferred: t.Annotated[
+        bool,
+        typer.Option(help="Allow deferred-mode idle termination while polling"),
+    ] = False,
+    deferred_idle_seconds: t.Annotated[
+        float,
+        typer.Option(help="Deferred-mode idle threshold in seconds"),
+    ] = 60.0,
 ):
     """Run a script under ``batchify``."""
     try:
         module_path, func_name = script_path.as_posix().rsplit(":", 1)
     except ValueError:
         raise typer.BadParameter("Script path must be a module path, use 'module:func' syntax")
-    script_args = []
-    for extra_arg in ctx.args:
-        script_args.append(extra_arg)
+    script_args = list(ctx.args)
 
-    asyncio.run(
-        run_script_with_batchify(
-            module_path=Path(module_path),
-            func_name=func_name,
-            script_args=script_args,
-            batch_size=batch_size,
-            batch_window_seconds=batch_window_seconds,
-            batch_poll_interval_seconds=batch_poll_interval_seconds,
-            dry_run=dry_run,
+    try:
+        asyncio.run(
+            run_script_with_batchify(
+                module_path=Path(module_path),
+                func_name=func_name,
+                script_args=script_args,
+                batch_size=batch_size,
+                batch_window_seconds=batch_window_seconds,
+                batch_poll_interval_seconds=batch_poll_interval_seconds,
+                dry_run=dry_run,
+                cache=cache,
+                deferred=deferred,
+                deferred_idle_seconds=deferred_idle_seconds,
+            )
         )
-    )
+    except DeferredExit:
+        typer.echo(
+            "Deferred mode: batches are underway. Re-run this command later to fetch results."
+        )
+        raise typer.Exit(code=0)

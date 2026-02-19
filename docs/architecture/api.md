@@ -8,7 +8,8 @@ yields `None`. Import it from `batchling`.
 
 - Install HTTP hooks once (idempotent).
 - Construct a `Batcher` with configuration such as `batch_size`,
-  `batch_window_seconds`, `batch_poll_interval_seconds`, and `dry_run`.
+  `batch_window_seconds`, `batch_poll_interval_seconds`, `dry_run`,
+  `cache`, `deferred`, and `deferred_idle_seconds`.
 - Return a `BatchingContext` to scope batching to a context manager.
 
 ## Inputs and outputs
@@ -20,6 +21,11 @@ yields `None`. Import it from `batchling`.
   and grouped using normal window/size triggers, but provider batch submission and polling
   are skipped. Requests resolve with synthetic `httpx.Response` objects marked with
   `x-batchling-dry-run: 1`.
+- **`cache` behavior**: when `cache=True` (default), intercepted requests are fingerprinted
+  and looked up in a persistent request cache. Cache hits bypass queueing and resume polling
+  from an existing provider batch when not in dry-run mode.
+- **`deferred` behavior**: when `deferred=True`, polling-only idle runtime can raise
+  `DeferredExit` after `deferred_idle_seconds`. CLI mode catches this and exits with success.
 - **Outputs**: `BatchingContext[None]` instance that yields `None`.
 
 ## CLI callable usage
@@ -33,7 +39,8 @@ batchling path/to/my_script.py:foo arg1 --name alice --count=3 --dry-run
 Behavior:
 
 - CLI options map directly to `batchify` arguments:
-  `batch_size`, `batch_window_seconds`, `batch_poll_interval_seconds`, and `dry_run`.
+  `batch_size`, `batch_window_seconds`, `batch_poll_interval_seconds`, `dry_run`,
+  `cache`, `deferred`, and `deferred_idle_seconds`.
 - Script target must use `module_path:function_name` syntax.
 - Forwarded callable arguments are mapped as:
   positional tokens are passed as positional arguments;

@@ -1,6 +1,6 @@
 # Configuration
 
-batchling exposes four user-facing controls.
+batchling exposes user-facing controls for queueing, polling, caching, and deferred mode.
 
 ## `batch_size`
 
@@ -26,6 +26,26 @@ batchling exposes four user-facing controls.
 - Default: `False`
 - Meaning: intercept and group requests without sending provider batches.
 
+## `cache`
+
+- Type: `bool`
+- Default: `True`
+- Meaning: enable persistent request cache lookup and writeback for batch submissions.
+- CLI: disable with `--no-cache`.
+
+## `deferred`
+
+- Type: `bool`
+- Default: `False`
+- Meaning: allow early termination when runtime becomes polling-only and idle.
+- Behavior: raises `DeferredExit` for library usage; CLI catches it and exits successfully.
+
+## `deferred_idle_seconds`
+
+- Type: `float`
+- Default: `60.0`
+- Meaning: idle duration threshold before deferred mode triggers early exit.
+
 ## Queue semantics
 
 Batch queues are partitioned by strict key:
@@ -43,6 +63,9 @@ async with batchify(
     batch_size=200,
     batch_window_seconds=5.0,
     batch_poll_interval_seconds=15.0,
+    cache=True,
+    deferred=False,
+    deferred_idle_seconds=60.0,
     dry_run=False,
 ):
     ...

@@ -31,6 +31,7 @@ async def test_batchify_creates_batcher(reset_hooks, reset_context):
     assert isinstance(wrapped._self_batcher, Batcher)
     assert wrapped._self_batcher._batch_size == 5
     assert wrapped._self_batcher._batch_window_seconds == 1.0
+    assert wrapped._self_batcher._cache_enabled is True
 
 
 @pytest.mark.asyncio
@@ -44,6 +45,23 @@ async def test_batchify_creates_dry_run_batcher(reset_hooks, reset_context):
 
     assert isinstance(wrapped._self_batcher, Batcher)
     assert wrapped._self_batcher._dry_run is True
+    assert wrapped._self_batcher._cache_enabled is True
+    assert wrapped._self_batcher._cache_write_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_batchify_configures_cache_and_deferred_flags(reset_hooks, reset_context):
+    """Test that batchify forwards cache/deferred options to Batcher."""
+    wrapped = batchify(
+        cache=False,
+        deferred=True,
+        deferred_idle_seconds=12.5,
+    )
+
+    assert isinstance(wrapped._self_batcher, Batcher)
+    assert wrapped._self_batcher._cache_enabled is False
+    assert wrapped._self_batcher._deferred is True
+    assert wrapped._self_batcher._deferred_idle_seconds == 12.5
 
 
 @pytest.mark.asyncio
