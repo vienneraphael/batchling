@@ -1583,6 +1583,51 @@ async def test_cache_hit_skips_provider_submission(
 
 
 @pytest.mark.asyncio
+async def test_cache_route_failure_falls_back_to_fresh_submission(
+    mock_openai_api_transport: httpx.MockTransport,
+):
+    """Test cache-hit poll failure reroutes the request to fresh batching."""
+    batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True)
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    batcher._poll_interval_seconds = 0.01
+    assert batcher._cache_store is not None
+
+    provider = OpenAIProvider()
+    queue_key = ("openai", "/v1/chat/completions", "model-a")
+    request_hash = batcher._build_request_hash(
+        queue_key=queue_key,
+        host="api.openai.com",
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    _ = batcher._cache_store.upsert_many(
+        entries=[
+            CacheEntry(
+                request_hash=request_hash,
+                provider="openai",
+                endpoint="/v1/chat/completions",
+                model="model-a",
+                host="api.openai.com",
+                batch_id="batch-missing",
+                custom_id="custom-missing",
+                created_at=time.time(),
+            )
+        ]
+    )
+
+    result = await batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    assert result.status_code == 200
+    await batcher.close()
+
+
+@pytest.mark.asyncio
 async def test_cache_fingerprint_uses_queue_model(
     monkeypatch, mock_openai_api_transport: httpx.MockTransport
 ):

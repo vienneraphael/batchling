@@ -68,7 +68,6 @@ class _ResumedPendingRequest:
 class _ResumedBatch:
     """Resumed cache-hit batch polled by batch ID."""
 
-    key: ResumedBatchKey
     provider: BaseProvider
     base_url: str
     api_headers: dict[str, str]
@@ -410,7 +409,26 @@ class Batcher:
                 request_hash=request_hash,
                 future=future,
             )
-            return await future
+            try:
+                return await future
+            except DeferredExit:
+                raise
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                log.warning(
+                    event="Cache route failed; falling back to fresh batch submission",
+                    provider=provider_name,
+                    endpoint=endpoint,
+                    model=queue_key[2],
+                    host=host,
+                    batch_id=cache_entry.batch_id,
+                    custom_id=cache_entry.custom_id,
+                    error=str(object=error),
+                )
+                _ = self._invalidate_cache_hashes(request_hashes=[request_hash])
+                custom_id = str(object=uuid.uuid4())
+                future = loop.create_future()
         log.debug(
             event="Cache miss for intercepted request",
             provider=provider_name,
@@ -570,7 +588,6 @@ class Batcher:
                     headers=provider.build_api_headers(headers=headers or {}),
                 )
                 resumed_batch = _ResumedBatch(
-                    key=resume_key,
                     provider=provider,
                     base_url=provider._normalize_base_url(url=host),
                     api_headers=api_headers,
@@ -1126,6 +1143,58 @@ class Batcher:
             },
         )
 
+    async def _raise_if_deferred_exit_triggered(self) -> None:
+        """
+        Raise deferred exit if idle polling conditions were met.
+        """
+        if self._deferred_exit_error is not None:
+            raise self._deferred_exit_error
+        await self._maybe_trigger_deferred_exit()
+        if self._deferred_exit_error is not None:
+            raise self._deferred_exit_error
+
+    async def _poll_batch_once(
+        self,
+        *,
+        provider: BaseProvider,
+        base_url: str,
+        api_headers: dict[str, str],
+        batch_id: str,
+    ) -> tuple[str, str, str]:
+        """
+        Execute one provider batch poll request.
+
+        Parameters
+        ----------
+        provider : BaseProvider
+            Provider adapter.
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        batch_id : str
+            Provider batch ID.
+
+        Returns
+        -------
+        tuple[str, str, str]
+            Tuple of ``(status, output_file_id, error_file_id)``.
+        """
+        poll_path = provider.build_batch_poll_path(batch_id=batch_id)
+        async with self._client_factory() as client:
+            response = await client.get(
+                url=f"{base_url}{poll_path}",
+                headers=api_headers,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        status = provider.extract_batch_status(payload=payload)
+        output_file_id = await provider.get_output_file_id_from_poll_response(
+            payload=payload,
+        )
+        error_file_id = payload.get(provider.error_file_field_name) or ""
+        return status, output_file_id, error_file_id
+
     async def _poll_batch(
         self,
         *,
@@ -1157,34 +1226,23 @@ class Batcher:
         self._poller_count += 1
         try:
             while True:
-                if self._deferred_exit_error is not None:
-                    raise self._deferred_exit_error
+                await self._raise_if_deferred_exit_triggered()
 
-                await self._maybe_trigger_deferred_exit()
-                if self._deferred_exit_error is not None:
-                    raise self._deferred_exit_error
-
-                poll_path = provider.build_batch_poll_path(batch_id=active_batch.batch_id)
-                async with self._client_factory() as client:
-                    response = await client.get(
-                        url=f"{base_url}{poll_path}",
-                        headers=api_headers,
-                    )
-                    response.raise_for_status()
-                    payload = response.json()
-                # FIXME: fit into a data validation model
-                status = provider.extract_batch_status(payload=payload)
-                active_batch.output_file_id = await provider.get_output_file_id_from_poll_response(
-                    payload=payload,
+                status, output_file_id, error_file_id = await self._poll_batch_once(
+                    provider=provider,
+                    base_url=base_url,
+                    api_headers=api_headers,
+                    batch_id=active_batch.batch_id,
                 )
-                active_batch.error_file_id = payload.get(provider.error_file_field_name) or ""
+                active_batch.output_file_id = output_file_id
+                active_batch.error_file_id = error_file_id
                 log.debug(
                     event="Batch poll tick",
                     provider=provider.name,
                     batch_id=active_batch.batch_id,
                     status=status,
-                    has_output_file=bool(active_batch.output_file_id),
-                    has_error_file=bool(active_batch.error_file_id),
+                    has_output_file=bool(output_file_id),
+                    has_error_file=bool(error_file_id),
                 )
 
                 if status in provider.batch_terminal_states:
@@ -1235,27 +1293,14 @@ class Batcher:
                 batch_id=batch_id,
             )
             while True:
-                if self._deferred_exit_error is not None:
-                    raise self._deferred_exit_error
+                await self._raise_if_deferred_exit_triggered()
 
-                await self._maybe_trigger_deferred_exit()
-                if self._deferred_exit_error is not None:
-                    raise self._deferred_exit_error
-
-                poll_path = provider.build_batch_poll_path(batch_id=batch_id)
-                async with self._client_factory() as client:
-                    response = await client.get(
-                        url=f"{resumed_batch.base_url}{poll_path}",
-                        headers=resumed_batch.api_headers,
-                    )
-                    response.raise_for_status()
-                    payload = response.json()
-
-                status = provider.extract_batch_status(payload=payload)
-                output_file_id = await provider.get_output_file_id_from_poll_response(
-                    payload=payload,
+                status, output_file_id, error_file_id = await self._poll_batch_once(
+                    provider=provider,
+                    base_url=resumed_batch.base_url,
+                    api_headers=resumed_batch.api_headers,
+                    batch_id=batch_id,
                 )
-                error_file_id = payload.get(provider.error_file_field_name) or ""
                 log.debug(
                     event="Resumed batch poll tick",
                     provider=provider.name,

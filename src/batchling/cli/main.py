@@ -177,9 +177,7 @@ def main(
         module_path, func_name = script_path.as_posix().rsplit(":", 1)
     except ValueError:
         raise typer.BadParameter("Script path must be a module path, use 'module:func' syntax")
-    script_args = []
-    for extra_arg in ctx.args:
-        script_args.append(extra_arg)
+    script_args = list(ctx.args)
 
     try:
         asyncio.run(
