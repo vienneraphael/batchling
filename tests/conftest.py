@@ -3,6 +3,7 @@ import httpx
 import pytest
 
 import batchling.hooks as hooks_module
+from batchling.cache import CACHE_PATH_ENV_VAR
 from batchling.hooks import active_batcher
 
 
@@ -29,6 +30,13 @@ def reset_context():
         active_batcher.set(None)
     except LookupError:
         pass
+
+
+@pytest.fixture(autouse=True)
+def isolate_cache_path(monkeypatch, tmp_path):
+    """Use a dedicated cache file per test."""
+    cache_path = tmp_path / "batchling-cache.sqlite3"
+    monkeypatch.setenv(CACHE_PATH_ENV_VAR, cache_path.as_posix())
     yield
     try:
         active_batcher.set(None)

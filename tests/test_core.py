@@ -3,12 +3,15 @@ Tests for the Batcher class in batchling.core.
 """
 
 import asyncio
+import time
 import typing as t
 
 import httpx
 import pytest
 
+from batchling.cache import CacheEntry
 from batchling.core import Batcher, _PendingRequest
+from batchling.exceptions import DeferredExit
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.mistral import MistralProvider
@@ -55,7 +58,7 @@ def batcher(mock_openai_api_transport: httpx.MockTransport) -> Batcher:
     Batcher
         Configured batcher instance.
     """
-    batcher = Batcher(batch_size=3, batch_window_seconds=0.5)
+    batcher = Batcher(batch_size=3, batch_window_seconds=0.5, cache=False)
     batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
     batcher._poll_interval_seconds = 0.01
     return batcher
@@ -71,7 +74,7 @@ def fast_batcher(mock_openai_api_transport: httpx.MockTransport) -> Batcher:
     Batcher
         Configured batcher instance.
     """
-    batcher = Batcher(batch_size=2, batch_window_seconds=0.1)
+    batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=False)
     batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
     batcher._poll_interval_seconds = 0.01
     return batcher
@@ -150,6 +153,7 @@ async def test_batcher_initialization():
         batch_size=10,
         batch_window_seconds=2.0,
         batch_poll_interval_seconds=5.0,
+        cache=False,
     )
 
     assert batcher._batch_size == 10
@@ -756,7 +760,7 @@ async def test_large_batch_size(
     mock_openai_api_transport: httpx.MockTransport, provider: OpenAIProvider
 ):
     """Test with a larger batch size."""
-    large_batcher = Batcher(batch_size=10, batch_window_seconds=0.1)
+    large_batcher = Batcher(batch_size=10, batch_window_seconds=0.1, cache=False)
     large_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
     large_batcher._poll_interval_seconds = 0.01
 
@@ -820,6 +824,7 @@ async def test_dry_run_returns_simulated_response(provider: OpenAIProvider):
         batch_size=3,
         batch_window_seconds=0.5,
         dry_run=True,
+        cache=False,
     )
 
     result = await dry_run_batcher.submit(
@@ -861,6 +866,7 @@ async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProv
         batch_size=1,
         batch_window_seconds=1.0,
         dry_run=True,
+        cache=False,
     )
 
     call_count = 0
@@ -899,6 +905,7 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
         batch_size=3,
         batch_window_seconds=1.0,
         dry_run=True,
+        cache=False,
     )
 
     results = await asyncio.gather(
@@ -945,6 +952,7 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
         batch_size=5,
         batch_window_seconds=10.0,
         dry_run=True,
+        cache=False,
     )
 
     task = asyncio.create_task(
@@ -972,7 +980,7 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
 async def test_homogeneous_provider_same_model_uses_same_queue():
     """Test strict batching groups same endpoint/model requests together."""
     provider = HomogeneousOpenAIProvider()
-    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     results = await asyncio.gather(
         batcher.submit(
@@ -1003,7 +1011,7 @@ async def test_homogeneous_provider_same_model_uses_same_queue():
 async def test_homogeneous_provider_pending_request_stores_queue_key():
     """Test strict batching stores full queue key on pending requests."""
     provider = HomogeneousOpenAIProvider()
-    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     task = asyncio.create_task(
         batcher.submit(
@@ -1031,7 +1039,7 @@ async def test_homogeneous_provider_pending_request_stores_queue_key():
 async def test_strict_queue_key_stores_provider_endpoint_model():
     """Test strict queue keys always store provider, endpoint, and model."""
     provider = OpenAIProvider()
-    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     task = asyncio.create_task(
         batcher.submit(
@@ -1068,7 +1076,7 @@ def test_gemini_queue_key_extracts_model_from_endpoint() -> None:
         This test asserts queue-key model extraction.
     """
     provider = GeminiProvider()
-    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     queue_key = batcher._build_queue_key(
         provider=provider,
@@ -1174,7 +1182,7 @@ def test_gemini_batch_status_extraction_uses_metadata_state_field() -> None:
 async def test_homogeneous_provider_different_models_use_distinct_queues():
     """Test strict batching partitions queues by model."""
     provider = HomogeneousOpenAIProvider()
-    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     await asyncio.gather(
         batcher.submit(
@@ -1220,7 +1228,7 @@ async def test_homogeneous_provider_different_models_use_distinct_queues():
 async def test_homogeneous_provider_missing_model_fails_fast():
     """Test strict batching rejects requests without model."""
     provider = HomogeneousOpenAIProvider()
-    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     with pytest.raises(ValueError, match="model"):
         await batcher.submit(
@@ -1241,7 +1249,7 @@ async def test_homogeneous_provider_missing_model_fails_fast():
 async def test_strict_queue_key_mixed_models_use_distinct_queues():
     """Test strict queue key partitions requests by model."""
     provider = OpenAIProvider()
-    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     task_1 = asyncio.create_task(
         batcher.submit(
@@ -1278,7 +1286,7 @@ async def test_strict_queue_key_mixed_models_use_distinct_queues():
 async def test_strict_queue_key_different_endpoints_use_distinct_queues():
     """Test strict queue key partitions requests by endpoint."""
     provider = OpenAIProvider()
-    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=3, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     task_1 = asyncio.create_task(
         batcher.submit(
@@ -1328,7 +1336,7 @@ async def test_strict_queue_key_different_endpoints_use_distinct_queues():
 async def test_close_flushes_all_model_scoped_queues_for_homogeneous_provider():
     """Test close flushes all strict model-scoped queues."""
     provider = HomogeneousOpenAIProvider()
-    batcher = Batcher(batch_size=5, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=5, batch_window_seconds=10.0, dry_run=True, cache=False)
 
     task_1 = asyncio.create_task(
         batcher.submit(
@@ -1373,7 +1381,7 @@ async def test_close_flushes_all_model_scoped_queues_for_homogeneous_provider():
 async def test_submit_requests_passes_queue_key_to_process_batch():
     """Test _submit_requests forwards queue_key to _process_batch."""
     provider = OpenAIProvider()
-    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True)
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
     loop = asyncio.get_running_loop()
     request = _PendingRequest(
         custom_id="request-id",
@@ -1387,6 +1395,7 @@ async def test_submit_requests_passes_queue_key_to_process_batch():
         },
         provider=provider,
         future=loop.create_future(),
+        request_hash="hash-request-id",
     )
     captured: dict[str, QueueKey] = {}
     called_event = asyncio.Event()
@@ -1409,7 +1418,7 @@ async def test_submit_requests_passes_queue_key_to_process_batch():
 async def test_process_batch_calls_provider_with_queue_key():
     """Test _process_batch passes queue_key argument to provider.process_batch."""
     provider = HomogeneousOpenAIProvider()
-    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=False)
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=False, cache=False)
     loop = asyncio.get_running_loop()
     queue_key = _queue_key(provider_name=provider.name, model_name="model-a")
     request = _PendingRequest(
@@ -1425,6 +1434,7 @@ async def test_process_batch_calls_provider_with_queue_key():
         },
         provider=provider,
         future=loop.create_future(),
+        request_hash="hash-request-1",
     )
     captured: dict[str, QueueKey] = {}
 
@@ -1481,6 +1491,7 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
         },
         provider=provider,
         future=asyncio.get_running_loop().create_future(),
+        request_hash="hash-request-1",
     )
     calls: dict[str, t.Any] = {"uploaded": False, "inline_lines": []}
 
@@ -1518,3 +1529,225 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
     assert calls["inline_lines"][0]["params"]["model"] == "claude"
     assert calls["queue_key"] == queue_key
     assert submission.batch_id == "msgbatch-123"
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_skips_provider_submission(
+    monkeypatch, mock_openai_api_transport: httpx.MockTransport
+):
+    """Test cache-hit requests bypass provider batch submission."""
+    first_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True)
+    first_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    first_batcher._poll_interval_seconds = 0.01
+
+    first_provider = OpenAIProvider()
+    first_result = await first_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=first_provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    assert first_result.status_code == 200
+    await first_batcher.close()
+
+    second_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True)
+    second_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    second_batcher._poll_interval_seconds = 0.01
+    second_provider = OpenAIProvider()
+
+    async def fail_process_batch(**kwargs):
+        del kwargs
+        raise AssertionError("cache-hit path should not submit a new provider batch")
+
+    monkeypatch.setattr(
+        target=second_provider,
+        name="process_batch",
+        value=fail_process_batch,
+    )
+
+    second_result = await second_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=second_provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    assert second_result.status_code == 200
+    assert len(second_batcher._active_batches) == 0
+    await second_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_cache_fingerprint_uses_queue_model(
+    monkeypatch, mock_openai_api_transport: httpx.MockTransport
+):
+    """Test model differences do not collide in cache fingerprints."""
+    first_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True)
+    first_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    first_batcher._poll_interval_seconds = 0.01
+    provider = OpenAIProvider()
+
+    _ = await first_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    await first_batcher.close()
+
+    second_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True)
+    second_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    second_batcher._poll_interval_seconds = 0.01
+    second_provider = OpenAIProvider()
+    call_count = 0
+    original_process_batch = second_provider.process_batch
+
+    async def wrapped_process_batch(*, requests, client_factory, queue_key):
+        nonlocal call_count
+        call_count += 1
+        return await original_process_batch(
+            requests=requests,
+            client_factory=client_factory,
+            queue_key=queue_key,
+        )
+
+    monkeypatch.setattr(
+        target=second_provider,
+        name="process_batch",
+        value=wrapped_process_batch,
+    )
+
+    _ = await second_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=second_provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-b","messages":[]}',
+    )
+    assert call_count == 1
+    await second_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_cache_cleanup_removes_rows_older_than_retention(
+    mock_openai_api_transport: httpx.MockTransport,
+):
+    """Test cache cleanup removes entries older than one month."""
+    batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True)
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    batcher._poll_interval_seconds = 0.01
+    assert batcher._cache_store is not None
+
+    stale_hash = "stale-hash"
+    stale_entry = CacheEntry(
+        request_hash=stale_hash,
+        provider="openai",
+        endpoint="/v1/chat/completions",
+        model="model-a",
+        host="api.openai.com",
+        batch_id="batch-stale",
+        custom_id="custom-stale",
+        created_at=time.time() - (31 * 24 * 60 * 60),
+    )
+    _ = batcher._cache_store.upsert_many(entries=[stale_entry])
+
+    provider = OpenAIProvider()
+    _ = await batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+
+    assert batcher._cache_store.get_by_hash(request_hash=stale_hash) is None
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_dry_run_cache_hit_is_read_only(mock_openai_api_transport: httpx.MockTransport):
+    """Test dry-run mode reads cache hits without writing new cache rows."""
+    writer_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True, dry_run=False)
+    writer_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    writer_batcher._poll_interval_seconds = 0.01
+    provider = OpenAIProvider()
+
+    _ = await writer_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    assert writer_batcher._cache_store is not None
+    request_hash = writer_batcher._build_request_hash(
+        queue_key=("openai", "/v1/chat/completions", "model-a"),
+        host="api.openai.com",
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    original_entry = writer_batcher._cache_store.get_by_hash(request_hash=request_hash)
+    assert original_entry is not None
+    original_created_at = original_entry.created_at
+    await writer_batcher.close()
+
+    dry_run_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True, dry_run=True)
+    dry_run_provider = OpenAIProvider()
+    dry_run_response = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=dry_run_provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    assert dry_run_response.headers["x-batchling-dry-run"] == "1"
+    assert dry_run_response.headers["x-batchling-cache-hit"] == "1"
+    assert dry_run_response.json()["cache_hit"] is True
+    assert dry_run_batcher._cache_store is not None
+    dry_run_entry = dry_run_batcher._cache_store.get_by_hash(request_hash=request_hash)
+    assert dry_run_entry is not None
+    assert dry_run_entry.created_at == original_created_at
+    await dry_run_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_deferred_idle_triggers_deferred_exit():
+    """Test deferred mode raises DeferredExit when polling-only idle threshold is reached."""
+    batcher = Batcher(
+        batch_size=2,
+        batch_window_seconds=0.1,
+        cache=False,
+        deferred=True,
+        deferred_idle_seconds=0.01,
+    )
+    batcher._poller_count = 1
+    batcher._last_intercepted_at = time.time() - 1.0
+
+    await batcher._maybe_trigger_deferred_exit()
+
+    assert isinstance(batcher._deferred_exit_error, DeferredExit)
+    provider = OpenAIProvider()
+    with pytest.raises(DeferredExit):
+        await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            body=b'{"model":"model-a","messages":[]}',
+        )

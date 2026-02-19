@@ -39,7 +39,7 @@ async def test_hook_routes_openai_url_to_batcher(reset_hooks, reset_context):
     mocked_original = AsyncMock(return_value=httpx.Response(status_code=204))
     hooks_module._original_httpx_async_send = mocked_original
 
-    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, cache=False)
     transport = make_openai_batch_transport()
     batcher._client_factory = lambda: httpx.AsyncClient(transport=transport)
     batcher._poll_interval_seconds = 0.01
@@ -75,7 +75,7 @@ async def test_hook_falls_back_for_unsupported_url(reset_hooks, reset_context):
     mocked_original = AsyncMock(return_value=httpx.Response(status_code=204))
     hooks_module._original_httpx_async_send = mocked_original
 
-    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, cache=False)
     token = active_batcher.set(batcher)
     try:
         async with httpx.AsyncClient() as client:
@@ -105,7 +105,7 @@ async def test_aiohttp_hook_routes_openai_url_to_batcher(reset_hooks, reset_cont
     mocked_original = AsyncMock(return_value=_AiohttpDummyResponse(status=204))
     hooks_module._original_aiohttp_request = mocked_original
 
-    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, cache=False)
     transport = make_openai_batch_transport()
     batcher._client_factory = lambda: httpx.AsyncClient(transport=transport)
     batcher._poll_interval_seconds = 0.01
@@ -146,7 +146,7 @@ async def test_aiohttp_hook_routes_openai_url_with_string_data_to_batcher(
     mocked_original = AsyncMock(return_value=_AiohttpDummyResponse(status=204))
     hooks_module._original_aiohttp_request = mocked_original
 
-    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, cache=False)
     transport = make_openai_batch_transport()
     batcher._client_factory = lambda: httpx.AsyncClient(transport=transport)
     batcher._poll_interval_seconds = 0.01
@@ -186,7 +186,7 @@ async def test_aiohttp_hook_falls_back_for_unsupported_url(reset_hooks, reset_co
     mocked_original = AsyncMock(return_value=_AiohttpDummyResponse(status=204))
     hooks_module._original_aiohttp_request = mocked_original
 
-    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, cache=False)
     token = active_batcher.set(batcher)
     try:
         async with aiohttp.ClientSession() as session:
@@ -216,7 +216,7 @@ async def test_hook_falls_back_for_non_batchable_openai_endpoint(reset_hooks, re
     mocked_original = AsyncMock(return_value=httpx.Response(status_code=204))
     hooks_module._original_httpx_async_send = mocked_original
 
-    batcher = Batcher(batch_size=1, batch_window_seconds=1.0)
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, cache=False)
     token = active_batcher.set(batcher)
     try:
         async with httpx.AsyncClient() as client:
