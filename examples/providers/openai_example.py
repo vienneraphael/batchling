@@ -11,14 +11,8 @@ from batchling import batchify
 load_dotenv()
 
 
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build OpenAI requests.
-
-    Returns
-    -------
-    list[Awaitable[Any]]
-        Concurrent requests for batchling execution.
-    """
+async def build_tasks() -> list:
+    """Build OpenAI requests."""
     client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
     messages = [
         {
@@ -30,12 +24,10 @@ async def build_tasks() -> list[t.Awaitable[t.Any]]:
         client.responses.create(
             input=t.cast(t.Any, messages),
             model="gpt-4o-mini",
-            stream=False,
         ),
         client.responses.create(
             input=t.cast(t.Any, messages),
             model="gpt-5-nano",
-            stream=False,
         ),
     ]
 
@@ -44,7 +36,9 @@ async def main() -> None:
     """Run the OpenAI example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        content = response.output[-1].content  # skip reasoning output, get straight to the answer
+        print(f"{response.model} answer: {content[0].text}")
 
 
 async def run_with_batchify() -> None:

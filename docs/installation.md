@@ -1,6 +1,6 @@
 # Installation
 
-Placeholder content.
+batchling is available on PyPI as `batchling`, install using either `pip` or `uv`:
 
 ## Package manager
 
