@@ -158,6 +158,10 @@
   line-height: 1.62;
 }
 
+.md-typeset .tabbed-set > .tabbed-content {
+  padding-top: 0.6rem;
+}
+
 .md-clipboard {
   color: var(--brand-muted);
 }
