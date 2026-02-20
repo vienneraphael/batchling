@@ -111,16 +111,6 @@
       "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "installation/",
-      "title": "Installation",
-      "text": "<p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p>"
-    },
-    {
-      "location": "installation/#package-manager",
-      "title": "Package manager",
-      "text": "uvpip <pre><code>uv add batchling\n</code></pre> <pre><code>pip install batchling\n</code></pre>"
-    },
-    {
       "location": "overview/",
       "title": "Overview",
       "text": "<p>Placeholder content.</p>"
@@ -148,12 +138,7 @@
     {
       "location": "quickstart/#installation",
       "title": "Installation",
-      "text": "<p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p>"
-    },
-    {
-      "location": "quickstart/#package-manager",
-      "title": "Package manager",
-      "text": "uvpip <pre><code>uv add batchling\n</code></pre> <pre><code>pip install batchling\n</code></pre>"
+      "text": "<p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p> uvpip <pre><code>uv add batchling\n</code></pre> <pre><code>pip install batchling\n</code></pre>"
     },
     {
       "location": "quickstart/#hello-world-example",

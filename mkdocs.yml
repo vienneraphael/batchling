@@ -74,7 +74,6 @@ extra_javascript:
 nav:
   - batchling:
       - batchling: index.md
-      - Installation: installation.md
       - Quickstart: quickstart.md
   - Documentation:
       - Core components:
