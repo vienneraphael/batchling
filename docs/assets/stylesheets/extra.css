@@ -101,6 +101,11 @@
   max-width: 88ch;
 }
 
+.md-typeset hr {
+  width: 100%;
+  max-width: 88ch;
+}
+
 .md-typeset a {
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -272,6 +277,7 @@
   border-radius: var(--radius);
   background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
   box-shadow: var(--shadow-soft);
+  max-width: 88ch;
 }
 
 .md-typeset .highlight {
@@ -280,6 +286,7 @@
   background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
+  max-width: 88ch;
 }
 
 .md-typeset .highlight pre {
@@ -306,6 +313,15 @@
 
 .md-typeset .tabbed-set > .tabbed-content {
   padding-top: 0.6rem;
+}
+
+.md-typeset .tabbed-set {
+  max-width: 88ch;
+}
+
+.md-typeset .tabbed-labels {
+  width: 100%;
+  max-width: 88ch;
 }
 
 .md-clipboard {
