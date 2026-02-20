@@ -43,50 +43,52 @@ batchling integrates smoothly with any async function doing GenAI calls or withi
 
 Let's suppose we have an existing script `generate.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
 
-    #!/usr/bin/env python3
-    import asyncio
-    import os
-    import typing as t
+<!-- markdownlint-disable-next-line MD046 -->
+```python
+import asyncio
+import os
+import typing as t
 
-    from dotenv import load_dotenv
-    from openai import AsyncOpenAI
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
-    load_dotenv()
-
-
-    async def build_tasks() -> list[t.Awaitable[t.Any]]:
-        """Build OpenAI requests.
-        """
-        client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
-        messages = [
-            {
-                "content": "Who is the best French painter? Answer in one short sentence.",
-                "role": "user",
-            },
-        ]
-        return [
-            client.responses.create(
-                input=messages,
-                model="gpt-4o-mini",
-            ),
-            client.responses.create(
-                input=messages,
-                model="gpt-5-nano",
-            ),
-        ]
+load_dotenv()
 
 
-    async def main() -> None:
-        """Run the OpenAI example."""
-        tasks = await build_tasks()
-        responses = await asyncio.gather(*tasks)
-        for response in responses:
-            content = response.output[-1].content # skip reasoning output, get straight to the answer
-            print(f"{response.model} answer: {content[0].text}")
+async def build_tasks() -> list[t.Awaitable[t.Any]]:
+    """Build OpenAI requests.
+    """
+    client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
+    messages = [
+        {
+            "content": "Who is the best French painter? Answer in one short sentence.",
+            "role": "user",
+        },
+    ]
+    return [
+        client.responses.create(
+            input=messages,
+            model="gpt-4o-mini",
+        ),
+        client.responses.create(
+            input=messages,
+            model="gpt-5-nano",
+        ),
+    ]
 
 
-    if __name__ == "__main__":
-        asyncio.run(main())
+async def main() -> None:
+    """Run the OpenAI example."""
+    tasks = await build_tasks()
+    responses = await asyncio.gather(*tasks)
+    for response in responses:
+        content = response.output[-1].content # skip reasoning output, get straight to the answer
+        print(f"{response.model} answer: {content[0].text}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
 
 === "CLI"
 

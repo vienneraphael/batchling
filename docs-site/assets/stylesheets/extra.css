@@ -149,6 +149,11 @@
   box-shadow: none;
 }
 
+.md-typeset .language-bash.highlight code .bash-command,
+.md-typeset .language-sh.highlight code .bash-command {
+  color: #8fd96d;
+}
+
 .md-typeset code {
   font-size: 0.86em;
 }

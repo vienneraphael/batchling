@@ -10,6 +10,8 @@ theme:
   name: material
   logo: assets/images/batchling.png
   favicon: assets/images/batchling.png
+  pygments_style: tango
+  pygments_style_dark: monokai
   font:
     text: IBM Plex Sans
     code: JetBrains Mono
@@ -59,11 +61,15 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.highlight:
       anchor_linenums: true
+      use_pygments: true
+      pygments_lang_class: true
   - toc:
       permalink: true
 
 extra_css:
   - assets/stylesheets/extra.css
+extra_javascript:
+  - assets/javascripts/bash-command-highlight.js
 
 nav:
   - batchling:
