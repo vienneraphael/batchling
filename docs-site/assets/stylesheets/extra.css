@@ -474,6 +474,7 @@
 .home-hero {
   border: 1px solid var(--border);
   border-radius: 1rem;
+  max-width: 88ch;
   padding: clamp(1.05rem, 0.9rem + 0.8vw, 1.65rem);
   margin-bottom: 1.5rem;
   background: linear-gradient(
@@ -491,6 +492,7 @@
 .home-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  max-width: 88ch;
   gap: 0.85rem;
   margin: 1rem 0 1.8rem;
 }
@@ -551,7 +553,11 @@
 }
 
 @media screen and (min-width: 76.25em) {
-  /* Give sidebars a bit more room outward and widen the reading lane. */
+  /* Shift the primary nav + content lane right into the spare space before ToC. */
+  :root {
+    --docs-lane-shift: clamp(3.6rem, 6vw, 6.4rem);
+  }
+
   .md-grid {
     max-width: 86rem;
   }
@@ -561,7 +567,7 @@
   }
 
   .md-sidebar--primary {
-    margin-left: -0.15rem;
+    margin-left: calc(-0.15rem + var(--docs-lane-shift));
   }
 
   .md-sidebar--secondary {
@@ -569,6 +575,7 @@
   }
 
   .md-content {
+    margin-right: calc(-1 * var(--docs-lane-shift));
     max-width: none;
   }
 }
