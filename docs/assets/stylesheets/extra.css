@@ -97,8 +97,7 @@
 .md-typeset ul,
 .md-typeset ol,
 .md-typeset blockquote,
-.md-typeset .admonition,
-.md-typeset details {
+.md-typeset .admonition {
   max-width: 88ch;
 }
 
@@ -279,6 +278,24 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   background-color: color-mix(in srgb, var(--surface-2) 68%, transparent);
+}
+
+.md-typeset details {
+  width: 100%;
+  max-width: 88ch;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0;
+  font-size: inherit;
+}
+
+.md-typeset details > summary {
+  margin: 0;
+  border-radius: var(--radius);
+}
+
+.md-typeset details > :not(summary) {
+  padding: 0 0.95rem 0.85rem;
 }
 
 .md-typeset .admonition.note,
