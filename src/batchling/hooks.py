@@ -293,9 +293,6 @@ def _log_httpx_request(
     method: str,
     url: str,
     headers: dict[str, str] | None,
-    json_data: t.Any = None,
-    content: t.Any = None,
-    data: t.Any = None,
     body: t.Any = None,
 ) -> None:
     """
@@ -309,12 +306,6 @@ def _log_httpx_request(
         Request URL.
     headers : dict[str, str] | None
         Request headers.
-    json_data : typing.Any, optional
-        JSON payload.
-    content : typing.Any, optional
-        Raw content payload.
-    data : typing.Any, optional
-        Form data payload.
     body : typing.Any, optional
         Generic body payload.
     """
@@ -402,26 +393,17 @@ def _maybe_route_to_batcher(
     provider = get_provider_for_batch_request(method=method, hostname=hostname, path=path)
     if batcher is None or provider is None:
         if batcher is None and provider is None:
-            log.debug(
-                event="httpx request not routed",
-                reason="no active batcher and no provider match",
-                hostname=hostname,
-                path=path,
-            )
+            reason = "no active batcher and no provider match"
         elif batcher is None:
-            log.debug(
-                event="httpx request not routed",
-                reason="no active batcher",
-                hostname=hostname,
-                path=path,
-            )
+            reason = "no active batcher"
         else:
-            log.debug(
-                event="httpx request not routed",
-                reason="provider not matched",
-                hostname=hostname,
-                path=path,
-            )
+            reason = "provider not matched"
+        log.debug(
+            event="httpx request not routed",
+            reason=reason,
+            hostname=hostname,
+            path=path,
+        )
         return None
 
     return (
@@ -459,11 +441,7 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
     url_str = str(object=request.url)
     headers, body = _extract_body_and_headers_from_request(request=request)
     request_headers = _normalize_httpx_headers(headers=request.headers)
-    if headers:
-        headers = {**request_headers, **headers}
-    else:
-        headers = request_headers
-
+    headers = {**request_headers, **headers}
     if headers.get("x-batchling-internal") == "1":
         return await _BASE_HTTPX_ASYNC_SEND(self, request, **kwargs)
 
@@ -524,9 +502,6 @@ async def _aiohttp_async_request_hook(
     body = _extract_aiohttp_body(kwargs=kwargs)
 
     # Keep interception narrow: only route JSON/bytes request bodies.
-    if kwargs.get("data") is not None and body is None:
-        return await _BASE_AIOHTTP_REQUEST(self, method, str_or_url, **kwargs)
-
     if headers.get("x-batchling-internal") == "1":
         return await _BASE_AIOHTTP_REQUEST(self, method, str_or_url, **kwargs)
 
