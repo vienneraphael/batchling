@@ -931,6 +931,136 @@
 
 
 
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Installation
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#get-started" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Get Started
+
+    </span>
+  </a>
+
+    <nav class="md-nav" aria-label="Get Started">
+      <ul class="md-nav__list">
+
+          <li class="md-nav__item">
+  <a href="#using-the-async-context-manager-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Using the async context manager (recommended)
+
+    </span>
+  </a>
+
+</li>
+
+          <li class="md-nav__item">
+  <a href="#using-the-cli-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Using the CLI wrapper
+
+    </span>
+  </a>
+
+</li>
+
+      </ul>
+    </nav>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        How it works
+
+    </span>
+  </a>
+
+    <nav class="md-nav" aria-label="How it works">
+      <ul class="md-nav__list">
+
+          <li class="md-nav__item">
+  <a href="#request-interception" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Request interception
+
+    </span>
+  </a>
+
+</li>
+
+          <li class="md-nav__item">
+  <a href="#batch-management" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Batch Management
+
+    </span>
+  </a>
+
+</li>
+
+          <li class="md-nav__item">
+  <a href="#requests-repurposing" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Requests repurposing
+
+    </span>
+  </a>
+
+</li>
+
+          <li class="md-nav__item">
+  <a href="#request-cache-and-deferred-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Request cache and deferred mode
+
+    </span>
+  </a>
+
+</li>
+
+      </ul>
+    </nav>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#supported-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Supported providers
+
+    </span>
+  </a>
+
+</li>
+
+    </ul>
+
 </nav>
                   </div>
                 </div>
@@ -951,27 +1081,27 @@
 
 <h1 id="batchling">batchling<a class="headerlink" href="#batchling" title="Permanent link">&para;</a></h1>
 <div class="home-hero">
-  <p><strong>Batch API calls from familiar clients.</strong></p>
-  <p>batchling intercepts supported requests, groups them by provider, and
-  returns normal responses while reducing cost and latency overhead.</p>
+  <p><strong>Save 50% off GenAI costs in two lines of code.</strong></p>
+  <p>batchling repurposes incoming GenAI requests to batch format, gets results from supported Batch APIs and
+  returns responses seamlessly in your code execution, reducing GenAI costs at scale with zero friction.</p>
 </div>
 
 <div class="home-grid">
-  <a class="home-card" href="getting-started/">
+  <a class="home-card" href="quickstart/">
     <strong>Quickstart</strong>
     <span>Install and run the first async batching flow in minutes.</span>
   </a>
-  <a class="home-card" href="configuration/">
-    <strong>Configuration</strong>
-    <span>Tune batch sizes, windows, and dry-run behavior safely.</span>
+  <a class="home-card" href="overview/">
+    <strong>Frameworks & Providers</strong>
+    <span>See the list of supported frameworks and providers</span>
   </a>
-  <a class="home-card" href="providers/">
-    <strong>Providers</strong>
-    <span>Check supported adapters and compatibility notes.</span>
+  <a class="home-card" href="use-cases/">
+    <strong>Use-Cases</strong>
+    <span>Browse through real-life use-cases of batchling</span>
   </a>
 </div>
 
-<h1 id="batchling_1">batchling<a class="headerlink" href="#batchling_1" title="Permanent link">&para;</a></h1>
+<!-- markdownlint-disable-file MD041 MD001 -->
 <div align="center">
 <img src="https://raw.githubusercontent.com/vienneraphael/batchling/main/docs/assets/images/batchling.png" alt="batchling logo" width="500" role="img">
 </div>
@@ -998,7 +1128,7 @@
 </ul>
 <details>
 <summary><strong>What's the catch?</strong></summary>
-<p>The catch is the Batch API!</p>
+<p>The batch is the catch!</p>
 <p>Batch APIs enable you to process large volumes of requests asynchronously (usually at 50% lower cost compared to real-time API calls). It's perfect for workloads that don't need immediate responses such as:</p>
 <ul>
 <li>Running mass offline evaluations</li>
@@ -1074,12 +1204,6 @@
 </code></pre></div>
 <p>Run your function in batch mode:</p>
 <div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>batchling<span class="w"> </span>main.py:generate
-</code></pre></div>
-<p>Disable cache explicitly:</p>
-<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>batchling<span class="w"> </span>main.py:generate<span class="w"> </span>--no-cache
-</code></pre></div>
-<p>Enable deferred idle exit:</p>
-<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>batchling<span class="w"> </span>main.py:generate<span class="w"> </span>--deferred<span class="w"> </span>--deferred-idle-seconds<span class="w"> </span><span class="m">60</span>
 </code></pre></div>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <h3 id="request-interception">Request interception<a class="headerlink" href="#request-interception" title="Permanent link">&para;</a></h3>

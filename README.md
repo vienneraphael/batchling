@@ -1,5 +1,4 @@
-# batchling
-
+<!-- markdownlint-disable-file MD041 MD001 -->
 <div align="center">
 <img src="https://raw.githubusercontent.com/vienneraphael/batchling/main/docs/assets/images/batchling.png" alt="batchling logo" width="500" role="img">
 </div>
@@ -30,7 +29,7 @@ Key features:
 
 <summary><strong>What's the catch?</strong></summary>
 
-The catch is the Batch API!
+The batch is the catch!
 
 Batch APIs enable you to process large volumes of requests asynchronously (usually at 50% lower cost compared to real-time API calls). It's perfect for workloads that don't need immediate responses such as:
 
@@ -121,18 +120,6 @@ Run your function in batch mode:
 
 ```bash
 batchling main.py:generate
-```
-
-Disable cache explicitly:
-
-```bash
-batchling main.py:generate --no-cache
-```
-
-Enable deferred idle exit:
-
-```bash
-batchling main.py:generate --deferred --deferred-idle-seconds 60
 ```
 
 ## How it works

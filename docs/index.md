@@ -1,23 +1,23 @@
 # batchling
 
 <div class="home-hero">
-  <p><strong>Batch API calls from familiar clients.</strong></p>
-  <p>batchling intercepts supported requests, groups them by provider, and
-  returns normal responses while reducing cost and latency overhead.</p>
+  <p><strong>Save 50% off GenAI costs in two lines of code.</strong></p>
+  <p>batchling repurposes incoming GenAI requests to batch format, gets results from supported Batch APIs and
+  returns responses seamlessly in your code execution, reducing GenAI costs at scale with zero friction.</p>
 </div>
 
 <div class="home-grid">
-  <a class="home-card" href="getting-started/">
+  <a class="home-card" href="quickstart/">
     <strong>Quickstart</strong>
     <span>Install and run the first async batching flow in minutes.</span>
   </a>
-  <a class="home-card" href="configuration/">
-    <strong>Configuration</strong>
-    <span>Tune batch sizes, windows, and dry-run behavior safely.</span>
+  <a class="home-card" href="overview/">
+    <strong>Frameworks & Providers</strong>
+    <span>See the list of supported frameworks and providers</span>
   </a>
-  <a class="home-card" href="providers/">
-    <strong>Providers</strong>
-    <span>Check supported adapters and compatibility notes.</span>
+  <a class="home-card" href="use-cases/">
+    <strong>Use-Cases</strong>
+    <span>Browse through real-life use-cases of batchling</span>
   </a>
 </div>
 
