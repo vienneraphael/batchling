@@ -23,8 +23,6 @@ Things you might not want to run with batchling (yes, there are some..):
 
 batchling is available on PyPI as `batchling`, install using either `pip` or `uv`:
 
-## Package manager
-
 === "uv"
 
     ```bash

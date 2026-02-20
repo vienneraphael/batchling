@@ -203,9 +203,9 @@
   justify-content: center;
   width: 1.72rem;
   height: 1.72rem;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  border-radius: 0.52rem;
-  background: color-mix(in srgb, var(--surface-1) 68%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--brand-muted);
   opacity: 0.42;
   transition:
@@ -221,18 +221,18 @@
 .md-typeset .md-code__button:hover {
   opacity: 1;
   color: var(--brand);
-  border-color: color-mix(in srgb, var(--brand) 36%, var(--border));
-  background: color-mix(in srgb, var(--surface-1) 88%, var(--brand-muted));
-  box-shadow: 0 8px 16px rgba(24, 16, 10, 0.22);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
 .md-typeset .highlight:hover .md-code__button {
   opacity: 1;
   color: var(--brand);
-  border-color: color-mix(in srgb, var(--brand) 36%, var(--border));
-  background: color-mix(in srgb, var(--surface-1) 88%, var(--brand-muted));
-  box-shadow: 0 8px 16px rgba(24, 16, 10, 0.22);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -247,7 +247,7 @@
 }
 
 [data-md-color-scheme="slate"] .md-typeset .md-code__button {
-  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+  background: transparent;
 }
 
 .md-clipboard:hover {

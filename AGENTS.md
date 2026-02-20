@@ -26,7 +26,7 @@ pre-commits to check for:
 <!-- - complexipy: outputs a function complexity report. For high-complexity functions/methods, try to find a way to better organize the code for readability, if possible.
 - skylos: finds dead code. Can have false positive but review each case and make a decision. -->
 
-- When updating static docs, always rebuild in strict mode after your changes.
+- When updating static docs, always rebuild in strict mode after your changes. In that case, no need to run tests with pytest.
 
 - When pursuing a complex task, break it down as simpler tasks and make atomic commits to facilitate code review.
 Do the atomic commits yourself using `git commit -m`.
