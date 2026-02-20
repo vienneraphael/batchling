@@ -2,26 +2,54 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://vienneraphael.github.io/batchling/</loc>
-         <lastmod>2026-02-18</lastmod>
+         <lastmod>2026-02-20</lastmod>
     </url>
     <url>
-         <loc>https://vienneraphael.github.io/batchling/configuration/</loc>
-         <lastmod>2026-02-18</lastmod>
+         <loc>https://vienneraphael.github.io/batchling/advanced-features/</loc>
+         <lastmod>2026-02-20</lastmod>
     </url>
     <url>
-         <loc>https://vienneraphael.github.io/batchling/getting-started/</loc>
-         <lastmod>2026-02-18</lastmod>
+         <loc>https://vienneraphael.github.io/batchling/cache/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/cli/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/deferred-mode/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/dry-run/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/frameworks/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/installation/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/overview/</loc>
+         <lastmod>2026-02-20</lastmod>
     </url>
     <url>
          <loc>https://vienneraphael.github.io/batchling/providers/</loc>
-         <lastmod>2026-02-18</lastmod>
+         <lastmod>2026-02-20</lastmod>
     </url>
     <url>
-         <loc>https://vienneraphael.github.io/batchling/troubleshooting/</loc>
-         <lastmod>2026-02-18</lastmod>
+         <loc>https://vienneraphael.github.io/batchling/python-sdk/</loc>
+         <lastmod>2026-02-20</lastmod>
     </url>
     <url>
-         <loc>https://vienneraphael.github.io/batchling/usage-patterns/</loc>
-         <lastmod>2026-02-18</lastmod>
+         <loc>https://vienneraphael.github.io/batchling/quickstart/</loc>
+         <lastmod>2026-02-20</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/use-cases/</loc>
+         <lastmod>2026-02-20</lastmod>
     </url>
 </urlset>

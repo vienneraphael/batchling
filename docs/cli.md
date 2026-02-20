@@ -1,3 +1,3 @@
-# Providers
+# CLI
 
 Placeholder content.

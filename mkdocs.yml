@@ -66,10 +66,21 @@ extra_css:
   - assets/stylesheets/extra.css
 
 nav:
-  - Home: index.md
-  - Guide:
-      - Getting Started: getting-started.md
-      - Usage Patterns: usage-patterns.md
-      - Configuration: configuration.md
-      - Providers: providers.md
-      - Troubleshooting: troubleshooting.md
+  - batchling:
+      - batchling: index.md
+      - Installation: installation.md
+      - Quickstart: quickstart.md
+  - Documentation:
+      - Core components:
+          - Python SDK: python-sdk.md
+          - CLI: cli.md
+      - Frameworks & Providers:
+          - Overview: overview.md
+          - Frameworks: frameworks.md
+          - Providers: providers.md
+      - Use-Cases: use-cases.md
+      - Advanced Features:
+          - Advanced Features: advanced-features.md
+          - Cache: cache.md
+          - Dry Run: dry-run.md
+          - Deferred Mode: deferred-mode.md

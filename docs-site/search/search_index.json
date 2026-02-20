@@ -48,7 +48,7 @@
     {
       "location": "#using-the-cli-wrapper",
       "title": "Using the CLI wrapper",
-      "text": "<p>Create a file <code>main.py</code> with:</p> <pre><code>import asyncio\nfrom openai import AsyncOpenAI\n\nasync def generate():\n    client = AsyncOpenAI()\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    tasks = [\n        client.responses.create(\n            input=messages,\n            model=\"gpt-4o-mini\",\n        ),\n        client.responses.create(\n            input=messages,\n            model=\"gpt-5-nano\",\n        ),\n    ]\n    responses = await asyncio.gather(*tasks)\n</code></pre> <p>Run your function in batch mode:</p> <pre><code>batchling main.py:generate\n</code></pre>"
+      "text": "<p>Create a file <code>main.py</code> with:</p> <pre><code>import asyncio\nfrom openai import AsyncOpenAI\n\nasync def generate():\n    client = AsyncOpenAI()\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    tasks = [\n        client.responses.create(\n            input=messages,\n            model=\"gpt-4o-mini\",\n        ),\n        client.responses.create(\n            input=messages,\n            model=\"gpt-5-nano\",\n        ),\n    ]\n    responses = await asyncio.gather(*tasks)\n</code></pre> <p>Run your function in batch mode:</p> <pre><code>batchling main.py:generate\n</code></pre> <p>Disable cache explicitly:</p> <pre><code>batchling main.py:generate --no-cache\n</code></pre> <p>Enable deferred idle exit:</p> <pre><code>batchling main.py:generate --deferred --deferred-idle-seconds 60\n</code></pre>"
     },
     {
       "location": "#how-it-works",
@@ -71,134 +71,79 @@
       "text": "<p>Once batches are ready to go, the received requests are repurposed into batch-compatible requests and sent to the provider. Batches are automatically polled every <code>batch_poll_interval_seconds</code> seconds. Once all batches have been processed, the data is returned through the <code>httpx</code> or <code>aiohttp</code> patch like a regular request would have been, letting the rest of the script execute.</p>"
     },
     {
+      "location": "#request-cache-and-deferred-mode",
+      "title": "Request cache and deferred mode",
+      "text": "<ul> <li>Request cache is enabled by default and can be disabled with <code>--no-cache</code> or <code>cache=False</code>.</li> <li>Cache entries are cleaned with a one-month retention window.</li> <li>Deferred mode (<code>--deferred</code> or <code>deferred=True</code>) can stop runtime when only polling remains idle.</li> <li>CLI mode exits successfully with a deferred message; Python usage raises <code>DeferredExit</code>.</li> </ul>"
+    },
+    {
       "location": "#supported-providers",
       "title": "Supported providers",
       "text": "Name Batch API Docs URL OpenAI https://platform.openai.com/docs/guides/batch Anthropic https://docs.anthropic.com/en/docs/build-with-claude/batch-processing Gemini https://ai.google.dev/gemini-api/docs/batch-mode Groq https://console.groq.com/docs/batch Mistral https://docs.mistral.ai/capabilities/batch/ Together AI https://docs.together.ai/docs/batch-inference Doubleword https://docs.doubleword.ai/batches/getting-started-with-batched-api"
     },
     {
-      "location": "configuration/",
-      "title": "Configuration",
-      "text": "<p>batchling exposes four user-facing controls.</p>"
+      "location": "advanced-features/",
+      "title": "Advanced Features",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "configuration/#batch_size",
-      "title": "<code>batch_size</code>",
-      "text": "<ul> <li>Type: <code>int</code></li> <li>Default: <code>50</code></li> <li>Meaning: submit when this many queued requests exist for a queue key.</li> </ul>"
+      "location": "cache/",
+      "title": "Cache",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "configuration/#batch_window_seconds",
-      "title": "<code>batch_window_seconds</code>",
-      "text": "<ul> <li>Type: <code>float</code></li> <li>Default: <code>2.0</code></li> <li>Meaning: submit when this time elapses, even if <code>batch_size</code> is not reached.</li> </ul>"
+      "location": "cli/",
+      "title": "CLI",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "configuration/#batch_poll_interval_seconds",
-      "title": "<code>batch_poll_interval_seconds</code>",
-      "text": "<ul> <li>Type: <code>float</code></li> <li>Default: <code>10.0</code></li> <li>Meaning: polling interval for active provider batches.</li> </ul>"
+      "location": "deferred-mode/",
+      "title": "Deferred Mode",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "configuration/#dry_run",
-      "title": "<code>dry_run</code>",
-      "text": "<ul> <li>Type: <code>bool</code></li> <li>Default: <code>False</code></li> <li>Meaning: intercept and group requests without sending provider batches.</li> </ul>"
+      "location": "dry-run/",
+      "title": "Dry Run",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "configuration/#queue-semantics",
-      "title": "Queue semantics",
-      "text": "<p>Batch queues are partitioned by strict key:</p> <ul> <li><code>provider</code></li> <li><code>endpoint</code></li> <li><code>model</code></li> </ul> <p>This means thresholds apply per <code>(provider, endpoint, model)</code> group, not globally.</p>"
+      "location": "frameworks/",
+      "title": "Frameworks",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "configuration/#example-tuning",
-      "title": "Example tuning",
-      "text": "<pre><code>async with batchify(\n    batch_size=200,\n    batch_window_seconds=5.0,\n    batch_poll_interval_seconds=15.0,\n    dry_run=False,\n):\n    ...\n</code></pre>"
+      "location": "installation/",
+      "title": "Installation",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "getting-started/",
-      "title": "Getting Started",
-      "text": ""
+      "location": "installation/#package-manager",
+      "title": "Package manager",
+      "text": "uvpip <pre><code>uv add batchling\n</code></pre> <pre><code>pip install batchling\n</code></pre>"
     },
     {
-      "location": "getting-started/#install",
-      "title": "Install",
-      "text": "<pre><code>pip install batchling\n</code></pre>"
-    },
-    {
-      "location": "getting-started/#minimal-async-usage-recommended",
-      "title": "Minimal async usage (recommended)",
-      "text": "<pre><code>import asyncio\nfrom batchling import batchify\nfrom openai import AsyncOpenAI\n\n\nasync def generate() -&gt; None:\n    client = AsyncOpenAI()\n    messages = [\n        {\n            \"role\": \"user\",\n            \"content\": \"Classify this text in one label: 'Batch APIs reduce cost for deferred jobs.'\",\n        }\n    ]\n\n    async with batchify():\n        responses = await asyncio.gather(\n            client.responses.create(\n                model=\"gpt-4o-mini\",\n                input=messages,\n            ),\n            client.responses.create(\n                model=\"gpt-4o-mini\",\n                input=messages,\n            ),\n        )\n\n    print(responses)\n\n\nasyncio.run(generate())\n</code></pre>"
-    },
-    {
-      "location": "getting-started/#what-to-expect-at-runtime",
-      "title": "What to expect at runtime",
-      "text": "<ul> <li>batchling installs request hooks and watches supported HTTP requests.</li> <li>Supported requests are grouped by <code>(provider, endpoint, model)</code>.</li> <li>A batch is submitted when either queue size or window threshold is hit.</li> <li>Batch results are polled and mapped back to each original request.</li> </ul>"
-    },
-    {
-      "location": "getting-started/#cli-wrapper-option",
-      "title": "CLI wrapper option",
-      "text": "<p>If your workload already lives in an async function inside a script, use the CLI wrapper:</p> <pre><code>batchling path/to/script.py:generate --batch-size 100 --batch-window-seconds 3.0\n</code></pre> <p>The target must be an <code>async def</code> callable.</p>"
+      "location": "overview/",
+      "title": "Overview",
+      "text": "<p>Placeholder content.</p>"
     },
     {
       "location": "providers/",
       "title": "Providers",
-      "text": "<p>batchling currently supports these provider adapters.</p> Provider Batch docs OpenAI https://platform.openai.com/docs/guides/batch Anthropic https://docs.anthropic.com/en/docs/build-with-claude/batch-processing Gemini https://ai.google.dev/gemini-api/docs/batch-mode Groq https://console.groq.com/docs/batch Mistral https://docs.mistral.ai/capabilities/batch/ Together AI https://docs.together.ai/docs/batch-inference Doubleword https://docs.doubleword.ai/batches/getting-started-with-batched-api"
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "providers/#compatibility-notes",
-      "title": "Compatibility notes",
-      "text": "<ul> <li>Matching is based on provider hostname plus supported batchable endpoints.</li> <li>Requests that are not recognized as batchable are not routed through the batch engine.</li> <li>Provider response decoding is normalized back into request-level responses.</li> </ul> <p>Implementation details for adapters are kept in AGENTS-oriented internal docs.</p>"
+      "location": "python-sdk/",
+      "title": "Python SDK",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "troubleshooting/",
-      "title": "Troubleshooting",
-      "text": ""
+      "location": "quickstart/",
+      "title": "Quickstart",
+      "text": "<p>Placeholder content.</p>"
     },
     {
-      "location": "troubleshooting/#requests-are-not-being-batched",
-      "title": "Requests are not being batched",
-      "text": "<p>Check:</p> <ul> <li>The request targets a supported provider hostname.</li> <li>The endpoint is batchable for that provider.</li> <li>The call runs inside <code>batchify()</code> scope (or via <code>batchling</code> CLI wrapper).</li> </ul>"
-    },
-    {
-      "location": "troubleshooting/#script-fails-in-cli-mode",
-      "title": "Script fails in CLI mode",
-      "text": "<p>Check:</p> <ul> <li>Target format is <code>path/to/script.py:function_name</code>.</li> <li>The function exists in that script.</li> <li>The function is <code>async def</code>.</li> </ul>"
-    },
-    {
-      "location": "troubleshooting/#batch-completion-feels-slow",
-      "title": "Batch completion feels slow",
-      "text": "<ul> <li>Increase <code>batch_size</code> only if you have enough traffic to fill queues quickly.</li> <li>Reduce <code>batch_window_seconds</code> for lower queue wait time.</li> <li>Reduce <code>batch_poll_interval_seconds</code> to check finished batches more frequently.</li> </ul>"
-    },
-    {
-      "location": "troubleshooting/#validate-setup-safely",
-      "title": "Validate setup safely",
-      "text": "<p>Run with dry-run to verify interception and queueing before real provider submissions:</p> <pre><code>batchling script.py:main --dry-run\n</code></pre>"
-    },
-    {
-      "location": "usage-patterns/",
-      "title": "Usage Patterns",
-      "text": ""
-    },
-    {
-      "location": "usage-patterns/#choose-the-right-execution-style",
-      "title": "Choose the right execution style",
-      "text": ""
-    },
-    {
-      "location": "usage-patterns/#use-async-with-batchify-when",
-      "title": "Use <code>async with batchify(...)</code> when",
-      "text": "<ul> <li>You control the application code.</li> <li>You want explicit batching scope around a block of async calls.</li> <li>You need local tuning per workflow.</li> </ul>"
-    },
-    {
-      "location": "usage-patterns/#use-batchling-scriptpyfunction-when",
-      "title": "Use <code>batchling script.py:function</code> when",
-      "text": "<ul> <li>You want to run an existing async script with minimal edits.</li> <li>You need to pass function args from CLI.</li> <li>You want to automate batched script runs from CI or schedulers.</li> </ul>"
-    },
-    {
-      "location": "usage-patterns/#forwarding-function-arguments-in-cli-mode",
-      "title": "Forwarding function arguments in CLI mode",
-      "text": "<pre><code>batchling jobs/run_eval.py:main dataset_a --limit 200 --dry-run\n</code></pre> <ul> <li>Positional tokens are forwarded as positional args.</li> <li><code>--name value</code> or <code>--name=value</code> are forwarded as keyword args.</li> <li>Standalone flags like <code>--dry-run</code> are forwarded as boolean <code>True</code> keyword args.</li> </ul>"
-    },
-    {
-      "location": "usage-patterns/#dry-run-pattern",
-      "title": "Dry run pattern",
-      "text": "<p>Use dry-run before production launch:</p> <pre><code>async with batchify(dry_run=True):\n    ...\n</code></pre> <p>Dry-run still intercepts and queues supported requests, but it skips provider submission and polling.</p>"
+      "location": "use-cases/",
+      "title": "Use-Cases",
+      "text": "<p>Placeholder content.</p>"
     }
   ]
 }
