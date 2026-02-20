@@ -251,6 +251,18 @@
   opacity: 0.56;
 }
 
+.md-sidebar--primary .md-nav__item--nested > label.md-nav__link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.md-sidebar--primary .md-nav__item--nested > label.md-nav__link > .md-nav__icon {
+  order: 0;
+  margin-left: 0.35rem;
+  margin-right: 0;
+}
+
 .md-sidebar--primary .md-nav__link--active {
   font-weight: 500;
 }
@@ -555,7 +567,8 @@
 @media screen and (min-width: 76.25em) {
   /* Shift the primary nav + content lane right into the spare space before ToC. */
   :root {
-    --docs-lane-shift: clamp(3.6rem, 6vw, 6.4rem);
+    --docs-lane-shift: clamp(4.4rem, 7vw, 7.4rem);
+    --docs-primary-extra-shift: clamp(2.4rem, 4vw, 3.8rem);
   }
 
   .md-grid {
@@ -563,11 +576,13 @@
   }
 
   .md-main__inner {
-    column-gap: 1.3rem;
+    column-gap: 0.95rem;
   }
 
   .md-sidebar--primary {
-    margin-left: calc(-0.15rem + var(--docs-lane-shift));
+    margin-left: calc(
+      -0.15rem + var(--docs-lane-shift) + var(--docs-primary-extra-shift)
+    );
   }
 
   .md-sidebar--secondary {
