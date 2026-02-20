@@ -113,7 +113,7 @@
     {
       "location": "installation/",
       "title": "Installation",
-      "text": "<p>Placeholder content.</p>"
+      "text": "<p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p>"
     },
     {
       "location": "installation/#package-manager",
@@ -138,7 +138,27 @@
     {
       "location": "quickstart/",
       "title": "Quickstart",
-      "text": "<p>Placeholder content.</p>"
+      "text": "<p>batchling is a powerful python library that lets you transform any async GenAI workflow to batched inference, saving you money in exchange of deferred execution (24 hours bound). You typically want to use batched inference when running any process that does not require immediate response and can wait at most 24 hours (most jobs are completed in a few hours).</p>"
+    },
+    {
+      "location": "quickstart/#example-use-cases",
+      "title": "Example use-cases",
+      "text": "<p>The range of use-cases you can tackle effortlessly with batchling is extremely wide, here are a few examples:</p> <ul> <li>Embedding text chunks for your RAG application overnight</li> <li>Running large-scale classification with your favourite GenAI provider and/or framework</li> <li>Run any GenAI evaluation pipeline</li> <li>Generate huge volume of synthtetic data at half the cost</li> <li>Transcribe or translate hours of audio in bulk</li> </ul> <p>Things you might not want to run with batchling (yes, there are some..):</p> <ul> <li>User-facing applications e.g. chatbots, you typically want fast answers</li> <li>A whole agentic loop with tons of calls</li> <li>Full AI workflows with a lot of sequential calls (each additional step will defer results by an additional 24 hours at worst)</li> </ul>"
+    },
+    {
+      "location": "quickstart/#installation",
+      "title": "Installation",
+      "text": "<p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p>"
+    },
+    {
+      "location": "quickstart/#package-manager",
+      "title": "Package manager",
+      "text": "uvpip <pre><code>uv add batchling\n</code></pre> <pre><code>pip install batchling\n</code></pre>"
+    },
+    {
+      "location": "quickstart/#hello-world-example",
+      "title": "Hello World Example",
+      "text": "<p>batchling integrates smoothly with any async function doing GenAI calls or within a whole async script that you'd run with <code>asyncio</code>.</p> <p>Let's suppose we have an existing script <code>generate.py</code> that uses the OpenAI client to make two parallel calls using <code>asyncio.gather</code>:</p> <pre><code>#!/usr/bin/env python3\nimport asyncio\nimport os\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom openai import AsyncOpenAI\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build OpenAI requests.\n    \"\"\"\n    client = AsyncOpenAI(api_key=os.getenv(key=\"OPENAI_API_KEY\"))\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    return [\n        client.responses.create(\n            input=messages,\n            model=\"gpt-4o-mini\",\n        ),\n        client.responses.create(\n            input=messages,\n            model=\"gpt-5-nano\",\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the OpenAI example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    for response in responses:\n        content = response.output[-1].content # skip reasoning output, get straight to the answer\n        print(f\"{response.model} answer: {content[0].text}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n</code></pre> CLIPython SDK <p>For you to switch this async execution to a batched inference one, you just have to run your script using the <code>batchling</code> CLI and targetting the main function ran by <code>asyncio</code>:</p> <pre><code>batchling generate.py:main\n</code></pre> <p>To selectively batchify certain pieces of your code execution, you can rely on the <code>batchify</code> function, which exposes an async context manager.</p> <p>First, add this import at the top of your file:</p> <pre><code>+ from batchling import batchify\n</code></pre> <p>Then, let's modify our async function <code>main</code> to wrap the <code>asyncio.gather</code> call into the <code>batchify</code> async context manager:</p> <pre><code> async def main() -&gt; None:\n     \"\"\"Run the OpenAI example.\"\"\"\n     tasks = await build_tasks()\n-    responses = await asyncio.gather(*tasks)\n+    with batchify():\n+        responses = await asyncio.gather(*tasks)\n     for response in responses:\n         content = response.output[-1].content # skip reasoning output, get straight to the answer\n         print(f\"{response.model} answer: {content[0].text}\")\n</code></pre> <p>Output:</p> <pre><code>gpt-4o-mini-2024-07-18 answer: The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.\ngpt-5-nano-2025-08-07 answer: There isn\u2019t a universal \u201cbest\u201d French painter, but Claude Monet is widely regarded as one of the greatest.\n</code></pre> <p>You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.</p>"
     },
     {
       "location": "use-cases/",

@@ -99,7 +99,7 @@
 .md-typeset blockquote,
 .md-typeset .admonition,
 .md-typeset details {
-  max-width: 74ch;
+  max-width: 88ch;
 }
 
 .md-typeset a {
@@ -131,6 +131,22 @@
   border-radius: var(--radius);
   background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
   box-shadow: var(--shadow-soft);
+}
+
+.md-typeset .highlight {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.md-typeset .highlight pre {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background-color: transparent;
+  box-shadow: none;
 }
 
 .md-typeset code {

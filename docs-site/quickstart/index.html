@@ -372,6 +372,24 @@
 
 
 
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+
+
+
+  <span class="md-ellipsis">
+
+
+    Quickstart
+
+
+
+  </span>
+
+
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+
       <a href="./" class="md-nav__link md-nav__link--active">
 
 
@@ -388,6 +406,69 @@
 
 
       </a>
+
+
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+
+
+
+
+
+
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+
+        <li class="md-nav__item">
+  <a href="#example-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Example use-cases
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Installation
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#package-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Package manager
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#hello-world-example" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Hello World Example
+
+    </span>
+  </a>
+
+</li>
+
+    </ul>
+
+</nav>
 
     </li>
 
@@ -973,6 +1054,58 @@
 
 
 
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+
+        <li class="md-nav__item">
+  <a href="#example-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Example use-cases
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Installation
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#package-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Package manager
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
+  <a href="#hello-world-example" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Hello World Example
+
+    </span>
+  </a>
+
+</li>
+
+    </ul>
+
 </nav>
                   </div>
                 </div>
@@ -992,7 +1125,117 @@
 
 
 <h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
-<p>Placeholder content.</p>
+<p>batchling is a powerful python library that lets you transform any async GenAI workflow to batched inference, saving you money in exchange of deferred execution (24 hours bound).
+You typically want to use batched inference when running any process that does not require immediate response and can wait at most 24 hours (most jobs are completed in a few hours).</p>
+<h2 id="example-use-cases">Example use-cases<a class="headerlink" href="#example-use-cases" title="Permanent link">&para;</a></h2>
+<p>The range of use-cases you can tackle effortlessly with batchling is extremely wide, here are a few examples:</p>
+<ul>
+<li>Embedding text chunks for your RAG application overnight</li>
+<li>Running large-scale classification with your favourite GenAI provider and/or framework</li>
+<li>Run any GenAI evaluation pipeline</li>
+<li>Generate huge volume of synthtetic data at half the cost</li>
+<li>Transcribe or translate hours of audio in bulk</li>
+</ul>
+<p>Things you might not want to run with batchling (yes, there are some..):</p>
+<ul>
+<li>User-facing applications e.g. chatbots, you typically want fast answers</li>
+<li>A whole agentic loop with tons of calls</li>
+<li>Full AI workflows with a lot of sequential calls (each additional step will defer results by an additional 24 hours at worst)</li>
+</ul>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p>
+<h2 id="package-manager">Package manager<a class="headerlink" href="#package-manager" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">uv</label><label for="__tabbed_1_2">pip</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span>batchling
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>batchling
+</code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="hello-world-example">Hello World Example<a class="headerlink" href="#hello-world-example" title="Permanent link">&para;</a></h2>
+<p>batchling integrates smoothly with any async function doing GenAI calls or within a whole async script that you'd run with <code>asyncio</code>.</p>
+<p>Let's suppose we have an existing script <code>generate.py</code> that uses the OpenAI client to make two parallel calls using <code>asyncio.gather</code>:</p>
+<div class="highlight"><pre><span></span><code>#!/usr/bin/env python3
+import asyncio
+import os
+import typing as t
+
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
+
+load_dotenv()
+
+
+async def build_tasks() -&gt; list[t.Awaitable[t.Any]]:
+    &quot;&quot;&quot;Build OpenAI requests.
+    &quot;&quot;&quot;
+    client = AsyncOpenAI(api_key=os.getenv(key=&quot;OPENAI_API_KEY&quot;))
+    messages = [
+        {
+            &quot;content&quot;: &quot;Who is the best French painter? Answer in one short sentence.&quot;,
+            &quot;role&quot;: &quot;user&quot;,
+        },
+    ]
+    return [
+        client.responses.create(
+            input=messages,
+            model=&quot;gpt-4o-mini&quot;,
+        ),
+        client.responses.create(
+            input=messages,
+            model=&quot;gpt-5-nano&quot;,
+        ),
+    ]
+
+
+async def main() -&gt; None:
+    &quot;&quot;&quot;Run the OpenAI example.&quot;&quot;&quot;
+    tasks = await build_tasks()
+    responses = await asyncio.gather(*tasks)
+    for response in responses:
+        content = response.output[-1].content # skip reasoning output, get straight to the answer
+        print(f&quot;{response.model} answer: {content[0].text}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    asyncio.run(main())
+</code></pre></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">CLI</label><label for="__tabbed_2_2">Python SDK</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>For you to switch this async execution to a batched inference one, you just have to run your script using the <code>batchling</code> CLI and targetting the main function ran by <code>asyncio</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>batchling<span class="w"> </span>generate.py:main
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>To selectively batchify certain pieces of your code execution, you can rely on the <code>batchify</code> function, which exposes an async context manager.</p>
+<p>First, add this import at the top of your file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gi">+ from batchling import batchify</span>
+</code></pre></div>
+<p>Then, let's modify our async function <code>main</code> to wrap the <code>asyncio.gather</code> call into the <code>batchify</code> async context manager:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="w"> </span>async def main() -&gt; None:
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w"> </span>    &quot;&quot;&quot;Run the OpenAI example.&quot;&quot;&quot;
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w"> </span>    tasks = await build_tasks()
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="gd">-    responses = await asyncio.gather(*tasks)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="gi">+    with batchify():</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="gi">+        responses = await asyncio.gather(*tasks)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w"> </span>    for response in responses:
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w"> </span>        content = response.output[-1].content # skip reasoning output, get straight to the answer
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w"> </span>        print(f&quot;{response.model} answer: {content[0].text}&quot;)
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Output:</p>
+<div class="highlight"><pre><span></span><code>gpt-4o-mini-2024-07-18 answer: The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
+gpt-5-nano-2025-08-07 answer: There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
+</code></pre></div>
+<p>You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.</p>
 
 
 
