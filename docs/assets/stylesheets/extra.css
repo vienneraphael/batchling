@@ -168,11 +168,109 @@
 }
 
 .md-clipboard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
   color: var(--brand-muted);
+  box-shadow: 0 6px 14px rgba(26, 18, 12, 0.18);
+  backdrop-filter: blur(6px);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.md-typeset .md-code__nav {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.md-typeset .md-code__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.72rem;
+  height: 1.72rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 0.52rem;
+  background: color-mix(in srgb, var(--surface-1) 68%, transparent);
+  color: var(--brand-muted);
+  opacity: 0.42;
+  transition:
+    opacity 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.md-typeset .md-code__button:focus-visible,
+.md-typeset .md-code__button:hover {
+  opacity: 1;
+  color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 36%, var(--border));
+  background: color-mix(in srgb, var(--surface-1) 88%, var(--brand-muted));
+  box-shadow: 0 8px 16px rgba(24, 16, 10, 0.22);
+  transform: translateY(-1px);
+}
+
+.md-typeset .highlight:hover .md-code__button {
+  opacity: 1;
+  color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 36%, var(--border));
+  background: color-mix(in srgb, var(--surface-1) 88%, var(--brand-muted));
+  box-shadow: 0 8px 16px rgba(24, 16, 10, 0.22);
+  transform: translateY(-1px);
+}
+
+.md-typeset .md-code__button:after {
+  width: 0.92rem;
+  height: 0.92rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .md-code__nav {
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .md-code__button {
+  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
 }
 
 .md-clipboard:hover {
   color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--border));
+  background: color-mix(in srgb, var(--surface-1) 86%, var(--brand-muted));
+  box-shadow: 0 10px 20px rgba(26, 18, 12, 0.24);
+  transform: translateY(-1px);
+}
+
+.md-clipboard:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 72%, transparent);
+  outline-offset: 2px;
+}
+
+.md-clipboard svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+[data-md-color-scheme="slate"] .md-clipboard {
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.36);
 }
 
 .md-typeset .admonition,
