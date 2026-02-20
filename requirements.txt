@@ -204,6 +204,8 @@ httpx==0.28.1
     #   genai-prices
     #   google-genai
     #   groq
+    #   langgraph-sdk
+    #   langsmith
     #   litellm
     #   mcp
     #   mistralai
@@ -271,6 +273,10 @@ jmespath==1.1.0
     # via
     #   boto3
     #   botocore
+jsonpatch==1.33
+    # via langchain-core
+jsonpointer==3.0.0
+    # via jsonpatch
 jsonref==1.1.0
     # via fastmcp
 jsonschema==4.26.0
@@ -291,6 +297,27 @@ keyring==25.7.0
     # via
     #   py-key-value-aio
     #   skylos
+langchain==1.2.10
+langchain-core==1.2.14
+    # via
+    #   langchain
+    #   langchain-openai
+    #   langgraph
+    #   langgraph-checkpoint
+    #   langgraph-prebuilt
+langchain-openai==1.1.10
+langgraph==1.0.9
+    # via langchain
+langgraph-checkpoint==4.0.0
+    # via
+    #   langgraph
+    #   langgraph-prebuilt
+langgraph-prebuilt==1.0.8
+    # via langgraph
+langgraph-sdk==0.3.8
+    # via langgraph
+langsmith==0.7.5
+    # via langchain-core
 libcst==1.8.6
     # via skylos
 litellm==1.81.9
@@ -366,8 +393,9 @@ networkx==3.6.1
     # via skylos
 nexus-rpc==1.2.0
     # via temporalio
-openai==2.17.0
+openai==2.21.0
     # via
+    #   langchain-openai
     #   litellm
     #   pydantic-ai-slim
 openapi-pydantic==0.5.1
@@ -411,11 +439,19 @@ opentelemetry-semantic-conventions==0.60b1
     #   opentelemetry-sdk
 opentelemetry-util-http==0.60b1
     # via opentelemetry-instrumentation-httpx
+orjson==3.11.7
+    # via
+    #   langgraph-sdk
+    #   langsmith
+ormsgpack==1.12.2
+    # via langgraph-checkpoint
 packaging==25.0
     # via
     #   fastmcp
     #   huggingface-hub
     #   ipykernel
+    #   langchain-core
+    #   langsmith
     #   mkdocs
     #   opentelemetry-instrumentation
     #   pytest
@@ -480,6 +516,10 @@ pydantic==2.12.3
     #   genai-prices
     #   google-genai
     #   groq
+    #   langchain
+    #   langchain-core
+    #   langgraph
+    #   langsmith
     #   litellm
     #   mcp
     #   mistralai
@@ -549,6 +589,7 @@ pyyaml==6.0.3
     #   fastmcp
     #   huggingface-hub
     #   jsonschema-path
+    #   langchain-core
     #   libcst
     #   mistralai
     #   mkdocs
@@ -581,12 +622,16 @@ requests==2.32.5
     #   google-genai
     #   huggingface-hub
     #   jsonschema-path
+    #   langsmith
     #   mkdocs-material
     #   opentelemetry-exporter-otlp-proto-http
     #   pydantic-ai-slim
+    #   requests-toolbelt
     #   skylos
     #   tiktoken
     #   xai-sdk
+requests-toolbelt==1.0.0
+    # via langsmith
 respx==0.22.0
 rich==14.2.0
     # via
@@ -645,9 +690,11 @@ temporalio==1.20.0
 tenacity==9.1.4
     # via
     #   google-genai
+    #   langchain-core
     #   pydantic-ai-slim
 tiktoken==0.12.0
     # via
+    #   langchain-openai
     #   litellm
     #   pydantic-ai-slim
 together==2.1.1
@@ -704,6 +751,7 @@ typing-extensions==4.15.0
     #   groq
     #   grpcio
     #   huggingface-hub
+    #   langchain-core
     #   logfire
     #   mcp
     #   nexus-rpc
@@ -735,6 +783,10 @@ urllib3==2.6.3
     #   botocore
     #   requests
     #   types-requests
+uuid-utils==0.14.0
+    # via
+    #   langchain-core
+    #   langsmith
 uvicorn==0.41.0
     # via
     #   fastmcp
@@ -765,7 +817,13 @@ xmod==1.9.0
     # via
     #   editor
     #   runs
+xxhash==3.6.0
+    # via
+    #   langgraph
+    #   langsmith
 yarl==1.22.0
     # via aiohttp
 zipp==3.23.0
     # via importlib-metadata
+zstandard==0.25.0
+    # via langsmith
