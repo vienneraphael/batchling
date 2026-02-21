@@ -33,9 +33,10 @@ jobs:
       - name: Run prek
         uses: j178/prek-action@v1
 
-      - name: Verify generated docs are up-to-date
+      - name: Verify generated docs and build artifacts are up-to-date
         run: |
           uv run python scripts/generate_framework_docs.py
+          uv run mkdocs build --strict
           git diff --exit-code
 
   run-tests:
