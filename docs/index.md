@@ -19,6 +19,10 @@
     <strong>Use-Cases</strong>
     <span>Browse through real-life use-cases of batchling</span>
   </a>
+  <a class="home-card" href="advanced-features/">
+    <strong>Advanced Features</strong>
+    <span>Learn about advanced features: caching, dry run, deferred mode..</span>
+  </a>
 </div>
 
 --8<-- "README.md"
