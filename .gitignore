@@ -18,6 +18,7 @@ profile_reports/
 .pytest_cache/
 .ruff_cache/
 .skylos/
+docs-site/
 skylos_report.json
 complexipy.json
 
