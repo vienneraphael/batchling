@@ -250,7 +250,7 @@ def render_frameworks_index(*, frameworks: list[Framework]) -> str:
         "`batchling` is natively compatible with all frameworks using `httpx` or `aiohttp` as "
         "their async request engine.",
         "",
-        "Below are the frameworks tested in `examples/frameworks`:",
+        "Below are the frameworks we tested that we are sure are compatible with `batchling`:",
         "",
     ]
 
@@ -320,8 +320,8 @@ def render_providers_index(*, providers: list[Provider]) -> str:
     lines = [
         "# Providers",
         "",
-        "Below are the provider adapters discovered in `src/batchling/providers`, with generated "
-        "details for supported endpoints and optional examples from `examples/providers`.",
+        "`batchling` is compatible with most providers exposing a Batch API.",
+        "The following providers are supported by `batchling`:",
         "",
     ]
 
