@@ -253,6 +253,18 @@ html {
   font-size: 0.7rem;
 }
 
+.md-sidebar--primary .md-nav__item--nested > .md-nav > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-sidebar--primary .md-nav__item--nested > .md-nav > .md-nav__list > .md-nav__item > .md-nav__container > .md-nav__link,
+.md-sidebar--primary .md-nav__item--nested > .md-nav > .md-nav__list > .md-nav__item > label.md-nav__link {
+  padding-left: 0.7rem !important;
+}
+
+.md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > .md-nav__container > .md-nav__link,
+.md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > label.md-nav__link {
+  padding-left: 0 !important;
+}
+
 .md-sidebar--primary .md-nav__icon {
   opacity: 0.56;
 }
