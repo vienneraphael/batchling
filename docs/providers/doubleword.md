@@ -9,8 +9,6 @@ The following endpoints are made batch-compatible by Doubleword:
 - `/v1/moderations`
 - `/v1/completions`
 
-## Example code
-
 Here's an example showing how to use `batchling` with Doubleword:
 
 - _No example file found in `examples/providers`._

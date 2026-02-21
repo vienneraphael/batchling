@@ -8,8 +8,6 @@ The following endpoints are made batch-compatible by Groq:
 - `/openai/v1/audio/transcriptions`
 - `/openai/v1/audio/translations`
 
-## Example code
-
 Here's an example showing how to use `batchling` with Groq:
 
 ```python

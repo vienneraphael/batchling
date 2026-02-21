@@ -7,8 +7,6 @@ The following endpoints are made batch-compatible by Together:
 - `/v1/chat/completions`
 - `/v1/audio/transcriptions`
 
-## Example code
-
 Here's an example showing how to use `batchling` with Together:
 
 ```python

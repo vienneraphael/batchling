@@ -292,8 +292,6 @@ def render_provider_page(*, provider: Provider) -> str:
     lines.extend(
         [
             "",
-            "## Example code",
-            "",
             f"Here's an example showing how to use `batchling` with {provider.display_name}:",
             "",
         ]

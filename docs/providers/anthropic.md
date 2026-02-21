@@ -6,8 +6,6 @@ The following endpoints are made batch-compatible by Anthropic:
 
 - `/v1/messages`
 
-## Example code
-
 Here's an example showing how to use `batchling` with Anthropic:
 
 ```python

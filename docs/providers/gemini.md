@@ -6,8 +6,6 @@ The following endpoints are made batch-compatible by Gemini:
 
 - `/v1beta/models/{model}:generateContent`
 
-## Example code
-
 Here's an example showing how to use `batchling` with Gemini:
 
 ```python
