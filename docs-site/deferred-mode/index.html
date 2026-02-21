@@ -1213,6 +1213,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deferred Mode
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1229,6 +1247,47 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#activating-deferred-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activating deferred execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1298,6 +1357,36 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#activating-deferred-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activating deferred execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1317,7 +1406,35 @@
 
 
 <h1 id="deferred-mode">Deferred Mode</h1>
-<p>Placeholder content.</p>
+<p>Batch APIs were never meant to be run async initially (until I hacked them :p).</p>
+<p>If you still want to run batches like an OG, deferred mode is there for you.</p>
+<p>The deferred execution in <code>batchling</code> allow for a graceful exit of the polling once we've reached an idle state (I see you hitting Ctrl + C furiously).</p>
+<p>The idle state is basically defined by "nothing happened except polling for X seconds" as a way to detect that we intercepted and sent every batch we had to.</p>
+<p>The default idle time value is one minute (60 seconds).</p>
+<h2 id="usage">Usage</h2>
+<p>Deferred execution is meant to be used in several steps:</p>
+<ul>
+<li>You first run a deferred batch, wait for it to gracefully exit.</li>
+</ul>
+<p>Whenever you get impatient or you have waited for 24 hours, come back and re-run the same script/command:</p>
+<ul>
+<li>
+<p>if you re-run it using deferred execution, it means you just want to check once</p>
+</li>
+<li>
+<p>if you run it normally it will poll until it gets results (or you have to quit by Ctrl + C)</p>
+</li>
+</ul>
+<h2 id="activating-deferred-execution">Activating deferred execution</h2>
+<p>Deferred mode is activated by two parameters through the CLI/SDK:</p>
+<ul>
+<li>
+<p><code>deferred=True</code> and <code>deferred_idle_seconds=60</code> in the SDK</p>
+</li>
+<li>
+<p><code>--deferred</code> and <code>--deferred-idle-seconds 60</code> in the CLI</p>
+</li>
+</ul>
 
 
 

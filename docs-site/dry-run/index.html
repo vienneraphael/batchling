@@ -1185,6 +1185,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dry Run
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1201,6 +1219,36 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#activating-dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activating dry run
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1298,6 +1346,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#activating-dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activating dry run
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1317,7 +1384,20 @@
 
 
 <h1 id="dry-run">Dry Run</h1>
-<p>Placeholder content.</p>
+<p><code>batchling</code> allow users to declare that they want to launch a dry run for their batching.</p>
+<p>This feature exists for users to be able to debug and better understand what WILL happen when they ultimately disable the flag, giving them the transparency required to be confident in the library.</p>
+<p>In practice, the dry run feature deactivates all batch submissions, but everything is done virtually, which means we can count incoming requests, number of batch we would have created, etc..</p>
+<p>To put it simply, it provides users with an exact breakdown of what their batched inference run would have been for real.</p>
+<h2 id="activating-dry-run">Activating dry run</h2>
+<p>Dry run is activated by setting up a flag in the CLI or SDK:</p>
+<ul>
+<li>
+<p><code>dry_run=True</code> if using the SDK</p>
+</li>
+<li>
+<p><code>--dry-run</code> if using the CLI</p>
+</li>
+</ul>
 
 
 

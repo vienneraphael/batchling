@@ -1157,6 +1157,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cache
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1173,6 +1191,58 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cache-retention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache retention
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-frameworks-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-frameworks cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deactivating-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deactivating cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1298,6 +1368,47 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cache-retention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache retention
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-frameworks-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-frameworks cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deactivating-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deactivating cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1317,7 +1428,32 @@
 
 
 <h1 id="cache">Cache</h1>
-<p>Placeholder content.</p>
+<p>By default, batches requests are cached locally.</p>
+<p>This is very useful for cases where the long-running process is interrupted:</p>
+<ul>
+<li>user locking computer if running locally</li>
+<li>network error on polling</li>
+<li>Server-side API error during polling</li>
+</ul>
+<p>When you re-run a script using <code>batchling</code>, the batch requests belonging to batches that were already sent to remote servers are cached locally.</p>
+<p>This ensures you are never invoiced twice or more for a given request.</p>
+<p>Whenever a cache hit is made, the corresponding request skips the batch submission part and is directly sent to polling the batch it belonged to in the past, usually giving instant results too.</p>
+<h2 id="cache-retention">Cache retention</h2>
+<p>Cache is kept locally and automatically cleaned up once it's 30 days old.</p>
+<p>This duration aligns with what most Batch APIs share on the duration for which they keep exposing batch results.</p>
+<h2 id="cross-frameworks-cache">Cross-frameworks cache</h2>
+<p>The cache system is based on request hashing, which means that two requests that are strictly equal will create a cache hit.
+While possible, it is not guaranteed that all frameworks build requests exactly the same way and thus we cannot guarantee cross-frameworks cache hits.</p>
+<h2 id="deactivating-cache">Deactivating cache</h2>
+<p>If you ever need to deactivate cache, you can do this through the parameter:</p>
+<ul>
+<li>
+<p><code>cache=False</code> if you use the python SDK</p>
+</li>
+<li>
+<p><code>--no-cache</code> if you use the CLI</p>
+</li>
+</ul>
 
 
 
