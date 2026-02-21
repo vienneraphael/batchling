@@ -18,10 +18,11 @@ PROVIDERS_DIR = DOCS_ROOT / "providers"
 PROVIDERS_INDEX = DOCS_ROOT / "providers.md"
 MKDOCS_CONFIG = REPO_ROOT / "mkdocs.yml"
 EXAMPLE_SUFFIX = "_example.py"
-AUTO_FRAMEWORK_NAV_BEGIN = "          # BEGIN AUTO-GENERATED FRAMEWORK NAV"
-AUTO_FRAMEWORK_NAV_END = "          # END AUTO-GENERATED FRAMEWORK NAV"
-AUTO_PROVIDER_NAV_BEGIN = "          # BEGIN AUTO-GENERATED PROVIDER NAV"
-AUTO_PROVIDER_NAV_END = "          # END AUTO-GENERATED PROVIDER NAV"
+NAV_GENERATED_INDENT = "      "
+AUTO_FRAMEWORK_NAV_BEGIN = f"{NAV_GENERATED_INDENT}# BEGIN AUTO-GENERATED FRAMEWORK NAV"
+AUTO_FRAMEWORK_NAV_END = f"{NAV_GENERATED_INDENT}# END AUTO-GENERATED FRAMEWORK NAV"
+AUTO_PROVIDER_NAV_BEGIN = f"{NAV_GENERATED_INDENT}# BEGIN AUTO-GENERATED PROVIDER NAV"
+AUTO_PROVIDER_NAV_END = f"{NAV_GENERATED_INDENT}# END AUTO-GENERATED PROVIDER NAV"
 PROVIDER_SKIP_FILES = {"__init__.py", "base.py"}
 DISPLAY_NAME_OVERRIDES = {
     "langchain": "LangChain",
@@ -369,7 +370,7 @@ def render_mkdocs_framework_nav(*, frameworks: list[Framework]) -> list[str]:
         YAML lines including line endings.
     """
     return [
-        f"          - {framework.display_name}: frameworks/{framework.slug}.md\n"
+        f"{NAV_GENERATED_INDENT}- {framework.display_name}: frameworks/{framework.slug}.md\n"
         for framework in frameworks
     ]
 
@@ -388,7 +389,7 @@ def render_mkdocs_provider_nav(*, providers: list[Provider]) -> list[str]:
         YAML lines including line endings.
     """
     return [
-        f"          - {provider.display_name}: providers/{provider.slug}.md\n"
+        f"{NAV_GENERATED_INDENT}- {provider.display_name}: providers/{provider.slug}.md\n"
         for provider in providers
     ]
 

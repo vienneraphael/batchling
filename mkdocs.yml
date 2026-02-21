@@ -31,7 +31,6 @@ theme:
         icon: material/weather-night
         name: Switch to light mode
   features:
-    - navigation.sections
     - navigation.top
     - navigation.indexes
     - search.suggest
@@ -81,35 +80,33 @@ extra:
   generator: false
 
 nav:
-  - batchling:
-      - batchling: index.md
-      - Quickstart: quickstart.md
-  - Documentation:
-      - batchify: batchify.md
-      - Core Components:
-          - Python SDK: python-sdk.md
-          - CLI: cli.md
-      - Providers:
-          - Overview: providers.md
-          # BEGIN AUTO-GENERATED PROVIDER NAV
-          - Anthropic: providers/anthropic.md
-          - Doubleword: providers/doubleword.md
-          - Gemini: providers/gemini.md
-          - Groq: providers/groq.md
-          - Mistral: providers/mistral.md
-          - OpenAI: providers/openai.md
-          - Together: providers/together.md
-          # END AUTO-GENERATED PROVIDER NAV
-      - Frameworks:
-          - Overview: frameworks.md
-          # BEGIN AUTO-GENERATED FRAMEWORK NAV
-          - LangChain: frameworks/langchain.md
-          - Pydantic AI: frameworks/pydantic_ai.md
-          # END AUTO-GENERATED FRAMEWORK NAV
-      - Use-Cases: use-cases.md
-      - Advanced Features:
-          - Overview: advanced-features.md
-          - Cache: cache.md
-          - Dry Run: dry-run.md
-          - Deferred Mode: deferred-mode.md
-      - How It Works: how-it-works.md
+  - batchling: index.md
+  - Quickstart: quickstart.md
+  - batchify: batchify.md
+  - Core Components:
+      - Python SDK: python-sdk.md
+      - CLI: cli.md
+  - Providers:
+      - Overview: providers.md
+      # BEGIN AUTO-GENERATED PROVIDER NAV
+      - Anthropic: providers/anthropic.md
+      - Doubleword: providers/doubleword.md
+      - Gemini: providers/gemini.md
+      - Groq: providers/groq.md
+      - Mistral: providers/mistral.md
+      - OpenAI: providers/openai.md
+      - Together: providers/together.md
+      # END AUTO-GENERATED PROVIDER NAV
+  - Frameworks:
+      - Overview: frameworks.md
+      # BEGIN AUTO-GENERATED FRAMEWORK NAV
+      - LangChain: frameworks/langchain.md
+      - Pydantic AI: frameworks/pydantic_ai.md
+      # END AUTO-GENERATED FRAMEWORK NAV
+  - Use-Cases: use-cases.md
+  - Advanced Features:
+      - Overview: advanced-features.md
+      - Cache: cache.md
+      - Dry Run: dry-run.md
+      - Deferred Mode: deferred-mode.md
+  - How It Works: how-it-works.md

@@ -660,19 +660,50 @@ html {
 
 @media screen and (max-width: 44.9375em) {
   .md-sidebar--primary .md-nav__title {
-    padding: 0.85rem 1rem 0.5rem;
+    padding: 1rem 1rem 0.7rem;
     margin: 0;
-    font-size: 0.92rem;
+    font-size: 0.95rem;
+    background: color-mix(in srgb, var(--surface-2) 70%, transparent);
   }
 
   .md-sidebar--primary .md-nav__link,
   .md-sidebar--primary label.md-nav__link {
-    padding: 0.55rem 1rem !important;
-    font-size: 0.85rem !important;
+    padding: 0.65rem 1rem !important;
+    font-size: 0.92rem !important;
   }
 
   .md-sidebar--primary .md-nav .md-nav .md-nav__link {
-    font-size: 0.82rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__list,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list {
+    gap: 0;
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__list > .md-nav__item,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item {
+    border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__list > .md-nav__item:last-child,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:last-child {
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+  .md-sidebar--primary .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link,
+  .md-sidebar--primary .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__container > .md-nav__link,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > .md-nav__link,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > label.md-nav__link,
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > .md-nav__container > .md-nav__link {
+    display: flex;
+    align-items: center;
+    min-height: 3rem;
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__list > .md-nav__item--active > label.md-nav__link[for="__toc"] {
+    display: none;
   }
 
   .md-content__inner {
