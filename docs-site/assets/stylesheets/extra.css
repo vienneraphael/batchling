@@ -570,6 +570,11 @@ html {
     --docs-sidebar-inset: clamp(4.4rem, 7.5vw, 6.2rem);
   }
 
+  .md-header__inner {
+    padding-left: var(--docs-sidebar-inset);
+    padding-right: var(--docs-sidebar-inset);
+  }
+
   .md-grid {
     max-width: 86rem;
   }
