@@ -2,6 +2,8 @@
 
 The `batchify` function is the one and only entrypoint for the `batchling` library, everything starts from there.
 
+It can be used either through the [Python SDK](./python-sdk.md) or [CLI](./cli.md) depending on your needs.
+
 It comes with a bunch of parameters that you can customize to alter how batching is performed:
 
 ::: batchling.api.batchify

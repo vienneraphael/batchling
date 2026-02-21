@@ -36,6 +36,7 @@ theme:
     - navigation.indexes
     - search.suggest
     - search.highlight
+    - content.tooltips
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
@@ -47,6 +48,13 @@ plugins:
       default_handler: python
 
 markdown_extensions:
+  - material.extensions.preview:
+      sources:
+        include:
+          - "*"
+      targets:
+        include:
+          - "*"
   - admonition
   - md_in_html
   - pymdownx.snippets:

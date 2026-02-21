@@ -4,6 +4,8 @@ batchling comes with a CLI included that further facilitates batching an existin
 
 The CLI pushes the abstraction even more, to a point where you don't even need to modify your code to start batching.
 
+## Example
+
 Suppose you work in e-commerce and you have a cutting-edge business which uses GenAI to generate product visuals whenever you receive new products from your vendors.
 You have a function `generate_image` that takes a prompt (string) as input and generates the corresponding image using an API, returning image bytes.
 You would typically run concurrent tasks using `asyncio` for tasks not blocking each other in the execution loop.

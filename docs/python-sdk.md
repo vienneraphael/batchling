@@ -1,8 +1,10 @@
 # Python SDK
 
-To use `batchling`, you only need to learn to use one function exposed through the library: `batchify`
+To use `batchling`, you only need to learn to use one function exposed through the library: [`batchify`](./batchify.md)
 
-The `batchify` function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.
+The [`batchify`](./batchify.md) function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.
+
+## Example
 
 Suppose you work in e-commerce and you have a cutting-edge business which uses GenAI to generate product visuals whenever you receive new products from your vendors.
 You have a function `generate_image` that takes a prompt (string) as input and generates the corresponding image using an API, returning image bytes.
@@ -58,6 +60,8 @@ Add one import at the top of your file:
 ```diff
 + from batchling import batchify
 ```
+
+Add the context manager scoping to your script:
 
 ```diff
 async def main():

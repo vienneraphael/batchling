@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
 === "CLI"
 
-    For you to switch this async execution to a batched inference one, you just have to run your script using the `batchling` CLI and targetting the main function ran by `asyncio`:
+    For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md) and targetting the main function ran by `asyncio`:
 
     ```bash
     batchling generate.py:main
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
 === "Python SDK"
 
-    To selectively batchify certain pieces of your code execution, you can rely on the `batchify` function, which exposes an async context manager.
+    To selectively batchify certain pieces of your code execution, you can rely on the [`batchify`](./batchify.md) function, which exposes an async context manager.
 
     First, add this import at the top of your file:
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     + from batchling import batchify
     ```
 
-    Then, let's modify our async function `main` to wrap the `asyncio.gather` call into the `batchify` async context manager:
+    Then, let's modify our async function `main` to wrap the `asyncio.gather` call into the [`batchify`](./batchify.md) async context manager:
 
     ```diff
      async def main() -> None:
