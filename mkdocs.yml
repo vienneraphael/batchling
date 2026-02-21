@@ -71,7 +71,7 @@ markdown_extensions:
       use_pygments: true
       pygments_lang_class: true
   - toc:
-      permalink: true
+      permalink: false
 
 extra_css:
   - assets/stylesheets/extra.css

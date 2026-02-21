@@ -1447,10 +1447,10 @@
   
 
 
-<h1 id="quickstart">Quickstart<a class="headerlink" data-preview="" href="#quickstart" title="Permanent link">&para;</a></h1>
+<h1 id="quickstart">Quickstart</h1>
 <p>batchling is a powerful python library that lets you transform any async GenAI workflow to batched inference, saving you money in exchange of deferred execution (24 hours bound).
 You typically want to use batched inference when running any process that does not require immediate response and can wait at most 24 hours (most jobs are completed in a few hours).</p>
-<h2 id="example-use-cases">Example use-cases<a class="headerlink" data-preview="" href="#example-use-cases" title="Permanent link">&para;</a></h2>
+<h2 id="example-use-cases">Example use-cases</h2>
 <p>The range of use-cases you can tackle effortlessly with batchling is extremely wide, here are a few examples:</p>
 <ul>
 <li>Embedding text chunks for your RAG application overnight</li>
@@ -1465,7 +1465,7 @@ You typically want to use batched inference when running any process that does n
 <li>A whole agentic loop with tons of calls</li>
 <li>Full AI workflows with a lot of sequential calls (each additional step will defer results by an additional 24 hours at worst)</li>
 </ul>
-<h2 id="installation">Installation<a class="headerlink" data-preview="" href="#installation" title="Permanent link">&para;</a></h2>
+<h2 id="installation">Installation</h2>
 <p>batchling is available on PyPI as <code>batchling</code>, install using either <code>pip</code> or <code>uv</code>:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">uv</label><label for="__tabbed_1_2">pip</label></div>
 <div class="tabbed-content">
@@ -1479,7 +1479,7 @@ You typically want to use batched inference when running any process that does n
 </div>
 </div>
 </div>
-<h2 id="hello-world-example">Hello World Example<a class="headerlink" data-preview="" href="#hello-world-example" title="Permanent link">&para;</a></h2>
+<h2 id="hello-world-example">Hello World Example</h2>
 <p>batchling integrates smoothly with any async function doing GenAI calls or within a whole async script that you'd run with <code>asyncio</code>.</p>
 <p>Let's suppose we have an existing script <code>generate.py</code> that uses the OpenAI client to make two parallel calls using <code>asyncio.gather</code>:</p>
 <!-- markdownlint-disable-next-line MD046 -->
@@ -1558,7 +1558,7 @@ You typically want to use batched inference when running any process that does n
 gpt-5-nano-2025-08-07 answer: There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
 </code></pre></div>
 <p>You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.</p>
-<h2 id="next-steps">Next Steps<a class="headerlink" data-preview="" href="#next-steps" title="Permanent link">&para;</a></h2>
+<h2 id="next-steps">Next Steps</h2>
 <p>Now that you've seen how <code>batchling</code> can be used and want to learn more about it, you can header over to the following sections of the documentation:</p>
 <ul>
 <li>

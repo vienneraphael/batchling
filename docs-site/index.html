@@ -1432,7 +1432,7 @@
   
 
 
-<h1 id="batchling">batchling<a class="headerlink" data-preview="" href="#batchling" title="Permanent link">&para;</a></h1>
+<h1 id="batchling">batchling</h1>
 <div class="home-hero">
   <p><strong>Save 50% off GenAI costs in two lines of code.</strong></p>
   <p>batchling repurposes incoming GenAI requests to batch format, gets results from supported Batch APIs and
@@ -1504,11 +1504,11 @@
 <li><strong>Flexible completion</strong>: Best-effort completion within 24 hours with progress tracking, batches usually complete within an hour.</li>
 </ul>
 </details>
-<h2 id="installation">Installation<a class="headerlink" data-preview="" href="#installation" title="Permanent link">&para;</a></h2>
+<h2 id="installation">Installation</h2>
 <div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>batchling
 </code></pre></div>
-<h2 id="get-started">Get Started<a class="headerlink" data-preview="" href="#get-started" title="Permanent link">&para;</a></h2>
-<h3 id="using-the-async-context-manager-recommended">Using the async context manager (recommended)<a class="headerlink" data-preview="" href="#using-the-async-context-manager-recommended" title="Permanent link">&para;</a></h3>
+<h2 id="get-started">Get Started</h2>
+<h3 id="using-the-async-context-manager-recommended">Using the async context manager (recommended)</h3>
 <div class="language-python highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">batchling</span><span class="w"> </span><span class="kn">import</span> <span class="n">batchify</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncOpenAI</span>
@@ -1534,7 +1534,7 @@
 <a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="k">with</span> <span class="n">batchify</span><span class="p">():</span> <span class="c1"># Runs your tasks as batches, save 50%</span>
 <a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>        <span class="n">responses</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">)</span>
 </code></pre></div>
-<h3 id="using-the-cli-wrapper">Using the CLI wrapper<a class="headerlink" data-preview="" href="#using-the-cli-wrapper" title="Permanent link">&para;</a></h3>
+<h3 id="using-the-cli-wrapper">Using the CLI wrapper</h3>
 <p>Create a file <code>main.py</code> with:</p>
 <div class="language-python highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncOpenAI</span>
@@ -1562,25 +1562,25 @@
 <p>Run your function in batch mode:</p>
 <div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>batchling<span class="w"> </span>main.py:generate
 </code></pre></div>
-<h2 id="how-it-works">How it works<a class="headerlink" data-preview="" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<h3 id="request-interception">Request interception<a class="headerlink" data-preview="" href="#request-interception" title="Permanent link">&para;</a></h3>
+<h2 id="how-it-works">How it works</h2>
+<h3 id="request-interception">Request interception</h3>
 <p>batchling patches <code>httpx</code> and <code>aiohttp</code>, the two main async request utilities to capture certain requests based on batchable endpoint detection for GenAI providers exposing a batch API.</p>
-<h3 id="batch-management">Batch Management<a class="headerlink" data-preview="" href="#batch-management" title="Permanent link">&para;</a></h3>
+<h3 id="batch-management">Batch Management</h3>
 <p>Relevant requests are routed to a batch manager, which orchestrates batch queues.
 Batch queues behaviors are parametrized by user-defined parameters <code>batch_size</code> and <code>batch_window_size</code>.
 Each batch queue is associated with a unique <code>(provider, endpoint, model)</code> key.</p>
-<h3 id="requests-repurposing">Requests repurposing<a class="headerlink" data-preview="" href="#requests-repurposing" title="Permanent link">&para;</a></h3>
+<h3 id="requests-repurposing">Requests repurposing</h3>
 <p>Once batches are ready to go, the received requests are repurposed into batch-compatible requests and sent to the provider.
 Batches are automatically polled every <code>batch_poll_interval_seconds</code> seconds.
 Once all batches have been processed, the data is returned through the <code>httpx</code> or <code>aiohttp</code> patch like a regular request would have been, letting the rest of the script execute.</p>
-<h3 id="request-cache-and-deferred-mode">Request cache and deferred mode<a class="headerlink" data-preview="" href="#request-cache-and-deferred-mode" title="Permanent link">&para;</a></h3>
+<h3 id="request-cache-and-deferred-mode">Request cache and deferred mode</h3>
 <ul>
 <li>Request cache is enabled by default and can be disabled with <code>--no-cache</code> or <code>cache=False</code>.</li>
 <li>Cache entries are cleaned with a one-month retention window.</li>
 <li>Deferred mode (<code>--deferred</code> or <code>deferred=True</code>) can stop runtime when only polling remains idle.</li>
 <li>CLI mode exits successfully with a deferred message; Python usage raises <code>DeferredExit</code>.</li>
 </ul>
-<h2 id="supported-providers">Supported providers<a class="headerlink" data-preview="" href="#supported-providers" title="Permanent link">&para;</a></h2>
+<h2 id="supported-providers">Supported providers</h2>
 <table>
 <thead>
 <tr>
