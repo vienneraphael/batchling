@@ -29,3 +29,9 @@ Deferred mode is activated by two parameters through the CLI/SDK:
 - `deferred=True` and `deferred_idle_seconds=60` in the SDK
 
 - `--deferred` and `--deferred-idle-seconds 60` in the CLI
+
+## Next Steps
+
+- See how [cache](./cache.md) is saved and for how long it is kept.
+
+- See how [dry run](./dry-run.md) can help you plan that everything is ok before sending batches

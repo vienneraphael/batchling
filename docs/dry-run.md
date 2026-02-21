@@ -15,3 +15,9 @@ Dry run is activated by setting up a flag in the CLI or SDK:
 - `dry_run=True` if using the SDK
 
 - `--dry-run` if using the CLI
+
+## Next Steps
+
+- Check out [deferred execution](./deferred-mode.md) to run batches without long-running polling processes
+
+- See how [cache](./cache.md) is saved and for how long it is kept.

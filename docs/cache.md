@@ -32,3 +32,9 @@ If you ever need to deactivate cache, you can do this through the parameter:
 - `cache=False` if you use the python SDK
 
 - `--no-cache` if you use the CLI
+
+## Next Steps
+
+- See how [dry run](./dry-run.md) can help you plan that everything is ok before sending batches
+
+- Check out [deferred execution](./deferred-mode.md) to run batches without long-running polling processes
