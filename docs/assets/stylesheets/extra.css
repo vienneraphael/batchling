@@ -224,7 +224,6 @@ html {
   font-size: 0.7rem;
   padding-top: 0.2rem;
   padding-bottom: 0.2rem;
-  color: color-mix(in srgb, var(--text-main) 88%, transparent);
 }
 
 .md-sidebar--primary .md-nav__item--section > .md-nav__link,
@@ -233,7 +232,6 @@ html {
   margin-top: 0.32rem;
   font-weight: 700;
   font-size: 0.7rem;
-  color: color-mix(in srgb, var(--text-main) 78%, var(--text-soft));
 }
 
 .md-sidebar--primary .md-nav__list > .md-nav__item:first-child > .md-nav__container > .md-nav__link {
@@ -248,7 +246,6 @@ html {
 
 .md-sidebar--primary .md-nav .md-nav .md-nav__link {
   font-size: 0.7rem;
-  color: color-mix(in srgb, var(--text-main) 76%, transparent);
 }
 
 .md-sidebar--primary .md-nav__icon {
