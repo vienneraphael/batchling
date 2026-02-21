@@ -411,6 +411,11 @@ html {
   height: 0.92rem;
 }
 
+.md-typeset .language-text.highlight .md-code__button[data-md-type="copy"],
+.md-typeset .language-plaintext.highlight .md-code__button[data-md-type="copy"] {
+  display: none;
+}
+
 [data-md-color-scheme="slate"] .md-typeset .md-code__nav {
   background: transparent;
   box-shadow: none;
