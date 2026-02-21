@@ -11,10 +11,10 @@ EXAMPLES_DIR = REPO_ROOT / "examples" / "frameworks"
 DOCS_ROOT = REPO_ROOT / "docs"
 FRAMEWORKS_DIR = DOCS_ROOT / "frameworks"
 FRAMEWORKS_INDEX = DOCS_ROOT / "frameworks.md"
+MKDOCS_CONFIG = REPO_ROOT / "mkdocs.yml"
 EXAMPLE_SUFFIX = "_example.py"
-GITHUB_EXAMPLES_BASE_URL = (
-    "https://github.com/vienneraphael/batchling/blob/main/examples/frameworks"
-)
+AUTO_NAV_BEGIN = "          # BEGIN AUTO-GENERATED FRAMEWORK NAV"
+AUTO_NAV_END = "          # END AUTO-GENERATED FRAMEWORK NAV"
 
 
 @dataclass(frozen=True)
@@ -77,12 +77,17 @@ def render_framework_page(*, framework: Framework) -> str:
     str
         Markdown content for the framework page.
     """
-    example_url = f"{GITHUB_EXAMPLES_BASE_URL}/{framework.example_filename}"
-    return (
-        f"# {framework.display_name}\n\n"
-        f"`batchling` was tested with {framework.display_name} using this example:\n\n"
-        f"- [{framework.example_filename}]({example_url})\n"
-    )
+    lines = [
+        f"# {framework.display_name}",
+        "",
+        f"`batchling` was tested with {framework.display_name} using this example:",
+        "",
+        "```python",
+        f'--8<-- "examples/frameworks/{framework.example_filename}"',
+        "```",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def render_frameworks_index(*, frameworks: list[Framework]) -> str:
@@ -130,6 +135,56 @@ def write_text(*, path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def render_mkdocs_framework_nav(*, frameworks: list[Framework]) -> list[str]:
+    """Render generated framework nav entries for ``mkdocs.yml``.
+
+    Parameters
+    ----------
+    frameworks : list[Framework]
+        Frameworks to include under the Frameworks nav section.
+
+    Returns
+    -------
+    list[str]
+        YAML lines including line endings.
+    """
+    return [
+        f"          - {framework.display_name}: frameworks/{framework.slug}.md\n"
+        for framework in frameworks
+    ]
+
+
+def update_mkdocs_nav(*, frameworks: list[Framework]) -> None:
+    """Update auto-generated framework nav entries in ``mkdocs.yml``.
+
+    Parameters
+    ----------
+    frameworks : list[Framework]
+        Frameworks to include in the generated nav subsection.
+
+    Raises
+    ------
+    ValueError
+        If generation markers are missing or invalid in ``mkdocs.yml``.
+    """
+    lines = MKDOCS_CONFIG.read_text(encoding="utf-8").splitlines(keepends=True)
+    begin_index: int | None = None
+    end_index: int | None = None
+
+    for index, line in enumerate(lines):
+        if line.rstrip("\n") == AUTO_NAV_BEGIN:
+            begin_index = index
+        if line.rstrip("\n") == AUTO_NAV_END:
+            end_index = index
+
+    if begin_index is None or end_index is None or begin_index >= end_index:
+        raise ValueError("Could not find valid auto-generated framework nav markers in mkdocs.yml.")
+
+    replacement_lines = render_mkdocs_framework_nav(frameworks=frameworks)
+    updated_lines = lines[: begin_index + 1] + replacement_lines + lines[end_index:]
+    MKDOCS_CONFIG.write_text("".join(updated_lines), encoding="utf-8")
+
+
 def clean_stale_framework_pages(*, frameworks: list[Framework]) -> None:
     """Delete generated framework pages that no longer have an example.
 
@@ -161,6 +216,7 @@ def generate_docs() -> None:
         write_text(path=page_path, content=page_content)
 
     clean_stale_framework_pages(frameworks=frameworks)
+    update_mkdocs_nav(frameworks=frameworks)
 
 
 if __name__ == "__main__":

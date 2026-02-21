@@ -89,10 +89,14 @@ nav:
       - Core Components:
           - Python SDK: python-sdk.md
           - CLI: cli.md
-      - Frameworks & Providers:
-          - Overview: overview.md
-          - Frameworks: frameworks.md
+      - Providers:
           - Providers: providers.md
+      - Frameworks:
+          - Overview: frameworks.md
+          # BEGIN AUTO-GENERATED FRAMEWORK NAV
+          - Langchain: frameworks/langchain.md
+          - Pydantic AI: frameworks/pydantic_ai.md
+          # END AUTO-GENERATED FRAMEWORK NAV
       - Use-Cases: use-cases.md
       - Advanced Features:
           - Overview: advanced-features.md
