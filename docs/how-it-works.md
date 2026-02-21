@@ -44,6 +44,8 @@ His role is the one of the orchestrator:
 
 - In practice, the batcher manages a set of queues that represent future batches (stack of requests).
 
+- Detects cached requests and fast-tracks them to the polling state.
+
 - Monitors time elapsed since a request spawned a queue and each queue size.
 
 - Uses the providers abstraction to submit, poll and download results from batches.

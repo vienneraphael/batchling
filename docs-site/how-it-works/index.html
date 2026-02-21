@@ -1468,6 +1468,9 @@
 <p>In practice, the batcher manages a set of queues that represent future batches (stack of requests).</p>
 </li>
 <li>
+<p>Detects cached requests and fast-tracks them to the polling state.</p>
+</li>
+<li>
 <p>Monitors time elapsed since a request spawned a queue and each queue size.</p>
 </li>
 <li>
