@@ -259,6 +259,11 @@ html {
   padding-left: 0.7rem !important;
 }
 
+.md-sidebar--primary .md-nav__item--nested > input.md-nav__toggle:checked + label.md-nav__link,
+.md-sidebar--primary .md-nav__item--nested > input.md-nav__toggle:checked + .md-nav__container > label.md-nav__link {
+  color: color-mix(in srgb, var(--text-main) 92%, transparent);
+}
+
 .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > .md-nav__link,
 .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > .md-nav__container > .md-nav__link,
 .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item > label.md-nav__link {
