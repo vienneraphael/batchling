@@ -579,6 +579,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
 
         <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Example
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
 
@@ -1052,6 +1063,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
 
         <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+
+        Example
+
+    </span>
+  </a>
+
+</li>
+
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
 
@@ -1083,8 +1105,9 @@
 
 
 <h1 id="python-sdk">Python SDK<a class="headerlink" data-preview="" href="#python-sdk" title="Permanent link">&para;</a></h1>
-<p>To use <code>batchling</code>, you only need to learn to use one function exposed through the library: <code>batchify</code></p>
-<p>The <code>batchify</code> function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.</p>
+<p>To use <code>batchling</code>, you only need to learn to use one function exposed through the library: <a data-preview="" href="../batchify/"><code>batchify</code></a></p>
+<p>The <a data-preview="" href="../batchify/"><code>batchify</code></a> function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.</p>
+<h2 id="example">Example<a class="headerlink" data-preview="" href="#example" title="Permanent link">&para;</a></h2>
 <p>Suppose you work in e-commerce and you have a cutting-edge business which uses GenAI to generate product visuals whenever you receive new products from your vendors.
 You have a function <code>generate_image</code> that takes a prompt (string) as input and generates the corresponding image using an API, returning image bytes.
 You would typically run concurrent tasks using <code>asyncio</code> for tasks not blocking each other in the execution loop.</p>
@@ -1133,6 +1156,7 @@ You would typically run concurrent tasks using <code>asyncio</code> for tasks no
 <p>Add one import at the top of your file:</p>
 <div class="language-diff highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gi">+ from batchling import batchify</span>
 </code></pre></div>
+<p>Add the context manager scoping to your script:</p>
 <div class="language-diff highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>async def main():
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w"> </span>   new_product_descriptions = await get_new_product_descriptions()
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w"> </span>   tasks = [

@@ -56,4 +56,12 @@
          <loc>https://vienneraphael.github.io/batchling/use-cases/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/frameworks/langchain/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/frameworks/pydantic_ai/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
 </urlset>

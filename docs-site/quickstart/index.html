@@ -1229,16 +1229,16 @@ You typically want to use batched inference when running any process that does n
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">CLI</label><label for="__tabbed_2_2">Python SDK</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p>For you to switch this async execution to a batched inference one, you just have to run your script using the <code>batchling</code> CLI and targetting the main function ran by <code>asyncio</code>:</p>
+<p>For you to switch this async execution to a batched inference one, you just have to run your script using the <a data-preview="" href="../cli/"><code>batchling</code> CLI</a> and targetting the main function ran by <code>asyncio</code>:</p>
 <div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>batchling<span class="w"> </span>generate.py:main
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>To selectively batchify certain pieces of your code execution, you can rely on the <code>batchify</code> function, which exposes an async context manager.</p>
+<p>To selectively batchify certain pieces of your code execution, you can rely on the <a data-preview="" href="../batchify/"><code>batchify</code></a> function, which exposes an async context manager.</p>
 <p>First, add this import at the top of your file:</p>
 <div class="language-diff highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="gi">+ from batchling import batchify</span>
 </code></pre></div>
-<p>Then, let's modify our async function <code>main</code> to wrap the <code>asyncio.gather</code> call into the <code>batchify</code> async context manager:</p>
+<p>Then, let's modify our async function <code>main</code> to wrap the <code>asyncio.gather</code> call into the <a data-preview="" href="../batchify/"><code>batchify</code></a> async context manager:</p>
 <div class="language-diff highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="w"> </span>async def main() -&gt; None:
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w"> </span>    &quot;&quot;&quot;Run the OpenAI example.&quot;&quot;&quot;
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w"> </span>    tasks = await build_tasks()
