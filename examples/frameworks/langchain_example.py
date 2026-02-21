@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import asyncio
-import typing as t
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
@@ -10,14 +9,8 @@ from batchling import batchify
 load_dotenv()
 
 
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build LangChain requests.
-
-    Returns
-    -------
-    list[Awaitable[Any]]
-        Concurrent requests for batchling execution.
-    """
+async def build_tasks() -> list:
+    """Build LangChain requests."""
     agent = create_agent(
         model="openai:gpt-4.1-mini",
     )

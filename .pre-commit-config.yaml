@@ -63,7 +63,7 @@ repos:
         language: python
         entry: uvx ty check
         pass_filenames: false
-        args: [--python=.venv/]
+        args: [--python=.venv/, --exclude=examples/]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.2

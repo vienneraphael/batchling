@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 import asyncio
 import os
-import typing as t
 
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
@@ -11,30 +9,21 @@ from batchling import batchify
 load_dotenv()
 
 
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build Anthropic requests.
-
-    Returns
-    -------
-    list[Awaitable[Any]]
-        Concurrent requests for batchling execution.
-    """
+async def build_tasks() -> list:
+    """Build Anthropic requests."""
     client = AsyncAnthropic(api_key=os.getenv(key="ANTHROPIC_API_KEY"))
     messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+        "Who is the best French painter? Answer in one short sentence.",
     ]
     return [
         client.messages.create(
             max_tokens=1024,
-            messages=t.cast(t.Any, messages),
+            messages=messages,
             model="claude-haiku-4-5",
         ),
         client.messages.create(
             max_tokens=1024,
-            messages=t.cast(t.Any, messages),
+            messages=messages,
             model="claude-3-5-haiku-latest",
         ),
     ]

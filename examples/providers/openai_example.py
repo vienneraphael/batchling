@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 import asyncio
 import os
-import typing as t
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
@@ -14,19 +12,14 @@ load_dotenv()
 async def build_tasks() -> list:
     """Build OpenAI requests."""
     client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
-    messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
-    ]
+    message = "Who is the best French painter? Answer in one short sentence."
     return [
         client.responses.create(
-            input=t.cast(t.Any, messages),
+            input=message,
             model="gpt-4o-mini",
         ),
         client.responses.create(
-            input=t.cast(t.Any, messages),
+            input=message,
             model="gpt-5-nano",
         ),
     ]

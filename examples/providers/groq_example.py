@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 import asyncio
 import os
-import typing as t
 
 from dotenv import load_dotenv
 from groq import AsyncGroq
@@ -11,29 +9,20 @@ from batchling import batchify
 load_dotenv()
 
 
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build Groq requests.
-
-    Returns
-    -------
-    list[Awaitable[Any]]
-        Concurrent requests for batchling execution.
-    """
+async def build_tasks() -> list:
+    """Build Groq requests."""
     client = AsyncGroq(api_key=os.getenv(key="GROQ_API_KEY"))
     messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+        "Who is the best French painter? Answer in one short sentence.",
     ]
     return [
         client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=t.cast(t.Any, messages),
+            messages=messages,
         ),
         client.chat.completions.create(
             model="openai/gpt-oss-20b",
-            messages=t.cast(t.Any, messages),
+            messages=messages,
         ),
     ]
 

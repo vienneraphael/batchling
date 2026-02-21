@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 import asyncio
 import os
-import typing as t
 
 from dotenv import load_dotenv
 from together import AsyncTogether
@@ -11,29 +9,20 @@ from batchling import batchify
 load_dotenv()
 
 
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build Together AI requests.
-
-    Returns
-    -------
-    list[Awaitable[Any]]
-        Concurrent requests for batchling execution.
-    """
+async def build_tasks() -> list:
+    """Build Together AI requests."""
     client = AsyncTogether(api_key=os.getenv(key="TOGETHER_API_KEY"))
     messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+        "Who is the best French painter? Answer in one short sentence.",
     ]
     return [
         client.chat.completions.create(
             model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
-            messages=t.cast(t.Any, messages),
+            messages=messages,
         ),
         client.chat.completions.create(
             model="google/gemma-3n-E4B-it",
-            messages=t.cast(t.Any, messages),
+            messages=messages,
         ),
     ]
 

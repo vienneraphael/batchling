@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 import asyncio
 import os
-import typing as t
 
 from dotenv import load_dotenv
 from mistralai import Mistral
@@ -11,16 +9,10 @@ from batchling import batchify
 load_dotenv()
 
 
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build Mistral requests.
-
-    Returns
-    -------
-    list[Awaitable[Any]]
-        Concurrent requests for batchling execution.
-    """
+async def build_tasks() -> list:
+    """Build Mistral requests."""
     client = Mistral(api_key=os.getenv(key="MISTRAL_API_KEY"))
-    messages: list[dict[str, str]] = [
+    messages = [
         {
             "content": "Who is the best French painter? Answer in one short sentence.",
             "role": "user",
@@ -29,13 +21,13 @@ async def build_tasks() -> list[t.Awaitable[t.Any]]:
     return [
         client.chat.complete_async(
             model="mistral-medium-2505",
-            messages=t.cast(t.Any, messages),
+            messages=messages,
             stream=False,
             response_format={"type": "text"},
         ),
         client.chat.complete_async(
             model="mistral-small-2506",
-            messages=t.cast(t.Any, messages),
+            messages=messages,
             stream=False,
             response_format={"type": "text"},
         ),
