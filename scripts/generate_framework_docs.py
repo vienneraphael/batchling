@@ -220,7 +220,7 @@ def render_framework_page(*, framework: Framework) -> str:
     lines = [
         f"# {framework.display_name}",
         "",
-        f"`batchling` was tested with {framework.display_name} using this example:",
+        f"Here's an example showing how to use `batchling` with {framework.display_name}:",
         "",
         "```python",
         f'--8<-- "examples/frameworks/{framework.example_filename}"',
@@ -250,7 +250,7 @@ def render_frameworks_index(*, frameworks: list[Framework]) -> str:
         "`batchling` is natively compatible with all frameworks using `httpx` or `aiohttp` as "
         "their async request engine.",
         "",
-        "Below are the frameworks we tested that we are sure are compatible with `batchling`:",
+        "Below are the frameworks we tested that we are sure are compatible with `batchling`, along with examples of how to use `batchling` with them:",
         "",
     ]
 
@@ -277,7 +277,11 @@ def render_provider_page(*, provider: Provider) -> str:
     lines = [
         f"# {provider.display_name}",
         "",
-        "## Supported endpoints",
+        f"`batchling` is compatible with {provider.display_name} through any [supported framework](../frameworks.md)",
+        "",
+        "## Batch-compatible endpoints",
+        "",
+        f"The following endpoints are made batch-compatible by {provider.display_name}:",
         "",
     ]
 
@@ -287,7 +291,15 @@ def render_provider_page(*, provider: Provider) -> str:
     else:
         lines.append("- _No declared `batchable_endpoints` found in the provider file._")
 
-    lines.extend(["", "## Example code", ""])
+    lines.extend(
+        [
+            "",
+            "## Example code",
+            "",
+            f"Here's an example showing how to use `batchling` with {provider.display_name}:",
+            "",
+        ]
+    )
 
     if provider.has_example:
         lines.extend(
@@ -321,6 +333,7 @@ def render_providers_index(*, providers: list[Provider]) -> str:
         "# Providers",
         "",
         "`batchling` is compatible with most providers exposing a Batch API.",
+        "",
         "The following providers are supported by `batchling`:",
         "",
     ]

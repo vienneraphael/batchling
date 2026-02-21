@@ -1,6 +1,10 @@
 # Doubleword
 
-## Supported endpoints
+`batchling` is compatible with Doubleword through any [supported framework](../frameworks.md)
+
+## Batch-compatible endpoints
+
+The following endpoints are made batch-compatible by Doubleword:
 
 - `/v1/chat/completions`
 - `/v1/embeddings`
@@ -8,5 +12,7 @@
 - `/v1/completions`
 
 ## Example code
+
+Here's an example showing how to use `batchling` with Doubleword:
 
 - _No example file found in `examples/providers`._

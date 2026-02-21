@@ -852,10 +852,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-endpoints" class="md-nav__link">
+  <a href="#batch-compatible-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported endpoints
+        Batch-compatible endpoints
       
     </span>
   </a>
@@ -1364,10 +1364,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-endpoints" class="md-nav__link">
+  <a href="#batch-compatible-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported endpoints
+        Batch-compatible endpoints
       
     </span>
   </a>
@@ -1406,7 +1406,9 @@
 
 
 <h1 id="mistral">Mistral<a class="headerlink" data-preview="" href="#mistral" title="Permanent link">&para;</a></h1>
-<h2 id="supported-endpoints">Supported endpoints<a class="headerlink" data-preview="" href="#supported-endpoints" title="Permanent link">&para;</a></h2>
+<p><code>batchling</code> is compatible with Mistral through any <a data-preview="" href="../../frameworks/">supported framework</a></p>
+<h2 id="batch-compatible-endpoints">Batch-compatible endpoints<a class="headerlink" data-preview="" href="#batch-compatible-endpoints" title="Permanent link">&para;</a></h2>
+<p>The following endpoints are made batch-compatible by Mistral:</p>
 <ul>
 <li><code>/v1/chat/completions</code></li>
 <li><code>/v1/fim/completions</code></li>
@@ -1417,6 +1419,7 @@
 <li><code>/v1/conversations/v1/audio/transcriptions</code></li>
 </ul>
 <h2 id="example-code">Example code<a class="headerlink" data-preview="" href="#example-code" title="Permanent link">&para;</a></h2>
+<p>Here's an example showing how to use <code>batchling</code> with Mistral:</p>
 <div class="language-python highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="ch">#!/usr/bin/env python3</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>

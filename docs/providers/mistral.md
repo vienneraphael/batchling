@@ -1,6 +1,10 @@
 # Mistral
 
-## Supported endpoints
+`batchling` is compatible with Mistral through any [supported framework](../frameworks.md)
+
+## Batch-compatible endpoints
+
+The following endpoints are made batch-compatible by Mistral:
 
 - `/v1/chat/completions`
 - `/v1/fim/completions`
@@ -11,6 +15,8 @@
 - `/v1/conversations/v1/audio/transcriptions`
 
 ## Example code
+
+Here's an example showing how to use `batchling` with Mistral:
 
 ```python
 --8<-- "examples/providers/mistral_example.py"

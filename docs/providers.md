@@ -1,6 +1,7 @@
 # Providers
 
 `batchling` is compatible with most providers exposing a Batch API.
+
 The following providers are supported by `batchling`:
 
 - [Anthropic](providers/anthropic.md)
