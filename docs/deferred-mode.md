@@ -16,11 +16,17 @@ Deferred execution is meant to be used in several steps:
 
 - You first run a deferred batch, wait for it to gracefully exit.
 
-Whenever you get impatient or you have waited for 24 hours, come back and re-run the same script/command:
+Whenever you get impatient or you have waited for 24 hours, come back and re-run the same script/command.
 
-- if you re-run it using deferred execution, it means you just want to check once
+Be careful of several aspects:
 
-- if you run it normally it will poll until it gets results (or you have to quit by Ctrl + C)
+- When you re-run the script, all code preceding the batching phase will be re-executed
+
+Once we reach batch point, batchling retrieves them through cache without re-submitting, there are two possibilities:
+
+- your batches are done, batchling collects results and your script continues
+
+- your batches are not done yet, batchling re-enters the polling loop. If you re-activated deferred mode, it exits after one minute of polling.
 
 ## Activating deferred execution
 
