@@ -666,6 +666,28 @@ html {
     background: color-mix(in srgb, var(--surface-2) 70%, transparent);
   }
 
+  .md-sidebar--primary .md-nav--primary > .md-nav__title[for="__drawer"] {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.95rem 1.2rem 0.8rem;
+    line-height: 1.2;
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__title[for="__drawer"] .md-nav__button.md-logo {
+    position: static;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 auto;
+  }
+
+  .md-sidebar--primary .md-nav--primary > .md-nav__title[for="__drawer"] .md-nav__button.md-logo img {
+    display: block;
+    width: 2.25rem;
+    height: 2.25rem;
+    object-fit: contain;
+  }
+
   .md-sidebar--primary .md-nav__link,
   .md-sidebar--primary label.md-nav__link {
     padding: 0.65rem 1rem !important;
