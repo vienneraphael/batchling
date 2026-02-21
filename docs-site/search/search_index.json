@@ -113,7 +113,7 @@
     {
       "location": "cli/#next-steps",
       "title": "Next Steps",
-      "text": "<p>If you haven't yet, look at how you can:</p> <ul> <li> <p>leverage the Python SDK to scope batching to specific portions of your code.</p> </li> <li> <p>use <code>batchling</code> with any provider/framework with examples</p> </li> <li> <p>learn about end-to-end use-cases using <code>batchling</code></p> </li> <li> <p>learn about advanced features</p> </li> </ul>"
+      "text": "<p>If you haven't yet, look at how you can:</p> <ul> <li> <p>leverage the Python SDK to scope batching to specific portions of your code.</p> </li> <li> <p>use <code>batchling</code> with any provider / framework with examples</p> </li> <li> <p>learn about end-to-end use-cases using <code>batchling</code></p> </li> <li> <p>learn about advanced features</p> </li> </ul>"
     },
     {
       "location": "deferred-mode/",
@@ -128,7 +128,7 @@
     {
       "location": "frameworks/",
       "title": "Frameworks",
-      "text": "<p>Since it operates at the network level by intercepting select async GenAI requests, <code>batchling</code> is natively compatible with all frameworks using <code>httpx</code> or <code>aiohttp</code> as their async request engine.</p> <p>Below are the frameworks tested in <code>examples/frameworks</code>:</p> <ul> <li>LangChain</li> <li>Pydantic AI</li> </ul>"
+      "text": "<p>Since it operates at the network level by intercepting select async GenAI requests, <code>batchling</code> is natively compatible with all frameworks using <code>httpx</code> or <code>aiohttp</code> as their async request engine.</p> <p>Below are the frameworks we tested that we are sure are compatible with <code>batchling</code>:</p> <ul> <li>LangChain</li> <li>Pydantic AI</li> </ul>"
     },
     {
       "location": "how-it-works/",
@@ -136,24 +136,9 @@
       "text": "<p>Placeholder content for the internal flow explanation.</p>"
     },
     {
-      "location": "overview/",
-      "title": "Overview",
-      "text": ""
-    },
-    {
-      "location": "overview/#inference-providers",
-      "title": "Inference Providers",
-      "text": "<p><code>batchling</code> is compatible with most providers exposing a Batch API.</p> <p>Head over to the list of supported providers to see more details.</p>"
-    },
-    {
-      "location": "overview/#frameworks",
-      "title": "Frameworks",
-      "text": "<p>By construction, <code>batchling</code> is supposed to be framework-agnostic, meaning that you can use batchling with any AI framework, as long as you call a supported provider from that framework.</p> <p>As long as a framework build async requests on top of <code>httpx</code> or <code>aiohttp</code>, <code>batchling</code> will be compatible.</p> <p>Still, we curated a list of frameworks that were carefully tested that we expose in our documentation.</p>"
-    },
-    {
       "location": "providers/",
       "title": "Providers",
-      "text": "<p>Below are the provider adapters discovered in <code>src/batchling/providers</code>, with generated details for supported endpoints and optional examples from <code>examples/providers</code>.</p> <ul> <li>Anthropic</li> <li>Doubleword</li> <li>Gemini</li> <li>Groq</li> <li>Mistral</li> <li>OpenAI</li> <li>Together</li> </ul>"
+      "text": "<p><code>batchling</code> is compatible with most providers exposing a Batch API. The following providers are supported by <code>batchling</code>:</p> <ul> <li>Anthropic</li> <li>Doubleword</li> <li>Gemini</li> <li>Groq</li> <li>Mistral</li> <li>OpenAI</li> <li>Together</li> </ul>"
     },
     {
       "location": "python-sdk/",
@@ -168,7 +153,7 @@
     {
       "location": "python-sdk/#next-steps",
       "title": "Next Steps",
-      "text": "<p>If you haven't yet, look at how you can:</p> <ul> <li> <p>leverage the CLI to batchify full scripts in one command</p> </li> <li> <p>use <code>batchling</code> with any provider/framework with examples</p> </li> <li> <p>learn about end-to-end use-cases using <code>batchling</code></p> </li> <li> <p>learn about advanced features</p> </li> </ul>"
+      "text": "<p>If you haven't yet, look at how you can:</p> <ul> <li> <p>leverage the CLI to batchify full scripts in one command</p> </li> <li> <p>use <code>batchling</code> with any provider / framework with examples</p> </li> <li> <p>learn about end-to-end use-cases using <code>batchling</code></p> </li> <li> <p>learn about advanced features</p> </li> </ul>"
     },
     {
       "location": "quickstart/",
