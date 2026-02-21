@@ -70,7 +70,7 @@ If you haven't yet, look at how you can:
 
 - leverage the [Python SDK](./python-sdk.md) to scope batching to specific portions of your code.
 
-- use `batchling` with any [provider/framework](./overview.md) with examples
+- use `batchling` with any [provider](./providers.md) / [framework](./framework.md) with examples
 
 - learn about end-to-end [use-cases](./use-cases.md) using `batchling`
 

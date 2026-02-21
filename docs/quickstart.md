@@ -137,6 +137,6 @@ Now that you've seen how `batchling` can be used and want to learn more about it
 
 - [Learn more about CLI usage](./cli.md)
 
-- [Learn about supported Providers & Frameworks](./overview.md)
+- Learn about supported [Providers](./providers.md) & [Frameworks](./frameworks.md)
 
 - [Browse batchling in-depth use-cases exploration](./use-cases.md)

@@ -21,7 +21,7 @@ Now that you have more information about the `batchify` function, you can:
 
 - Learn to use it from the [Python SDK](./python-sdk.md) or the [CLI](./cli.md)
 
-- See on which [Frameworks & Providers](./overview.md) it can be used
+- See on which [Frameworks](./frameworks.md) & [Providers](./providers.md) it can be used
 
 - Consult in-depth [use-cases](./use-cases.md) leveraging `batchify`
 
