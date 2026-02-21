@@ -68,21 +68,12 @@ from openai import AsyncOpenAI
 
 async def generate():
     client = AsyncOpenAI()
-    messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
-    tasks = [
-        client.responses.create(
-            input=messages,
-            model="gpt-4o-mini",
-        ),
-        client.responses.create(
-            input=messages,
-            model="gpt-5-nano",
-        ),
+    return [
+        client.responses.create(input=question, model="gpt-4o-mini") for question in questions
     ]
     with batchify(): # Runs your tasks as batches, save 50%
         responses = await asyncio.gather(*tasks)

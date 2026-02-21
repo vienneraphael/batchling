@@ -12,17 +12,11 @@ load_dotenv()
 async def build_tasks() -> list:
     """Build OpenAI requests."""
     client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
-    message = "Who is the best French painter? Answer in one short sentence."
-    return [
-        client.responses.create(
-            input=message,
-            model="gpt-4o-mini",
-        ),
-        client.responses.create(
-            input=message,
-            model="gpt-5-nano",
-        ),
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
+    return [client.responses.create(input=question, model="gpt-4o-mini") for question in questions]
 
 
 async def main() -> None:

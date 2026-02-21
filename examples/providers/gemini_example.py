@@ -12,16 +12,16 @@ load_dotenv()
 async def build_tasks() -> list:
     """Build Gemini requests."""
     client = genai.Client(api_key=os.getenv(key="GEMINI_API_KEY")).aio
-    contents = "Who is the best French painter? Answer in one short sentence."
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
+    ]
     return [
         client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=contents,
-        ),
-        client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=contents,
-        ),
+            contents=question,
+        )
+        for question in questions
     ]
 
 

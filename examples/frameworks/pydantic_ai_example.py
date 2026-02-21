@@ -14,10 +14,11 @@ async def build_tasks() -> list:
         model="openai:gpt-5-nano",
         tools=[],
     )
-    return [
-        agent.run(user_prompt="What is the best French painter?"),
-        agent.run(user_prompt="Where does 'hello world' come from?"),
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
+    return [agent.run(user_prompt=question) for question in questions]
 
 
 async def main() -> None:
