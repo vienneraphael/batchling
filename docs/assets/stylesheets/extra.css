@@ -620,36 +620,23 @@ html {
 
 @media screen and (min-width: 76.25em) {
   :root {
-    --docs-sidebar-inset: clamp(2.5rem, 6vw, 6.5rem);
+    --docs-outer-gutter: clamp(2rem, 4vw, 4.5rem);
   }
 
   .md-header__inner {
-    padding-left: var(--docs-sidebar-inset);
-    padding-right: var(--docs-sidebar-inset);
+    padding-left: var(--docs-outer-gutter);
+    padding-right: var(--docs-outer-gutter);
   }
 
   .md-grid {
-    max-width: 84rem;
+    box-sizing: border-box;
+    max-width: min(96rem, calc(100vw - (2 * var(--docs-outer-gutter))));
+    padding-left: var(--docs-outer-gutter);
+    padding-right: var(--docs-outer-gutter);
   }
 
   .md-main__inner {
     column-gap: 0;
-  }
-
-  .md-sidebar--primary {
-    margin-left: var(--docs-sidebar-inset);
-  }
-
-  .md-sidebar--secondary {
-    margin-right: var(--docs-sidebar-inset);
-  }
-
-  .md-sidebar--primary .md-sidebar__scrollwrap {
-    padding-right: 0;
-  }
-
-  .md-sidebar--secondary .md-sidebar__scrollwrap {
-    padding-left: 0.1rem;
   }
 
   .md-content {
