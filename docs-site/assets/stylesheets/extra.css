@@ -53,6 +53,10 @@
   --md-typeset-mark-color: rgba(213, 175, 143, 0.22);
 }
 
+html {
+  font-size: 21px;
+}
+
 .md-main {
   background: var(--md-default-bg-color);
 }
@@ -258,8 +262,8 @@
 }
 
 .md-sidebar--primary .md-nav__item--nested > label.md-nav__link > .md-nav__icon {
-  order: 0;
-  margin-left: 0.35rem;
+  order: 1;
+  margin-left: 0.2rem;
   margin-right: 0;
 }
 
@@ -565,10 +569,8 @@
 }
 
 @media screen and (min-width: 76.25em) {
-  /* Shift the primary nav + content lane right into the spare space before ToC. */
   :root {
-    --docs-lane-shift: clamp(4.4rem, 7vw, 7.4rem);
-    --docs-primary-extra-shift: clamp(2.4rem, 4vw, 3.8rem);
+    --docs-sidebar-inset: clamp(4.4rem, 7.5vw, 6.2rem);
   }
 
   .md-grid {
@@ -576,21 +578,26 @@
   }
 
   .md-main__inner {
-    column-gap: 0.95rem;
+    column-gap: 0;
   }
 
   .md-sidebar--primary {
-    margin-left: calc(
-      -0.15rem + var(--docs-lane-shift) + var(--docs-primary-extra-shift)
-    );
+    margin-left: var(--docs-sidebar-inset);
   }
 
   .md-sidebar--secondary {
-    margin-right: -0.15rem;
+    margin-right: var(--docs-sidebar-inset);
+  }
+
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    padding-right: 0;
+  }
+
+  .md-sidebar--secondary .md-sidebar__scrollwrap {
+    padding-left: 0.1rem;
   }
 
   .md-content {
-    margin-right: calc(-1 * var(--docs-lane-shift));
     max-width: none;
   }
 }
