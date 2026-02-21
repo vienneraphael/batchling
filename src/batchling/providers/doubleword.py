@@ -13,6 +13,7 @@ class DoublewordProvider(OpenAIProvider):
     hostnames = ("api.doubleword.ai",)
     batchable_endpoints = (
         "/v1/chat/completions",
+        "/v1/responses",
         "/v1/embeddings",
         "/v1/moderations",
         "/v1/completions",
