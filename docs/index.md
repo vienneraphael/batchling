@@ -11,9 +11,9 @@
     <strong>Quickstart</strong>
     <span>Install and run the first async batching flow in minutes.</span>
   </a>
-  <a class="home-card" href="overview/">
-    <strong>Frameworks & Providers</strong>
-    <span>See the list of supported frameworks and providers</span>
+  <a class="home-card" href="providers/">
+    <strong>Providers</strong>
+    <span>See the list of supported providers</span>
   </a>
   <a class="home-card" href="batchify/">
     <strong>Usage</strong>

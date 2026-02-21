@@ -8,6 +8,7 @@
 <p align="center">
 <a href="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml" target="_blank">
     <img src="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml/badge.svg" alt="CI">
+</a>
 <a href="https://pypi.org/project/batchling" target="_blank">
     <img src="https://img.shields.io/pypi/v/batchling?color=%2334D058&label=pypi%20package" alt="Package version">
 </a>
