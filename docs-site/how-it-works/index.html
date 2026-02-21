@@ -1245,6 +1245,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How It Works
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1261,6 +1279,58 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context manager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#http-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batcher
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1294,6 +1364,47 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context manager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#http-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batcher
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1313,7 +1424,60 @@
 
 
 <h1 id="how-it-works">How it works</h1>
-<p>Placeholder content for the internal flow explanation.</p>
+<p>This documentation section aims to give a high-level explanation of what happens under the hood when you run <code>batchling</code> through the <a data-preview="" href="../python-sdk/">SDK</a> or <a data-preview="" href="../cli/">CLI</a>.</p>
+<p>There are basically three components working together hand in hand, in order:</p>
+<ol>
+<li>
+<p>The context manager</p>
+</li>
+<li>
+<p>The HTTP hooks</p>
+</li>
+<li>
+<p>The batcher</p>
+</li>
+</ol>
+<p>Let's detail the role of each of them next.</p>
+<h2 id="context-manager">Context manager</h2>
+<p>This is the <code>batchify</code> function you call in the SDK (or that is called for you if you use the CLI).</p>
+<p>What it does:</p>
+<ul>
+<li>
+<p>Install HTTP hooks to capture target incoming HTTP requests</p>
+</li>
+<li>
+<p>Initialize the batcher, which will do most of the hard work later</p>
+</li>
+<li>
+<p>Activate a <code>BatchingContext</code> context var when the user enters the context, basically saying "batch mode is activated" at the context manager scope</p>
+</li>
+</ul>
+<h2 id="http-hooks">HTTP Hooks</h2>
+<p>The HTTP hooks are installed by the context manager.</p>
+<p>Essentially, they patch the <code>httpx</code> and <code>aiohttp</code> libraries such that incoming requests matching certain characteristics (hostname, endpoint, method..) are captured.</p>
+<p>The requests that are not captured just flow naturally like if nothing happened, which makes <code>batchling</code> <strong>non-intrusive</strong>.</p>
+<p>The captured requests are repurposed and sent to the batcher for further processing.</p>
+<h2 id="batcher">Batcher</h2>
+<p>The batcher receives tons of requests coming from differents sources.</p>
+<p>His role is the one of the orchestrator:</p>
+<ul>
+<li>
+<p>Sorts requests by the provider, endpoint, model triplet. This is required because most Batch APIs don't allow mixing models and endpoints.</p>
+</li>
+<li>
+<p>In practice, the batcher manages a set of queues that represent future batches (stack of requests).</p>
+</li>
+<li>
+<p>Monitors time elapsed since a request spawned a queue and each queue size.</p>
+</li>
+<li>
+<p>Uses the providers abstraction to submit, poll and download results from batches.</p>
+</li>
+<li>
+<p>Returns results as a dump of HTTP Responses, like if nothing had happened in the middle.</p>
+</li>
+</ul>
+<p>Finally, the batcher sends back those responses to the patched HTTP client, which returns them to your framework of choice, and the code continues its execution.</p>
 
 
 
