@@ -122,31 +122,6 @@ Run your function in batch mode:
 batchling main.py:generate
 ```
 
-## How it works
-
-### Request interception
-
-batchling patches `httpx` and `aiohttp`, the two main async request utilities to capture certain requests based on batchable endpoint detection for GenAI providers exposing a batch API.
-
-### Batch Management
-
-Relevant requests are routed to a batch manager, which orchestrates batch queues.
-Batch queues behaviors are parametrized by user-defined parameters `batch_size` and `batch_window_size`.
-Each batch queue is associated with a unique `(provider, endpoint, model)` key.
-
-### Requests repurposing
-
-Once batches are ready to go, the received requests are repurposed into batch-compatible requests and sent to the provider.
-Batches are automatically polled every `batch_poll_interval_seconds` seconds.
-Once all batches have been processed, the data is returned through the `httpx` or `aiohttp` patch like a regular request would have been, letting the rest of the script execute.
-
-### Request cache and deferred mode
-
-- Request cache is enabled by default and can be disabled with `--no-cache` or `cache=False`.
-- Cache entries are cleaned with a one-month retention window.
-- Deferred mode (`--deferred` or `deferred=True`) can stop runtime when only polling remains idle.
-- CLI mode exits successfully with a deferred message; Python usage raises `DeferredExit`.
-
 ## Supported providers
 
 | Name        | Batch API Docs URL                                                       |
@@ -158,3 +133,9 @@ Once all batches have been processed, the data is returned through the `httpx` o
 | Mistral     | <https://docs.mistral.ai/capabilities/batch/>                            |
 | Together AI | <https://docs.together.ai/docs/batch-inference>                          |
 | Doubleword  | <https://docs.doubleword.ai/batches/getting-started-with-batched-api>    |
+
+## Next Steps
+
+To try `batchling` for yourself, follow  this [quickstart guide].
+
+Read the [docs] to learn more about how you can save on your GenAI expenses with `batchling`.
