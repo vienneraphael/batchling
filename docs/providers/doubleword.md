@@ -2,8 +2,6 @@
 
 `batchling` is compatible with Doubleword through any [supported framework](../frameworks.md)
 
-## Batch-compatible endpoints
-
 The following endpoints are made batch-compatible by Doubleword:
 
 - `/v1/chat/completions`
