@@ -128,7 +128,7 @@
     {
       "location": "frameworks/",
       "title": "Frameworks",
-      "text": "<p>Since it operates at the network level by intercepting select async GenAI requests, <code>batchling</code> is natively compatible with all frameworks using <code>httpx</code> or <code>aiohttp</code> as their async request engine.</p> <p>Below are the frameworks tested in <code>examples/frameworks</code>:</p> <ul> <li>Langchain</li> <li>Pydantic AI</li> </ul>"
+      "text": "<p>Since it operates at the network level by intercepting select async GenAI requests, <code>batchling</code> is natively compatible with all frameworks using <code>httpx</code> or <code>aiohttp</code> as their async request engine.</p> <p>Below are the frameworks tested in <code>examples/frameworks</code>:</p> <ul> <li>LangChain</li> <li>Pydantic AI</li> </ul>"
     },
     {
       "location": "how-it-works/",
@@ -153,7 +153,7 @@
     {
       "location": "providers/",
       "title": "Providers",
-      "text": "<p>Placeholder content.</p>"
+      "text": "<p>Below are the provider adapters discovered in <code>src/batchling/providers</code>, with generated details for supported endpoints and optional examples from <code>examples/providers</code>.</p> <ul> <li>Anthropic</li> <li>Doubleword</li> <li>Gemini</li> <li>Groq</li> <li>Mistral</li> <li>OpenAI</li> <li>Together</li> </ul>"
     },
     {
       "location": "python-sdk/",
@@ -202,13 +202,118 @@
     },
     {
       "location": "frameworks/langchain/",
-      "title": "Langchain",
-      "text": "<p><code>batchling</code> was tested with Langchain using this example:</p> <ul> <li>langchain_example.py</li> </ul>"
+      "title": "LangChain",
+      "text": "<p><code>batchling</code> was tested with LangChain using this example:</p> <pre><code>#!/usr/bin/env python3\nimport asyncio\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom langchain.agents import create_agent\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build LangChain requests.\n\n    Returns\n    -------\n    list[Awaitable[Any]]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    agent = create_agent(\n        model=\"openai:gpt-4.1-mini\",\n    )\n    return [\n        agent.ainvoke(\n            input={\n                \"messages\": [\n                    {\"role\": \"user\", \"content\": \"What is the best French painter?\"},\n                ]\n            }\n        ),\n        agent.ainvoke(\n            input={\n                \"messages\": [\n                    {\"role\": \"user\", \"content\": \"Where does 'hello world' come from?\"},\n                ]\n            }\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the LangChain example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
     },
     {
       "location": "frameworks/pydantic_ai/",
       "title": "Pydantic AI",
-      "text": "<p><code>batchling</code> was tested with Pydantic AI using this example:</p> <ul> <li>pydantic_ai_example.py</li> </ul>"
+      "text": "<p><code>batchling</code> was tested with Pydantic AI using this example:</p> <pre><code>#!/usr/bin/env python3\nimport asyncio\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom pydantic_ai import Agent\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build pydantic-ai requests.\n\n    Returns\n    -------\n    list[Awaitable[Any]]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    agent = Agent(\n        model=\"openai:gpt-5-nano\",\n        tools=[],\n    )\n    return [\n        agent.run(user_prompt=\"What is the best French painter?\"),\n        agent.run(user_prompt=\"Where does 'hello world' come from?\"),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the pydantic-ai example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
+    },
+    {
+      "location": "providers/anthropic/",
+      "title": "Anthropic",
+      "text": ""
+    },
+    {
+      "location": "providers/anthropic/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/v1/messages</code></li> </ul>"
+    },
+    {
+      "location": "providers/anthropic/#example-code",
+      "title": "Example code",
+      "text": "<pre><code>#!/usr/bin/env python3\nimport asyncio\nimport os\nimport typing as t\n\nfrom anthropic import AsyncAnthropic\nfrom dotenv import load_dotenv\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build Anthropic requests.\n\n    Returns\n    -------\n    list[Awaitable[Any]]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    client = AsyncAnthropic(api_key=os.getenv(key=\"ANTHROPIC_API_KEY\"))\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    return [\n        client.messages.create(\n            max_tokens=1024,\n            messages=t.cast(t.Any, messages),\n            model=\"claude-haiku-4-5\",\n        ),\n        client.messages.create(\n            max_tokens=1024,\n            messages=t.cast(t.Any, messages),\n            model=\"claude-3-5-haiku-latest\",\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the Anthropic example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
+    },
+    {
+      "location": "providers/doubleword/",
+      "title": "Doubleword",
+      "text": ""
+    },
+    {
+      "location": "providers/doubleword/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/v1/chat/completions</code></li> <li><code>/v1/embeddings</code></li> <li><code>/v1/moderations</code></li> <li><code>/v1/completions</code></li> </ul>"
+    },
+    {
+      "location": "providers/doubleword/#example-code",
+      "title": "Example code",
+      "text": "<ul> <li>No example file found in <code>examples/providers</code>.</li> </ul>"
+    },
+    {
+      "location": "providers/gemini/",
+      "title": "Gemini",
+      "text": ""
+    },
+    {
+      "location": "providers/gemini/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/v1beta/models/{model}:generateContent</code></li> </ul>"
+    },
+    {
+      "location": "providers/gemini/#example-code",
+      "title": "Example code",
+      "text": "<pre><code>#!/usr/bin/env python3\nimport asyncio\nimport base64\nimport os\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom google import genai\nfrom pydantic import BaseModel, Field\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nclass ImageAnalysis(BaseModel):\n    \"\"\"Structured image-analysis response example.\n\n    Attributes\n    ----------\n    name : str\n        Name of the image content.\n    fun_fact : str\n        Short fun fact about the image.\n    \"\"\"\n\n    name: str = Field(description=\"the name of the image\")\n    fun_fact: str = Field(description=\"a fun fact about the image\")\n\n\ndef encode_image(image_path: str) -&gt; str:\n    \"\"\"Encode an image file as base64.\n\n    Parameters\n    ----------\n    image_path : str\n        Absolute or relative path to an image.\n\n    Returns\n    -------\n    str\n        Base64-encoded content.\n    \"\"\"\n    with open(image_path, \"rb\") as image_file:\n        return base64.b64encode(image_file.read()).decode(\"utf-8\")\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build Gemini requests.\n\n    Returns\n    -------\n    list[asyncio.Future]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    client = genai.Client(api_key=os.getenv(key=\"GEMINI_API_KEY\")).aio\n    contents = \"Who is the best French painter? Answer in one short sentence.\"\n    return [\n        client.models.generate_content(\n            model=\"gemini-2.5-flash\",\n            contents=contents,\n        ),\n        client.models.generate_content(\n            model=\"gemini-2.5-flash\",\n            contents=contents,\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the Gemini example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
+    },
+    {
+      "location": "providers/groq/",
+      "title": "Groq",
+      "text": ""
+    },
+    {
+      "location": "providers/groq/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/openai/v1/chat/completions</code></li> <li><code>/openai/v1/audio/transcriptions</code></li> <li><code>/openai/v1/audio/translations</code></li> </ul>"
+    },
+    {
+      "location": "providers/groq/#example-code",
+      "title": "Example code",
+      "text": "<pre><code>#!/usr/bin/env python3\nimport asyncio\nimport os\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom groq import AsyncGroq\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build Groq requests.\n\n    Returns\n    -------\n    list[Awaitable[Any]]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    client = AsyncGroq(api_key=os.getenv(key=\"GROQ_API_KEY\"))\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    return [\n        client.chat.completions.create(\n            model=\"llama-3.1-8b-instant\",\n            messages=t.cast(t.Any, messages),\n        ),\n        client.chat.completions.create(\n            model=\"openai/gpt-oss-20b\",\n            messages=t.cast(t.Any, messages),\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the Groq example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
+    },
+    {
+      "location": "providers/mistral/",
+      "title": "Mistral",
+      "text": ""
+    },
+    {
+      "location": "providers/mistral/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/v1/chat/completions</code></li> <li><code>/v1/fim/completions</code></li> <li><code>/v1/embeddings</code></li> <li><code>/v1/moderations</code></li> <li><code>/v1/chat/moderations/v1/ocr</code></li> <li><code>/v1/classifications</code></li> <li><code>/v1/conversations/v1/audio/transcriptions</code></li> </ul>"
+    },
+    {
+      "location": "providers/mistral/#example-code",
+      "title": "Example code",
+      "text": "<pre><code>#!/usr/bin/env python3\nimport asyncio\nimport os\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom mistralai import Mistral\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build Mistral requests.\n\n    Returns\n    -------\n    list[Awaitable[Any]]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    client = Mistral(api_key=os.getenv(key=\"MISTRAL_API_KEY\"))\n    messages: list[dict[str, str]] = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    return [\n        client.chat.complete_async(\n            model=\"mistral-medium-2505\",\n            messages=t.cast(t.Any, messages),\n            stream=False,\n            response_format={\"type\": \"text\"},\n        ),\n        client.chat.complete_async(\n            model=\"mistral-small-2506\",\n            messages=t.cast(t.Any, messages),\n            stream=False,\n            response_format={\"type\": \"text\"},\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the Mistral example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
+    },
+    {
+      "location": "providers/openai/",
+      "title": "OpenAI",
+      "text": ""
+    },
+    {
+      "location": "providers/openai/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/v1/responses</code></li> <li><code>/v1/chat/completions</code></li> <li><code>/v1/embeddings</code></li> <li><code>/v1/completions</code></li> <li><code>/v1/moderations</code></li> <li><code>/v1/images/generations</code></li> <li><code>/v1/images/edits</code></li> </ul>"
+    },
+    {
+      "location": "providers/openai/#example-code",
+      "title": "Example code",
+      "text": "<pre><code>#!/usr/bin/env python3\nimport asyncio\nimport os\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom openai import AsyncOpenAI\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list:\n    \"\"\"Build OpenAI requests.\"\"\"\n    client = AsyncOpenAI(api_key=os.getenv(key=\"OPENAI_API_KEY\"))\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    return [\n        client.responses.create(\n            input=t.cast(t.Any, messages),\n            model=\"gpt-4o-mini\",\n        ),\n        client.responses.create(\n            input=t.cast(t.Any, messages),\n            model=\"gpt-5-nano\",\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the OpenAI example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    for response in responses:\n        content = response.output[-1].content  # skip reasoning output, get straight to the answer\n        print(f\"{response.model} answer: {content[0].text}\")\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
+    },
+    {
+      "location": "providers/together/",
+      "title": "Together",
+      "text": ""
+    },
+    {
+      "location": "providers/together/#supported-endpoints",
+      "title": "Supported endpoints",
+      "text": "<ul> <li><code>/v1/chat/completions</code></li> <li><code>/v1/audio/transcriptions</code></li> </ul>"
+    },
+    {
+      "location": "providers/together/#example-code",
+      "title": "Example code",
+      "text": "<pre><code>#!/usr/bin/env python3\nimport asyncio\nimport os\nimport typing as t\n\nfrom dotenv import load_dotenv\nfrom together import AsyncTogether\n\nfrom batchling import batchify\n\nload_dotenv()\n\n\nasync def build_tasks() -&gt; list[t.Awaitable[t.Any]]:\n    \"\"\"Build Together AI requests.\n\n    Returns\n    -------\n    list[Awaitable[Any]]\n        Concurrent requests for batchling execution.\n    \"\"\"\n    client = AsyncTogether(api_key=os.getenv(key=\"TOGETHER_API_KEY\"))\n    messages = [\n        {\n            \"content\": \"Who is the best French painter? Answer in one short sentence.\",\n            \"role\": \"user\",\n        },\n    ]\n    return [\n        client.chat.completions.create(\n            model=\"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo\",\n            messages=t.cast(t.Any, messages),\n        ),\n        client.chat.completions.create(\n            model=\"google/gemma-3n-E4B-it\",\n            messages=t.cast(t.Any, messages),\n        ),\n    ]\n\n\nasync def main() -&gt; None:\n    \"\"\"Run the Together AI example.\"\"\"\n    tasks = await build_tasks()\n    responses = await asyncio.gather(*tasks)\n    print(responses)\n\n\nasync def run_with_batchify() -&gt; None:\n    \"\"\"Run `main` inside `batchify` for direct script execution.\"\"\"\n    async with batchify():\n        await main()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(run_with_batchify())\n</code></pre>"
     }
   ]
 }

@@ -64,4 +64,32 @@
          <loc>https://vienneraphael.github.io/batchling/frameworks/pydantic_ai/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/anthropic/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/doubleword/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/gemini/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/groq/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/mistral/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/openai/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://vienneraphael.github.io/batchling/providers/together/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
 </urlset>

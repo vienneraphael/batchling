@@ -4,5 +4,5 @@ Since it operates at the network level by intercepting select async GenAI reques
 
 Below are the frameworks tested in `examples/frameworks`:
 
-- [Langchain](frameworks/langchain.md)
+- [LangChain](frameworks/langchain.md)
 - [Pydantic AI](frameworks/pydantic_ai.md)

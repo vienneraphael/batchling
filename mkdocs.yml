@@ -90,11 +90,20 @@ nav:
           - Python SDK: python-sdk.md
           - CLI: cli.md
       - Providers:
-          - Providers: providers.md
+          - Overview: providers.md
+          # BEGIN AUTO-GENERATED PROVIDER NAV
+          - Anthropic: providers/anthropic.md
+          - Doubleword: providers/doubleword.md
+          - Gemini: providers/gemini.md
+          - Groq: providers/groq.md
+          - Mistral: providers/mistral.md
+          - OpenAI: providers/openai.md
+          - Together: providers/together.md
+          # END AUTO-GENERATED PROVIDER NAV
       - Frameworks:
           - Overview: frameworks.md
           # BEGIN AUTO-GENERATED FRAMEWORK NAV
-          - Langchain: frameworks/langchain.md
+          - LangChain: frameworks/langchain.md
           - Pydantic AI: frameworks/pydantic_ai.md
           # END AUTO-GENERATED FRAMEWORK NAV
       - Use-Cases: use-cases.md
