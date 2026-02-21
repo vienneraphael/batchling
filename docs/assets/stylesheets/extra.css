@@ -657,3 +657,56 @@ html {
     font-size: 0.88em;
   }
 }
+
+@media screen and (max-width: 44.9375em) {
+  .md-sidebar--primary .md-nav__title {
+    padding: 0.85rem 1rem 0.5rem;
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .md-sidebar--primary .md-nav__link,
+  .md-sidebar--primary label.md-nav__link {
+    padding: 0.55rem 1rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .md-sidebar--primary .md-nav .md-nav .md-nav__link {
+    font-size: 0.82rem !important;
+  }
+
+  .md-content__inner {
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+
+  .home-hero,
+  .home-grid,
+  .home-card {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .md-typeset .highlight,
+  .md-typeset pre,
+  .md-typeset .highlight pre {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .md-typeset .highlight {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .md-content__inner > .highlight,
+  .md-content__inner > pre,
+  .md-content__inner > .highlighttable {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
