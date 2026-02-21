@@ -78,7 +78,7 @@ nav:
       - Quickstart: quickstart.md
   - Documentation:
       - batchify: batchify.md
-      - Core components:
+      - Core Components:
           - Python SDK: python-sdk.md
           - CLI: cli.md
       - Frameworks & Providers:
@@ -91,3 +91,4 @@ nav:
           - Cache: cache.md
           - Dry Run: dry-run.md
           - Deferred Mode: deferred-mode.md
+      - How It Works: how-it-works.md
