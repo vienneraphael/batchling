@@ -136,9 +136,120 @@ function installQuickCopyOnCodeBlockClick() {
   }
 }
 
+function isEditableTarget(target) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return (
+    target.closest("input, textarea, select, [contenteditable], [role='textbox']") !== null
+  );
+}
+
+function openSearchDialog() {
+  const searchToggle = document.getElementById("__search");
+  const searchQuery = document.querySelector("input[data-md-component='search-query']");
+  if (!(searchToggle instanceof HTMLInputElement) || !(searchQuery instanceof HTMLInputElement)) {
+    return;
+  }
+
+  if (!searchToggle.checked) {
+    searchToggle.checked = true;
+    searchToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  window.requestAnimationFrame(() => {
+    searchQuery.focus();
+    searchQuery.select();
+  });
+}
+
+function closeSearchDialog() {
+  const searchToggle = document.getElementById("__search");
+  const searchQuery = document.querySelector("input[data-md-component='search-query']");
+  if (!(searchToggle instanceof HTMLInputElement)) {
+    return;
+  }
+
+  if (searchToggle.checked) {
+    searchToggle.checked = false;
+    searchToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  if (searchQuery instanceof HTMLInputElement) {
+    searchQuery.blur();
+  }
+}
+
+function isSearchTarget(target) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return target.closest(".md-search") !== null;
+}
+
+function toggleSearchDialog() {
+  const searchToggle = document.getElementById("__search");
+  if (!(searchToggle instanceof HTMLInputElement)) {
+    return;
+  }
+
+  if (searchToggle.checked) {
+    closeSearchDialog();
+    return;
+  }
+
+  openSearchDialog();
+}
+
+function installSearchKeyboardShortcut() {
+  if (window.__batchlingSearchShortcutBound === true) {
+    return;
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) {
+      return;
+    }
+
+    if (event.key.toLowerCase() !== "k") {
+      return;
+    }
+
+    if (isEditableTarget(event.target) && !isSearchTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    toggleSearchDialog();
+  });
+
+  window.__batchlingSearchShortcutBound = true;
+}
+
+function installSearchShortcutHint() {
+  const searchForm = document.querySelector(".md-search__form");
+  if (!(searchForm instanceof HTMLFormElement)) {
+    return;
+  }
+
+  if (searchForm.querySelector(".batchling-search-shortcut-hint") !== null) {
+    return;
+  }
+
+  const hint = document.createElement("span");
+  hint.className = "batchling-search-shortcut-hint";
+  hint.setAttribute("aria-hidden", "true");
+  hint.textContent = "Ctrl/Cmd + K";
+  searchForm.append(hint);
+}
+
 function initializeCustomCodeBehaviors() {
   highlightBashCommandTokens();
   installQuickCopyOnCodeBlockClick();
+  installSearchKeyboardShortcut();
+  installSearchShortcutHint();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -86,7 +86,7 @@ nav:
           - Providers: providers.md
       - Use-Cases: use-cases.md
       - Advanced Features:
-          - Advanced Features: advanced-features.md
+          - Overview: advanced-features.md
           - Cache: cache.md
           - Dry Run: dry-run.md
           - Deferred Mode: deferred-mode.md

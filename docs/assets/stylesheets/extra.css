@@ -555,6 +555,31 @@ html {
   animation: rise-in 260ms ease-out both;
 }
 
+@media screen and (min-width: 60em) {
+  .md-search__form {
+    position: relative;
+  }
+
+  .md-search__input {
+    padding-right: 8rem;
+  }
+
+  .batchling-search-shortcut-hint {
+    position: absolute;
+    top: 50%;
+    right: 2.5rem;
+    transform: translateY(-50%);
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+    padding: 0.06rem 0.35rem;
+    font-size: 0.52rem;
+    letter-spacing: 0.015em;
+    color: var(--text-soft);
+    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+    pointer-events: none;
+  }
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
