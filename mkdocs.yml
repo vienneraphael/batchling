@@ -77,6 +77,7 @@ nav:
       - batchling: index.md
       - Quickstart: quickstart.md
   - Documentation:
+      - batchify: batchify.md
       - Core components:
           - Python SDK: python-sdk.md
           - CLI: cli.md

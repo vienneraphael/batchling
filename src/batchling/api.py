@@ -19,30 +19,38 @@ def batchify(
     deferred_idle_seconds: float = 60.0,
 ) -> BatchingContext:
     """
-    Context manager adapter.
+    Context manager used to activate batching for a scoped context.<br>
+    Requests are accumulated within this context and will be batched and sent to the provider when the batch size or window is reached.<br>
+    Batches are accumulated in different queues based on the provider/endpoint/model triplet.
 
     Parameters
     ----------
     batch_size : int, optional
-        Submit a batch when this many requests are queued for a provider.
+        Submit a batch when this many requests are queued for a given provider/endpoint/model triplet.
     batch_window_seconds : float, optional
-        Submit a provider batch after this many seconds, even if size not reached.
+        Submit a provider batch after this many seconds from the moment the first request is queued, even if size not reached.
     batch_poll_interval_seconds : float, optional
-        Poll active batches every this many seconds.
+        Poll active batches for results every this many seconds.
     dry_run : bool, optional
-        If ``True``, intercept and batch requests without sending provider batches.
+        If ``True``, intercept and batch requests without sending provider batches.<br>
+        Use it to debug or before sending big jobs.<br>
         Batched requests resolve to synthetic responses.
     cache : bool, optional
-        If ``True``, enable persistent request cache lookups.
+        If ``True``, enable persistent request cache lookups.<br>
+        This parameter allows to skip the batch submission and go straight to the polling phase for requests that have already been sent.
     deferred : bool, optional
-        If ``True``, allow deferred-mode idle termination while polling.
+        If ``True``, allow deferred-mode idle termination while polling.<br>
+        Deferred mode exits the program once polling is idle for some time.<br>
+        Useful to avoid having an async long-running process and process batches the deferred way.
     deferred_idle_seconds : float, optional
-        Idle threshold before deferred mode triggers a controlled early exit.
+        Idle threshold before deferred mode triggers a controlled early exit.<br>
+        Useful to avoid having an async long-running process and process batches the deferred way.
 
     Returns
     -------
     BatchingContext
-        Context manager that yields ``None``.
+        Context manager that yields ``None``.<br>
+        The context manager is only used to scope the batching context and is not used to yield any target.
     """
     # 1. Install hooks globally (idempotent)
     install_hooks()

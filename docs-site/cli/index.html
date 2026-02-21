@@ -387,6 +387,8 @@
 
 
 
+
+
     <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
 
 
@@ -429,6 +431,34 @@
 
 
 
+    <li class="md-nav__item">
+      <a href="../batchify/" class="md-nav__link">
+
+
+
+  <span class="md-ellipsis">
+
+
+    batchify
+
+
+
+  </span>
+
+
+
+      </a>
+    </li>
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -448,10 +478,10 @@
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" checked>
 
 
-          <label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
 
 
 
@@ -469,8 +499,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_1">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_2">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -579,10 +609,10 @@
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
 
 
-          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
 
 
 
@@ -600,8 +630,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -758,10 +788,10 @@
 
 
 
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_5" >
 
 
-          <label class="md-nav__link" for="__nav_2_4" id="__nav_2_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
 
 
 
@@ -779,8 +809,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
 
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
             <span class="md-nav__icon md-icon"></span>
 
 
@@ -956,7 +986,58 @@
 
 
 <h1 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h1>
-<p>Placeholder content.</p>
+<p>batchling comes with a CLI included that further facilitates batching an existing process.</p>
+<p>The CLI pushes the abstraction even more, to a point where you don't even need to modify your code to start batching.</p>
+<p>Suppose you work in e-commerce and you have a cutting-edge business which uses GenAI to generate product visuals whenever you receive new products from your vendors.
+You have a function <code>generate_image</code> that takes a prompt (string) as input and generates the corresponding image using an API, returning image bytes.
+You would typically run concurrent tasks using <code>asyncio</code> for tasks not blocking each other in the execution loop.</p>
+<div class="language-python highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># generate_product_images.py</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_new_product_descriptions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="sd">    Fetches pending product descriptions having no image yet</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="o">...</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">generate_image</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="o">...</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_product_db</span><span class="p">(</span><span class="n">generated_images</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]):</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="sd">    Update product db with generated images for review</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">new_product_descriptions</span> <span class="o">=</span> <span class="k">await</span> <span class="n">get_new_product_descriptions</span><span class="p">()</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        <span class="n">generate_image</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">product_description</span><span class="p">)</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="k">for</span> <span class="n">product_description</span> <span class="ow">in</span> <span class="n">new_product_descriptions</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="p">]</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="n">generated_images</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">)</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    <span class="k">await</span> <span class="n">update_product_db</span><span class="p">(</span><span class="n">generated_images</span><span class="o">=</span><span class="n">generated_images</span><span class="p">)</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>    <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<p>This approach might have several drawbacks for you:</p>
+<ol>
+<li>You pay the full price for calls that likely can wait at most 24h.</li>
+<li>You might hit your providers' rate limits if you send all products at once, so you likely need to add more complex structures like semaphores.</li>
+<li>Even with semaphores, you might run into daily rate limits, so you likely want to implement retries with exponential waiting</li>
+</ol>
+<p>The batch inference approach solves all those issues:</p>
+<ol>
+<li>Cut costs by 50% if you can wait up to 24 hours.</li>
+<li>Batch APIs rate limits are made for high-volume and thus always higher (near-infinite for certain providers)</li>
+<li>No retries mechanism needed, you keep the code simple and light.</li>
+</ol>
+<p>Here's how you can leverage the <code>batchling</code> CLI to transform that workflow from async to batched.</p>
+<p>In your terminal, run the following command:</p>
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>batchling<span class="w"> </span>generate_product_images.py:main
+</code></pre></div>
+<p>That's it! Just run that command and you save 50% off your workflow.</p>
 
 
 

@@ -126,3 +126,17 @@ Output:
     gpt-5-nano-2025-08-07 answer: There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
 
 You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.
+
+## Next Steps
+
+Now that you've seen how `batchling` can be used and want to learn more about it, you can header over to the following sections of the documentation:
+
+- [Learn how to control batching behavior through batchify parameters](./batchify.md)
+
+- [Learn more about the Python SDK usage](./python-sdk.md)
+
+- [Learn more about CLI usage](./cli.md)
+
+- [Learn about supported Providers & Frameworks](./overview.md)
+
+- [Browse batchling in-depth use-cases exploration](./use-cases.md)

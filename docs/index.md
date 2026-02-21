@@ -15,9 +15,9 @@
     <strong>Frameworks & Providers</strong>
     <span>See the list of supported frameworks and providers</span>
   </a>
-  <a class="home-card" href="use-cases/">
-    <strong>Use-Cases</strong>
-    <span>Browse through real-life use-cases of batchling</span>
+  <a class="home-card" href="batchify/">
+    <strong>batchify</strong>
+    <span>Learn how to use the all-in-one endpoint of batchling</span>
   </a>
   <a class="home-card" href="advanced-features/">
     <strong>Advanced Features</strong>
