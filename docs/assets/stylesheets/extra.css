@@ -71,6 +71,11 @@ html {
   background-color: color-mix(in srgb, var(--surface-2) 88%, transparent);
 }
 
+.md-footer,
+.md-footer-meta {
+  background: var(--md-default-bg-color);
+}
+
 .md-content__inner {
   margin-top: clamp(1rem, 0.9rem + 0.5vw, 1.45rem);
 }
