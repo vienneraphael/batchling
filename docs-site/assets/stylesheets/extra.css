@@ -5,6 +5,7 @@
   --brand: #6b3f24;
   --brand-muted: #8b694f;
   --accent-soft: #a66a45;
+  --accent-hover: #c46f3d;
   --surface-1: #f8f5f1;
   --surface-2: #efe8e0;
   --border: #dccfc2;
@@ -35,6 +36,7 @@
   --brand: #d5af8f;
   --brand-muted: #c39a79;
   --accent-soft: #e3b18c;
+  --accent-hover: #ffd2af;
   --surface-1: #161311;
   --surface-2: #1e1916;
   --border: #3a3028;
@@ -196,10 +198,9 @@ html {
   padding-left: 0 !important;
 }
 
-.md-sidebar--primary .md-nav__link:is(:hover, :focus-visible),
-.md-sidebar--secondary .md-nav__link:is(:hover, :focus-visible) {
+.md-sidebar--primary .md-nav__link:is(:hover, :focus-visible) {
   background: transparent;
-  color: color-mix(in srgb, var(--text-main) 96%, transparent);
+  color: var(--accent-hover);
 }
 
 .md-sidebar--primary .md-nav__link--active,
