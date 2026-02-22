@@ -100,9 +100,12 @@ Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI 
 
 Output:
 
-<!-- markdownlint-disable-next-line MD046 -->
-```json
-{
+<div style="display: flex; gap: 16px; align-items: stretch; margin-bottom: 16px; flex-wrap: wrap;">
+  <div style="flex: 1 1 240px; max-width: 33%; min-width: 220px; display: flex;">
+    <img src="../assets/images/quickstart/woman-striped-dress.png" alt="Portrait of a Woman in Striped Dress" style="width: 100%; height: 100%; object-fit: cover;" />
+  </div>
+  <div style="flex: 2 1 420px; min-width: 320px; display: flex;">
+    <pre style="margin: 0; width: 100%; height: 100%; overflow: auto;"><code class="language-json">{
   "author": "",
   "name": "Portrait of a Woman in Striped Dress",
   "period": "Early 20th century",
@@ -120,8 +123,16 @@ Output:
   ],
   "context": "A seated young woman in a striped red-and-blue blouse and a polka-dot blue skirt, holding flowers, set against a flat mint-green background. The brushwork and color treatment emphasize flat planes and expressive color typical of Post-Impressionist/Fauvist portraiture.",
   "fun_fact": "The composition and bold color palette resemble early 20th-century French modernist works; exact attribution is difficult from a single image."
-}
-{
+}</code></pre>
+  </div>
+</div>
+
+<div style="display: flex; gap: 16px; align-items: stretch; margin-bottom: 16px; flex-wrap: wrap;">
+  <div style="flex: 1 1 240px; max-width: 33%; min-width: 220px; display: flex;">
+    <img src="../assets/images/quickstart/napoleon.png" alt="Portrait of a Napoleonic Officer in Dress Uniform" style="width: 100%; height: 100%; object-fit: cover;" />
+  </div>
+  <div style="flex: 2 1 420px; min-width: 320px; display: flex;">
+    <pre style="margin: 0; width: 100%; height: 100%; overflow: auto;"><code class="language-json">{
   "author": "",
   "name": "",
   "period": "Early 19th century (Napoleonic era)",
@@ -140,8 +151,16 @@ Output:
   ],
   "context": "A formal portrait of a high-ranking military officer in full dress uniform, set in an ornate interior with classical furnishings, suggesting a studio or official setting typical of early 19th-century noble or military portraiture.",
   "fun_fact": "The subject wears a star medal and epaulettes common to high-ranking officers of Napoleonic Europe; the rich interior and ceremonial attire indicate status and prestige rather than battlefield activity."
-}
-{
+}</code></pre>
+  </div>
+</div>
+
+<div style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;">
+  <div style="flex: 1 1 240px; max-width: 33%; min-width: 220px; display: flex;">
+    <img src="../assets/images/quickstart/self-portrait.png" alt="Self-Portrait with Palette" style="width: 100%; height: 100%; object-fit: cover;" />
+  </div>
+  <div style="flex: 2 1 420px; min-width: 320px; display: flex;">
+    <pre style="margin: 0; width: 100%; height: 100%; overflow: auto;"><code class="language-json">{
   "author": "Vincent van Gogh",
   "name": "Self-Portrait with Palette",
   "period": "1889",
@@ -158,8 +177,9 @@ Output:
   ],
   "context": "A self-portrait painted by Vincent van Gogh during his stay at the Saint-Paul asylum in Saint-Rémy-de-Provence in 1889. The image shows van Gogh holding a palette, set against a swirling blue background that demonstrates his bold, expressive brushwork and distinctive color sense.",
   "fun_fact": "Van Gogh produced hundreds of self-portraits, using them to study color and emotion; this piece is notable for its cool blue tones contrasting with the warmer tones of his hair and beard."
-}
-```
+}</code></pre>
+  </div>
+</div>
 
 You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.
 
