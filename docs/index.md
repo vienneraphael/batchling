@@ -26,7 +26,7 @@
   </a>
   <a class="home-card" href="advanced-features/">
     <strong>Advanced Features</strong>
-    <span>Learn about advanced features: caching, dry run, deferred mode..</span>
+    <span>Learn about advanced features: caching and dry run.</span>
   </a>
 </div>
 

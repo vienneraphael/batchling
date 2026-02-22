@@ -16,7 +16,7 @@
 
 ---
 
-batchling is a frictionless, batteries-included plugin to convert any GenAI async function or script into half-cost deferred jobs.
+batchling is a frictionless, batteries-included plugin to convert any GenAI async function or script into half-cost batch jobs.
 
 Key features:
 

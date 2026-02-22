@@ -10,7 +10,6 @@ import pytest
 import respx
 
 import batchling.hooks as hooks_module
-from batchling.exceptions import DeferredExit
 
 install_hooks = hooks_module.install_hooks
 
@@ -210,34 +209,3 @@ async def test_hook_handles_different_http_methods(restore_hooks):
 
             assert response.status_code == 200
             assert response.json()["method"] == method
-
-
-@pytest.mark.asyncio
-async def test_hook_returns_deferred_response_without_transport_error(restore_hooks):
-    """Test that DeferredExit is translated into a tagged synthetic HTTP response."""
-    install_hooks()
-
-    class _FakeBatcher:
-        async def submit(self, *, provider, **kwargs):
-            del provider
-            del kwargs
-            raise DeferredExit(
-                "Deferred mode idle threshold reached while batches are still polling."
-            )
-
-    token = hooks_module.active_batcher.set(_FakeBatcher())
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                json={
-                    "model": "claude-3-5-haiku-latest",
-                    "messages": [{"role": "user", "content": "Hello"}],
-                    "max_tokens": 16,
-                },
-            )
-        assert response.status_code == 499
-        assert response.headers["x-batchling-deferred"] == "1"
-        assert response.json()["error"]["type"] == "deferred_exit"
-    finally:
-        hooks_module.active_batcher.reset(token)
