@@ -6,8 +6,7 @@ from pathlib import Path
 
 import typer
 
-from batchling import DeferredExit, batchify
-from batchling.exceptions import is_deferred_exit_error
+from batchling import batchify
 
 # syncify = lambda f: wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
@@ -76,8 +75,6 @@ async def run_script_with_batchify(
     batch_poll_interval_seconds: float,
     dry_run: bool,
     cache: bool,
-    deferred: bool,
-    deferred_idle_seconds: float,
 ):
     """
     Execute a Python script under a batchify context.
@@ -100,10 +97,6 @@ async def run_script_with_batchify(
         Dry run mode passed to ``batchify``.
     cache : bool
         Cache mode passed to ``batchify``.
-    deferred : bool
-        Deferred mode passed to ``batchify``.
-    deferred_idle_seconds : float
-        Deferred idle threshold passed to ``batchify``.
     """
     if not module_path.exists():
         typer.echo(f"Script not found: {module_path}")
@@ -119,8 +112,6 @@ async def run_script_with_batchify(
         batch_poll_interval_seconds=batch_poll_interval_seconds,
         dry_run=dry_run,
         cache=cache,
-        deferred=deferred,
-        deferred_idle_seconds=deferred_idle_seconds,
     ):
         ns = runpy.run_path(path_name=script_path_as_posix, run_name="batchling.runtime")
         func = ns.get(func_name)
@@ -164,14 +155,6 @@ def main(
         bool,
         typer.Option("--cache/--no-cache", help="Enable persistent request caching"),
     ] = True,
-    deferred: t.Annotated[
-        bool,
-        typer.Option(help="Allow deferred-mode idle termination while polling"),
-    ] = False,
-    deferred_idle_seconds: t.Annotated[
-        float,
-        typer.Option(help="Deferred-mode idle threshold in seconds"),
-    ] = 60.0,
 ):
     """Run a script under ``batchify``."""
     try:
@@ -180,30 +163,15 @@ def main(
         raise typer.BadParameter("Script path must be a module path, use 'module:func' syntax")
     script_args = list(ctx.args)
 
-    try:
-        asyncio.run(
-            run_script_with_batchify(
-                module_path=Path(module_path),
-                func_name=func_name,
-                script_args=script_args,
-                batch_size=batch_size,
-                batch_window_seconds=batch_window_seconds,
-                batch_poll_interval_seconds=batch_poll_interval_seconds,
-                dry_run=dry_run,
-                cache=cache,
-                deferred=deferred,
-                deferred_idle_seconds=deferred_idle_seconds,
-            )
+    asyncio.run(
+        run_script_with_batchify(
+            module_path=Path(module_path),
+            func_name=func_name,
+            script_args=script_args,
+            batch_size=batch_size,
+            batch_window_seconds=batch_window_seconds,
+            batch_poll_interval_seconds=batch_poll_interval_seconds,
+            dry_run=dry_run,
+            cache=cache,
         )
-    except DeferredExit:
-        typer.echo(
-            "Deferred mode: batches are underway. Re-run this command later to fetch results."
-        )
-        raise typer.Exit(code=0)
-    except Exception as error:
-        if is_deferred_exit_error(error=error):
-            typer.echo(
-                "Deferred mode: batches are underway. Re-run this command later to fetch results."
-            )
-            raise typer.Exit(code=0)
-        raise
+    )

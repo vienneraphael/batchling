@@ -15,8 +15,6 @@ def batchify(
     batch_poll_interval_seconds: float = 10.0,
     dry_run: bool = False,
     cache: bool = True,
-    deferred: bool = False,
-    deferred_idle_seconds: float = 60.0,
 ) -> BatchingContext:
     """
     Context manager used to activate batching for a scoped context.<br>
@@ -38,13 +36,6 @@ def batchify(
     cache : bool, optional
         If ``True``, enable persistent request cache lookups.<br>
         This parameter allows to skip the batch submission and go straight to the polling phase for requests that have already been sent.
-    deferred : bool, optional
-        If ``True``, allow deferred-mode idle termination while polling.<br>
-        Deferred mode exits the program once polling is idle for some time.<br>
-        Useful to avoid having an async long-running process and process batches the deferred way.
-    deferred_idle_seconds : float, optional
-        Idle threshold before deferred mode triggers a controlled early exit.<br>
-        Useful to avoid having an async long-running process and process batches the deferred way.
 
     Returns
     -------
@@ -62,8 +53,6 @@ def batchify(
         batch_poll_interval_seconds=batch_poll_interval_seconds,
         dry_run=dry_run,
         cache=cache,
-        deferred=deferred,
-        deferred_idle_seconds=deferred_idle_seconds,
     )
 
     # 3. Return BatchingContext with no yielded target.

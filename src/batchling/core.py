@@ -19,7 +19,6 @@ import httpx
 import structlog
 
 from batchling.cache import CacheEntry, RequestCacheStore
-from batchling.exceptions import DeferredExit
 from batchling.providers import BaseProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec
 
@@ -95,8 +94,6 @@ class Batcher:
         batch_poll_interval_seconds: float = 10.0,
         dry_run: bool = False,
         cache: bool = True,
-        deferred: bool = False,
-        deferred_idle_seconds: float = 60.0,
     ):
         """
         Initialize the batcher.
@@ -113,21 +110,12 @@ class Batcher:
             If ``True``, simulate provider batch resolution without provider I/O.
         cache : bool
             If ``True``, enable persistent request cache lookups.
-        deferred : bool
-            If ``True``, allow deferred idle-triggered early exit.
-        deferred_idle_seconds : float
-            Idle threshold in seconds before deferred mode raises ``DeferredExit``.
         """
         self._batch_size = batch_size
         self._batch_window_seconds = batch_window_seconds
         self._dry_run = dry_run
         self._cache_enabled = cache
         self._cache_write_enabled = cache and not dry_run
-        self._deferred = deferred
-        self._deferred_idle_seconds = deferred_idle_seconds
-        self._last_intercepted_at = time.time()
-        self._deferred_exit_error: DeferredExit | None = None
-        self._deferred_lock = asyncio.Lock()
 
         # Request collection
         self._pending_by_provider: dict[QueueKey, list[_PendingRequest]] = {}
@@ -165,8 +153,6 @@ class Batcher:
             dry_run=dry_run,
             cache_enabled=self._cache_enabled,
             cache_write_enabled=self._cache_write_enabled,
-            deferred=deferred,
-            deferred_idle_seconds=deferred_idle_seconds,
             cache_path=(
                 self._cache_store.path.as_posix() if self._cache_store is not None else None
             ),
@@ -502,10 +488,6 @@ class Batcher:
         typing.Any
             Provider-decoded response.
         """
-        if self._deferred_exit_error is not None:
-            raise self._deferred_exit_error
-
-        self._last_intercepted_at = time.time()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[t.Any] = loop.create_future()
         custom_id = str(object=uuid.uuid4())
@@ -547,8 +529,6 @@ class Batcher:
         if cache_entry is not None:
             try:
                 return await future
-            except DeferredExit:
-                raise
             except asyncio.CancelledError:
                 raise
             except Exception as error:
@@ -936,104 +916,6 @@ class Batcher:
             )
         return deleted_rows
 
-    def _has_active_pollers(self) -> bool:
-        """
-        Return whether batch submission/polling tasks are currently running.
-
-        Returns
-        -------
-        bool
-            ``True`` when at least one background polling-related task is active.
-        """
-        return any(not task.done() for task in self._batch_tasks) or any(
-            not task.done() for task in self._resumed_poll_tasks
-        )
-
-    async def _maybe_trigger_deferred_exit(self) -> None:
-        """
-        Trigger deferred early exit if polling-only idle conditions are met.
-        """
-        if not self._deferred or self._deferred_exit_error is not None:
-            return
-        idle_seconds = time.time() - self._last_intercepted_at
-        if idle_seconds < self._deferred_idle_seconds:
-            return
-
-        async with self._pending_lock:
-            has_pending = any(bool(queue) for queue in self._pending_by_provider.values())
-            has_window = any(
-                bool(task is not None and not task.done()) for task in self._window_tasks.values()
-            )
-        if has_pending or has_window or not self._has_active_pollers():
-            return
-
-        await self._trigger_deferred_exit(
-            reason=(
-                "Deferred mode idle threshold reached while batches are still polling. "
-                "Re-run later to fetch results."
-            ),
-        )
-
-    async def _trigger_deferred_exit(self, *, reason: str) -> None:
-        """
-        Set deferred exit state and fail unresolved request futures.
-
-        Parameters
-        ----------
-        reason : str
-            Human-readable deferred exit reason.
-        """
-        async with self._deferred_lock:
-            if self._deferred_exit_error is not None:
-                return
-            deferred_error = DeferredExit(reason)
-            self._deferred_exit_error = deferred_error
-
-        log.info(
-            event="Deferred mode triggered early exit",
-            reason=reason,
-            idle_seconds=self._deferred_idle_seconds,
-        )
-        await self._fail_unresolved_futures(error=deferred_error)
-
-        current_task = asyncio.current_task()
-        for task in list(self._window_tasks.values()):
-            if task is not None and not task.done() and task is not current_task:
-                task.cancel()
-        for task in list(self._batch_tasks):
-            if not task.done() and task is not current_task:
-                task.cancel()
-        for task in list(self._resumed_poll_tasks):
-            if not task.done() and task is not current_task:
-                task.cancel()
-
-    async def _fail_unresolved_futures(self, *, error: Exception) -> None:
-        """
-        Set exception on unresolved futures across all queues and pollers.
-
-        Parameters
-        ----------
-        error : Exception
-            Exception attached to unresolved futures.
-        """
-        async with self._pending_lock:
-            for queue in self._pending_by_provider.values():
-                for request in queue:
-                    if not request.future.done():
-                        request.future.set_exception(error)
-
-        for active_batch in self._active_batches:
-            for request in active_batch.requests.values():
-                if not request.future.done():
-                    request.future.set_exception(error)
-
-        async with self._resumed_lock:
-            for resumed_batch in self._resumed_batches.values():
-                for pending_list in resumed_batch.requests_by_custom_id.values():
-                    for pending in pending_list:
-                        if not pending.future.done():
-                            pending.future.set_exception(error)
-
     async def _process_batch(
         self,
         *,
@@ -1057,8 +939,6 @@ class Batcher:
         queue_name = self._format_queue_key(queue_key=queue_key)
         provider_name, queue_endpoint, model_name = queue_key
         try:
-            if self._deferred_exit_error is not None:
-                raise self._deferred_exit_error
             if self._dry_run:
                 dry_run_batch_id = f"dryrun-{uuid.uuid4()}"
                 active_batch = _ActiveBatch(
@@ -1137,18 +1017,6 @@ class Batcher:
                 provider=provider,
                 active_batch=active_batch,
             )
-        except DeferredExit as error:
-            log.info(
-                event="Deferred exit interrupted active batch processing",
-                provider=provider_name,
-                queue_endpoint=queue_endpoint,
-                model=model_name,
-                queue_key=queue_name,
-                error=str(object=error),
-            )
-            for req in requests:
-                if not req.future.done():
-                    req.future.set_exception(error)
         except asyncio.CancelledError:
             log.debug(
                 event="Batch processing task cancelled",
@@ -1206,16 +1074,6 @@ class Batcher:
                 "cache_hit": cache_hit,
             },
         )
-
-    async def _raise_if_deferred_exit_triggered(self) -> None:
-        """
-        Raise deferred exit if idle polling conditions were met.
-        """
-        if self._deferred_exit_error is not None:
-            raise self._deferred_exit_error
-        await self._maybe_trigger_deferred_exit()
-        if self._deferred_exit_error is not None:
-            raise self._deferred_exit_error
 
     async def _poll_batch_once(
         self,
@@ -1285,8 +1143,6 @@ class Batcher:
             poll_interval_seconds=self._poll_interval_seconds,
         )
         while True:
-            await self._raise_if_deferred_exit_triggered()
-
             poll_snapshot = await self._poll_batch_once(
                 provider=provider,
                 base_url=base_url,
@@ -1349,8 +1205,6 @@ class Batcher:
                 batch_id=batch_id,
             )
             while True:
-                await self._raise_if_deferred_exit_triggered()
-
                 poll_snapshot = await self._poll_batch_once(
                     provider=provider,
                     base_url=resumed_batch.base_url,
@@ -1374,12 +1228,6 @@ class Batcher:
                     return
 
                 await asyncio.sleep(delay=self._poll_interval_seconds)
-        except DeferredExit as error:
-            await self._fail_resumed_batch_requests(
-                resume_key=resume_key,
-                error=error,
-                invalidate_cache=False,
-            )
         except asyncio.CancelledError:
             raise
         except Exception as error:
@@ -1698,23 +1546,6 @@ class Batcher:
                     )
                     pass
         self._window_tasks.clear()
-
-        if self._deferred_exit_error is not None:
-            async with self._pending_lock:
-                self._pending_by_provider.clear()
-            cancelled_tasks: list[asyncio.Task[None]] = []
-            for task in list(self._batch_tasks):
-                if not task.done():
-                    task.cancel()
-                    cancelled_tasks.append(task)
-            for task in list(self._resumed_poll_tasks):
-                if not task.done():
-                    task.cancel()
-                    cancelled_tasks.append(task)
-            if cancelled_tasks:
-                _ = await asyncio.gather(*cancelled_tasks, return_exceptions=True)
-            log.debug(event="Batcher closed after deferred exit")
-            return
 
         pending_batches: list[tuple[QueueKey, list[_PendingRequest]]] = []
         async with self._pending_lock:
