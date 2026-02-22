@@ -11,6 +11,7 @@ You have a function `generate_image` that takes a prompt (string) as input and g
 You would typically run concurrent tasks using `asyncio` for tasks not blocking each other in the execution loop.
 
 ```python
+# generate_product_images.py
 import asyncio
 
 async def get_new_product_descriptions() -> list[str]:
@@ -77,6 +78,12 @@ async def main():
 ```
 
 That's it! Update three lines of code and you save 50% off your workflow.
+
+You can now run this script normally using python and start saving money:
+
+```bash
+python generate_product_images.py
+```
 
 ## Next Steps
 
