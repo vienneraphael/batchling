@@ -39,7 +39,7 @@ batchling is available on PyPI as `batchling`, install using either `pip` or `uv
 
 batchling integrates smoothly with any async function doing GenAI calls or within a whole async script that you'd run with `asyncio`.
 
-Let's suppose we have an existing script `generate.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
+Let's suppose we have an existing script `main.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
 
 <!-- markdownlint-disable-next-line MD046 -->
 ```python
@@ -56,26 +56,17 @@ load_dotenv()
 async def build_tasks() -> list[t.Awaitable[t.Any]]:
     """Build OpenAI requests.
     """
-    client = AsyncOpenAI(api_key=os.getenv(key="OPENAI_API_KEY"))
-    messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+    client = AsyncOpenAI()
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
     return [
-        client.responses.create(
-            input=messages,
-            model="gpt-4o-mini",
-        ),
-        client.responses.create(
-            input=messages,
-            model="gpt-5-nano",
-        ),
+        client.responses.create(input=question, model="gpt-4o-mini") for question in questions
     ]
 
 
-async def main() -> None:
+async def generate() -> None:
     """Run the OpenAI example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
@@ -85,15 +76,15 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(generate())
 ```
 
 === "CLI"
 
-    For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md) and targetting the main function ran by `asyncio`:
+    For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md) and targetting the generate function ran by `asyncio`:
 
     ```bash
-    batchling generate.py:main
+    batchling main.py:generate
     ```
 
 === "Python SDK"
@@ -106,10 +97,10 @@ if __name__ == "__main__":
     + from batchling import batchify
     ```
 
-    Then, let's modify our async function `main` to wrap the `asyncio.gather` call into the [`batchify`](./batchify.md) async context manager:
+    Then, let's modify our async function `generate` to wrap the `asyncio.gather` call into the [`batchify`](./batchify.md) async context manager:
 
     ```diff
-     async def main() -> None:
+     async def generate() -> None:
          """Run the OpenAI example."""
          tasks = await build_tasks()
     -    responses = await asyncio.gather(*tasks)
@@ -117,13 +108,13 @@ if __name__ == "__main__":
     +        responses = await asyncio.gather(*tasks)
          for response in responses:
              content = response.output[-1].content # skip reasoning output, get straight to the answer
-             print(f"{response.model} answer: {content[0].text}")
+             print(content[0].text)
     ```
 
 Output:
 
-    gpt-4o-mini-2024-07-18 answer: The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
-    gpt-5-nano-2025-08-07 answer: There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
+    The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
+    There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
 
 You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.
 
