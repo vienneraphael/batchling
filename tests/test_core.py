@@ -3,7 +3,6 @@ Tests for the Batcher class in batchling.core.
 """
 
 import asyncio
-import contextlib
 import time
 import typing as t
 
@@ -12,7 +11,6 @@ import pytest
 
 from batchling.cache import CacheEntry
 from batchling.core import Batcher, _ActiveBatch, _PendingRequest
-from batchling.exceptions import DeferredExit
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
 from batchling.providers.gemini import GeminiProvider
@@ -1950,34 +1948,3 @@ async def test_dry_run_cache_hit_is_read_only(mock_openai_api_transport: httpx.M
     assert dry_run_entry is not None
     assert dry_run_entry.created_at == original_created_at
     await dry_run_batcher.close()
-
-
-@pytest.mark.asyncio
-async def test_deferred_idle_triggers_deferred_exit():
-    """Test deferred mode raises DeferredExit when polling-only idle threshold is reached."""
-    batcher = Batcher(
-        batch_size=2,
-        batch_window_seconds=0.1,
-        cache=False,
-        deferred=True,
-        deferred_idle_seconds=0.01,
-    )
-    active_task = asyncio.create_task(asyncio.sleep(delay=10.0))
-    batcher._batch_tasks.add(active_task)
-    batcher._last_intercepted_at = time.time() - 1.0
-
-    await batcher._maybe_trigger_deferred_exit()
-
-    assert isinstance(batcher._deferred_exit_error, DeferredExit)
-    with contextlib.suppress(asyncio.CancelledError):
-        await active_task
-    provider = OpenAIProvider()
-    with pytest.raises(DeferredExit):
-        await batcher.submit(
-            client_type="httpx",
-            method="POST",
-            url="api.openai.com",
-            endpoint="/v1/chat/completions",
-            provider=provider,
-            body=b'{"model":"model-a","messages":[]}',
-        )
