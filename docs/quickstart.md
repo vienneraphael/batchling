@@ -43,10 +43,10 @@ Let's try to generate metadata for famous pieces of art from the National Galler
 
 For this example, we'll use the three following art pieces:
 
-<div style="display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap;">
-  <img src="../assets/images/quickstart/woman-striped-dress.png" alt="Portrait of a Woman in Striped Dress" style="width: 32%; min-width: 220px;" />
-  <img src="../assets/images/quickstart/napoleon.png" alt="Portrait of a Napoleonic Officer in Dress Uniform" style="width: 32%; min-width: 220px;" />
-  <img src="../assets/images/quickstart/self-portrait.png" alt="Self-Portrait with Palette" style="width: 32%; min-width: 220px;" />
+<div style="display: flex; gap: 12px; justify-content: space-between;">
+  <img src="../assets/images/quickstart/woman-striped-dress.png" alt="Portrait of a Woman in Striped Dress" style="width: 32%; height: auto;" />
+  <img src="../assets/images/quickstart/napoleon.png" alt="Portrait of a Napoleonic Officer in Dress Uniform" style="width: 32%; height: auto;" />
+  <img src="../assets/images/quickstart/self-portrait.png" alt="Self-Portrait with Palette" style="width: 32%; height: auto;" />
 </div>
 
 For each art piece, we will generate the following metadata:
