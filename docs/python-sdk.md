@@ -34,7 +34,7 @@ async def main():
         generate_image(text=product_description)
         for product_description in new_product_descriptions
     ]
-    generated_images = asyncio.gather(*tasks)
+    generated_images = await asyncio.gather(*tasks)
     await update_product_db(generated_images=generated_images)
 
 
@@ -72,8 +72,8 @@ async def main():
         for product_description in new_product_descriptions
     ]
 -   generated_images = asyncio.gather(*tasks)
-+   with batchify():
-+       generated_images = asyncio.gather(*tasks)
++   async with batchify():
++       generated_images = await asyncio.gather(*tasks)
     await update_product_db(generated_images=generated_images)
 ```
 
@@ -92,7 +92,5 @@ If you haven't yet, look at how you can:
 - leverage the [CLI](./cli.md) to batchify full scripts in one command
 
 - use `batchling` with any [provider](./providers.md) / [framework](./frameworks.md) with examples
-
-- learn about end-to-end [use-cases](./use-cases.md) using `batchling`
 
 - learn about [advanced features](./advanced-features.md)

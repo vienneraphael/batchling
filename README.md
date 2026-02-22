@@ -83,7 +83,7 @@ async def generate():
     tasks = [
         client.responses.create(input=question, model="gpt-4o-mini") for question in questions
     ]
-    with batchify(): # Runs your tasks as batches, save 50%
+    async with batchify(): # Runs your tasks as batches, save 50%
         responses = await asyncio.gather(*tasks)
     for response in responses:
         content = response.output[-1].content # skip reasoning output, get straight to the answer
@@ -153,7 +153,7 @@ batchling main.py:generate
 | Gemini      | <https://ai.google.dev/gemini-api/docs/batch-mode>                       |
 | Groq        | <https://console.groq.com/docs/batch>                                    |
 | Mistral     | <https://docs.mistral.ai/capabilities/batch/>                            |
-| Together AI | <https://docs.together.ai/docs/batch-inference>                          |
+| Together    | <https://docs.together.ai/docs/batch-inference>                          |
 | Doubleword  | <https://docs.doubleword.ai/batches/getting-started-with-batched-api>    |
 
 ## Next Steps

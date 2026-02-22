@@ -76,7 +76,7 @@ batch response shapes:
 The Doubleword provider reuses the OpenAI provider implementation and only changes:
 
 - `hostnames = ("api.doubleword.ai",)`
-- `batchable_endpoints = ("/v1/chat/completions",)`
+- `batchable_endpoints = ("/v1/chat/completions", "/v1/responses", "/v1/embeddings", "/v1/moderations", "/v1/completions")`
 
 Terminal states are inherited unchanged from the OpenAI provider.
 

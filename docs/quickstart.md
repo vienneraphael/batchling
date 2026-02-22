@@ -60,7 +60,7 @@ For each art piece, we will generate the following metadata:
 - short description about the background
 - fun fact about it
 
-Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
+Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI client to make parallel calls using `asyncio.gather` to generate metadata to the three art pieces:
 
 <!-- markdownlint-disable-next-line MD046 -->
 ```python
@@ -72,7 +72,7 @@ Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI 
     For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md){ data-preview } and targetting the generate function ran by `asyncio`:
 
     ```bash
-    batchling main.py:enrich_art_images
+    batchling art_metadata.py:enrich_art_images
     ```
 
 === "Python SDK"
@@ -85,14 +85,14 @@ Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI 
     + from batchling import batchify
     ```
 
-    Then, let's modify our async function `generate` to wrap the `asyncio.gather` call into the `batchify` async context manager:
+    Then, let's modify our async function `enrich_art_images` to wrap the `asyncio.gather` call into the `batchify` async context manager:
 
     ```diff
      async def enrich_art_images() -> None:
          """Run the OpenAI example."""
          tasks = await build_tasks()
     -    responses = await asyncio.gather(*tasks)
-    +    with batchify():
+    +    async with batchify():
     +        responses = await asyncio.gather(*tasks)
          for response in responses:
              print(response.output_parsed.model_dump_json(indent=2))
@@ -194,5 +194,3 @@ Now that you've seen how `batchling` can be used and want to learn more about it
 - [Learn more about CLI usage](./cli.md)
 
 - Learn about supported [Providers](./providers.md) & [Frameworks](./frameworks.md)
-
-- [Browse batchling in-depth use-cases exploration](./use-cases.md)
