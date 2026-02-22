@@ -94,7 +94,7 @@ Output:
 
 ```text
 The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
-There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
+The capital of France is Paris.
 ```
 
 ### Using the CLI wrapper
@@ -124,7 +124,7 @@ Output:
 
 ```text
 The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
-There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
+The capital of France is Paris.
 ```
 
 Run your function in batch mode:

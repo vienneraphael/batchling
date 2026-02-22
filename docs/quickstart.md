@@ -35,48 +35,36 @@ batchling is available on PyPI as `batchling`, install using either `pip` or `uv
     pip install batchling
     ```
 
-## Hello World Example
+## Art Metadata Generation Example
 
 batchling integrates smoothly with any async function doing GenAI calls or within a whole async script that you'd run with `asyncio`.
 
-Let's suppose we have an existing script `main.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
+Let's try to generate metadata for famous pieces of art from the National Gallery of Arts.
+
+For this example, we'll use the three following art pieces:
+
+<div style="display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap;">
+  <img src="../assets/images/quickstart/woman-striped-dress.png" alt="Portrait of a Woman in Striped Dress" style="width: 32%; min-width: 220px;" />
+  <img src="../assets/images/quickstart/napoleon.png" alt="Portrait of a Napoleonic Officer in Dress Uniform" style="width: 32%; min-width: 220px;" />
+  <img src="../assets/images/quickstart/self-portrait.png" alt="Self-Portrait with Palette" style="width: 32%; min-width: 220px;" />
+</div>
+
+For each art piece, we will generate the following metadata:
+
+- author name
+- name of the art piece
+- period in which it was created
+- movement to which it belongs
+- material used to create the piece
+- list of tags representing visual elements of the art piece
+- short description about the background
+- fun fact about it
+
+Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
 
 <!-- markdownlint-disable-next-line MD046 -->
 ```python
-import asyncio
-import os
-import typing as t
-
-from dotenv import load_dotenv
-from openai import AsyncOpenAI
-
-load_dotenv()
-
-
-async def build_tasks() -> list[t.Awaitable[t.Any]]:
-    """Build OpenAI requests.
-    """
-    client = AsyncOpenAI()
-    questions = [
-        "Who is the best French painter? Answer in one short sentence.",
-        "What is the capital of France?",
-    ]
-    return [
-        client.responses.create(input=question, model="gpt-4o-mini") for question in questions
-    ]
-
-
-async def generate() -> None:
-    """Run the OpenAI example."""
-    tasks = await build_tasks()
-    responses = await asyncio.gather(*tasks)
-    for response in responses:
-        content = response.output[-1].content # skip reasoning output, get straight to the answer
-        print(f"{response.model} answer: {content[0].text}")
-
-
-if __name__ == "__main__":
-    asyncio.run(generate())
+--8<-- "examples/art_metadata.py:quickstart"
 ```
 
 === "CLI"
@@ -84,7 +72,7 @@ if __name__ == "__main__":
     For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md) and targetting the generate function ran by `asyncio`:
 
     ```bash
-    batchling main.py:generate
+    batchling main.py:enrich_art_images
     ```
 
 === "Python SDK"
@@ -100,21 +88,78 @@ if __name__ == "__main__":
     Then, let's modify our async function `generate` to wrap the `asyncio.gather` call into the [`batchify`](./batchify.md) async context manager:
 
     ```diff
-     async def generate() -> None:
+     async def enrich_art_images() -> None:
          """Run the OpenAI example."""
          tasks = await build_tasks()
     -    responses = await asyncio.gather(*tasks)
     +    with batchify():
     +        responses = await asyncio.gather(*tasks)
          for response in responses:
-             content = response.output[-1].content # skip reasoning output, get straight to the answer
-             print(content[0].text)
+             print(response.output_parsed.model_dump_json(indent=2))
     ```
 
 Output:
 
-    The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
-    There isn’t a universal “best” French painter, but Claude Monet is widely regarded as one of the greatest.
+<!-- markdownlint-disable-next-line MD046 -->
+```json
+{
+  "author": "",
+  "name": "Portrait of a Woman in Striped Dress",
+  "period": "Early 20th century",
+  "movement": "Post-Impressionism / Fauvism influence",
+  "material": "Oil on canvas",
+  "tags": [
+    "portrait",
+    "woman",
+    "stripes",
+    "bold color",
+    "flower bouquet",
+    "interior",
+    "fauvism",
+    "post-impressionism"
+  ],
+  "context": "A seated young woman in a striped red-and-blue blouse and a polka-dot blue skirt, holding flowers, set against a flat mint-green background. The brushwork and color treatment emphasize flat planes and expressive color typical of Post-Impressionist/Fauvist portraiture.",
+  "fun_fact": "The composition and bold color palette resemble early 20th-century French modernist works; exact attribution is difficult from a single image."
+}
+{
+  "author": "",
+  "name": "",
+  "period": "Early 19th century (Napoleonic era)",
+  "movement": "",
+  "material": "Oil on canvas",
+  "tags": [
+    "portrait",
+    "military",
+    "uniform",
+    "Napoleonic era",
+    "European",
+    "blue coat",
+    "epaulettes",
+    "medal",
+    "sash"
+  ],
+  "context": "A formal portrait of a high-ranking military officer in full dress uniform, set in an ornate interior with classical furnishings, suggesting a studio or official setting typical of early 19th-century noble or military portraiture.",
+  "fun_fact": "The subject wears a star medal and epaulettes common to high-ranking officers of Napoleonic Europe; the rich interior and ceremonial attire indicate status and prestige rather than battlefield activity."
+}
+{
+  "author": "Vincent van Gogh",
+  "name": "Self-Portrait with Palette",
+  "period": "1889",
+  "movement": "Post-Impressionism",
+  "material": "Oil on canvas",
+  "tags": [
+    "Self-portrait",
+    "palette",
+    "brushwork",
+    "van Gogh",
+    "Post-Impressionism",
+    "blue background",
+    "oil on canvas"
+  ],
+  "context": "A self-portrait painted by Vincent van Gogh during his stay at the Saint-Paul asylum in Saint-Rémy-de-Provence in 1889. The image shows van Gogh holding a palette, set against a swirling blue background that demonstrates his bold, expressive brushwork and distinctive color sense.",
+  "fun_fact": "Van Gogh produced hundreds of self-portraits, using them to study color and emotion; this piece is notable for its cool blue tones contrasting with the warmer tones of his hair and beard."
+}
+```
 
 You can run the script and see for yourself, normally small batches like that should run under 5-10 minutes at most.
 
