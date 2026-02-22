@@ -1,5 +1,10 @@
-# batchling
+<style>
+  .md-content__inner > h1:first-of-type {
+    display: none;
+  }
+</style>
 
+<!-- markdownlint-disable-file MD041 MD001 -->
 <div class="home-hero">
   <p><strong>Save 50% off GenAI costs in two lines of code.</strong></p>
   <p>batchling repurposes incoming GenAI requests to batch format, gets results from supported Batch APIs and
