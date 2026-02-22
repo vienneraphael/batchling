@@ -14,16 +14,16 @@ async def build_tasks() -> list:
     client = AsyncOpenAI(
         api_key=os.getenv(key="DOUBLEWORD_API_KEY"), base_url="https://api.doubleword.ai/v1"
     )
-    message = "Who is the best French painter? Answer in one short sentence."
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
+    ]
     return [
         client.responses.create(
-            input=message,
+            input=question,
             model="Qwen/Qwen3-14B-FP8",
-        ),
-        client.responses.create(
-            input=message,
-            model="openai/gpt-oss-20b",
-        ),
+        )
+        for question in questions
     ]
 
 

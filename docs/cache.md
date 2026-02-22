@@ -16,6 +16,8 @@ Whenever a cache hit is made, the corresponding request skips the batch submissi
 
 ## Cache retention
 
+By default, the cache is located in your home folder under: `$HOME/.cache/batchling`
+
 Cache is kept locally and automatically cleaned up once it's 30 days old.
 
 This duration aligns with what most Batch APIs share on the duration for which they keep exposing batch results.

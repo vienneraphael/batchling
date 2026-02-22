@@ -12,18 +12,16 @@ load_dotenv()
 async def build_tasks() -> list:
     """Build Together AI requests."""
     client = AsyncTogether(api_key=os.getenv(key="TOGETHER_API_KEY"))
-    messages = [
+    questions = [
         "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
     return [
         client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
-            messages=messages,
-        ),
-        client.chat.completions.create(
             model="google/gemma-3n-E4B-it",
-            messages=messages,
-        ),
+            messages=question,
+        )
+        for question in questions
     ]
 
 

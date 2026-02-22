@@ -13,21 +13,19 @@ async def build_tasks() -> list:
     agent = create_agent(
         model="openai:gpt-4.1-mini",
     )
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
+    ]
     return [
         agent.ainvoke(
             input={
                 "messages": [
-                    {"role": "user", "content": "What is the best French painter?"},
+                    {"role": "user", "content": question},
                 ]
             }
-        ),
-        agent.ainvoke(
-            input={
-                "messages": [
-                    {"role": "user", "content": "Where does 'hello world' come from?"},
-                ]
-            }
-        ),
+        )
+        for question in questions
     ]
 
 

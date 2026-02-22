@@ -53,13 +53,21 @@ Compared to using standard endpoints directly, Batch API offers:
 
 ## Installation
 
+batchling is available on PyPI as `batchling`, install using either `pip` or `uv`:
+
 ```bash
 pip install batchling
 ```
 
 ## Get Started
 
+batchling integrates smoothly with any async function doing GenAI calls or within a whole async script that you'd run with `asyncio`.
+
+Let's suppose we have an existing script `main.py` that uses the OpenAI client to make two parallel calls using `asyncio.gather`:
+
 ### Using the async context manager (recommended)
+
+To selectively batchify certain pieces of your code execution, you can rely on the `batchify` function, which exposes an async context manager.
 
 ```python
 import asyncio
@@ -68,29 +76,30 @@ from openai import AsyncOpenAI
 
 async def generate():
     client = AsyncOpenAI()
-    messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
     tasks = [
-        client.responses.create(
-            input=messages,
-            model="gpt-4o-mini",
-        ),
-        client.responses.create(
-            input=messages,
-            model="gpt-5-nano",
-        ),
+        client.responses.create(input=question, model="gpt-4o-mini") for question in questions
     ]
     with batchify(): # Runs your tasks as batches, save 50%
         responses = await asyncio.gather(*tasks)
+    for response in responses:
+        content = response.output[-1].content # skip reasoning output, get straight to the answer
+        print(content[0].text)
+```
+
+Output:
+
+```text
+The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
+The capital of France is Paris.
 ```
 
 ### Using the CLI wrapper
 
-Create a file `main.py` with:
+For you to switch this async execution to a batched inference one, you just have to run your script using the `batchling` CLI and targetting the main function ran by `asyncio`:
 
 ```python
 import asyncio
@@ -98,23 +107,24 @@ from openai import AsyncOpenAI
 
 async def generate():
     client = AsyncOpenAI()
-    messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
     tasks = [
-        client.responses.create(
-            input=messages,
-            model="gpt-4o-mini",
-        ),
-        client.responses.create(
-            input=messages,
-            model="gpt-5-nano",
-        ),
+        client.responses.create(input=question, model="gpt-4o-mini") for question in questions
     ]
     responses = await asyncio.gather(*tasks)
+    for response in responses:
+        content = response.output[-1].content # skip reasoning output, get straight to the answer
+        print(content[0].text)
+```
+
+Output:
+
+```text
+The best French painter is often considered to be Claude Monet, a leading figure in the Impressionist movement.
+The capital of France is Paris.
 ```
 
 Run your function in batch mode:

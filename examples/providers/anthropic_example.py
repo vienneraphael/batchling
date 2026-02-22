@@ -12,20 +12,17 @@ load_dotenv()
 async def build_tasks() -> list:
     """Build Anthropic requests."""
     client = AsyncAnthropic(api_key=os.getenv(key="ANTHROPIC_API_KEY"))
-    messages = [
+    questions = [
         "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
     return [
         client.messages.create(
             max_tokens=1024,
-            messages=messages,
+            messages=question,
             model="claude-haiku-4-5",
-        ),
-        client.messages.create(
-            max_tokens=1024,
-            messages=messages,
-            model="claude-3-5-haiku-latest",
-        ),
+        )
+        for question in questions
     ]
 
 

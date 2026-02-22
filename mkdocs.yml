@@ -8,7 +8,7 @@ exclude_docs: architecture/**
 
 theme:
   name: material
-  logo: assets/images/batchling.png
+  logo: assets/images/batchling-transparent-cropped.png
   favicon: assets/images/batchling.png
   pygments_style: tango
   pygments_style_dark: monokai

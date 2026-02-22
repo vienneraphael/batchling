@@ -12,25 +12,21 @@ load_dotenv()
 async def build_tasks() -> list:
     """Build Mistral requests."""
     client = Mistral(api_key=os.getenv(key="MISTRAL_API_KEY"))
-    messages = [
-        {
-            "content": "Who is the best French painter? Answer in one short sentence.",
-            "role": "user",
-        },
+    questions = [
+        "Who is the best French painter? Answer in one short sentence.",
+        "What is the capital of France?",
     ]
     return [
         client.chat.complete_async(
             model="mistral-medium-2505",
-            messages=messages,
+            messages={
+                "role": "user",
+                "content": question,
+            },
             stream=False,
             response_format={"type": "text"},
-        ),
-        client.chat.complete_async(
-            model="mistral-small-2506",
-            messages=messages,
-            stream=False,
-            response_format={"type": "text"},
-        ),
+        )
+        for question in questions
     ]
 
 
