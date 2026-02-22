@@ -88,6 +88,16 @@ async def generate():
     for response in responses:
         content = response.output[-1].content # skip reasoning output, get straight to the answer
         print(content[0].text)
+
+if __name__ == "__main__":
+    asyncio.run(generate())
+
+```
+
+Then, just run `main.py` like you would normally:
+
+```bash
+python main.py
 ```
 
 Output:
@@ -118,6 +128,7 @@ async def generate():
     for response in responses:
         content = response.output[-1].content # skip reasoning output, get straight to the answer
         print(content[0].text)
+
 ```
 
 Output:
