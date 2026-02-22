@@ -1,6 +1,6 @@
 # Quickstart
 
-batchling is a powerful python library that lets you transform any async GenAI workflow to batched inference, saving you money in exchange of deferred execution (24 hours bound).
+batchling is a powerful python library that lets you transform any async GenAI workflow to batched inference, saving you money for workloads that can complete asynchronously (up to 24 hours).
 You typically want to use batched inference when running any process that does not require immediate response and can wait at most 24 hours (most jobs are completed in a few hours).
 
 ## Example use-cases
@@ -17,7 +17,7 @@ Things you might not want to run with batchling (yes, there are some..):
 
 - User-facing applications e.g. chatbots, you typically want fast answers
 - A whole agentic loop with tons of calls
-- Full AI workflows with a lot of sequential calls (each additional step will defer results by an additional 24 hours at worst)
+- Full AI workflows with a lot of sequential calls (each additional step can add another asynchronous batch cycle, up to 24 hours at worst)
 
 ## Installation
 

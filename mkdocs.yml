@@ -108,5 +108,4 @@ nav:
       - Overview: advanced-features.md
       - Cache: cache.md
       - Dry Run: dry-run.md
-      - Deferred Mode: deferred-mode.md
   - How It Works: how-it-works.md

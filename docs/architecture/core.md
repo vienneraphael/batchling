@@ -15,7 +15,6 @@ resolves futures back to callers.
 - Delegate provider-specific batch submission to `provider.process_batch()`.
 - Persist request-to-batch mappings on successful submission and clean old cache rows.
 - Track active batches and resolve per-request futures with provider-parsed responses.
-- Support deferred-mode idle termination via `DeferredExit`.
 - Provide cleanup via `close()` to flush remaining work.
 
 ## Key data structures
@@ -32,8 +31,7 @@ resolves futures back to callers.
 4. Threshold/window trigger calls `_submit_requests()` and starts provider batch submission.
 5. On successful submission, request cache rows are upserted and stale rows are cleaned.
 6. Batcher polls active batches and maps provider results back to request futures.
-7. In deferred mode, polling-only idle runtime triggers `DeferredExit`.
-8. `close()` flushes remaining requests (unless deferred exit already triggered) and cancels timers.
+7. `close()` flushes remaining requests and cancels timers.
 
 In `dry_run` mode, step 3 and provider polling are bypassed: `_process_batch()` still
 creates `_ActiveBatch` for tracking, then resolves each request immediately with a
