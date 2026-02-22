@@ -53,7 +53,7 @@ Compared to using standard endpoints directly, Batch API offers:
 
 ## Installation
 
-batchling is available on PyPI as `batchling`, install using either `pip` or `uv`:
+batchling is available on PyPI as `batchling`, install using either `pip`:
 
 ```bash
 pip install batchling

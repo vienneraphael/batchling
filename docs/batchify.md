@@ -23,6 +23,4 @@ Now that you have more information about the `batchify` function, you can:
 
 - See on which [Frameworks](./frameworks.md) & [Providers](./providers.md) it can be used
 
-- Consult in-depth [use-cases](./use-cases.md) leveraging `batchify`
-
 - Learn more about [advanced features](./advanced-features.md)

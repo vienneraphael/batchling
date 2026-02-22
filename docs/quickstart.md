@@ -69,7 +69,7 @@ Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI 
 
 === "CLI"
 
-    For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md){ data-preview } and targetting the generate function ran by `asyncio`:
+    For you to switch this async execution to a batched inference one, you just have to run your script using the [`batchling` CLI](./cli.md){ data-preview } and targetting the `enrich_art_images` function ran by `asyncio`:
 
     ```bash
     batchling art_metadata.py:enrich_art_images

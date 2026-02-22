@@ -57,7 +57,7 @@ The Mistral provider reuses the file-based flow with provider-specific endpoints
 - `hostnames = ("api.mistral.ai",)`
 - `batch_endpoint = "/v1/batch/jobs"`
 - `file_upload_endpoint = "/v1/files"`
-- `file_content_endpoint = "/v1/files"`
+- `file_content_endpoint = "/v1/files/{id}/content"`
 
 ## Together provider
 
@@ -67,7 +67,7 @@ batch response shapes:
 - `hostnames = ("api.together.xyz",)`
 - `batchable_endpoints = ("/v1/chat/completions", "/v1/audio/transcriptions")`
 - `file_upload_endpoint = "/v1/files/upload"`
-- `file_content_endpoint = "/v1/files"`
+- `file_content_endpoint = "/v1/files/{id}/content"`
 - overrides batch file upload form fields (`file_name`, `purpose=batch-api`)
 - extracts batch id from nested response payload (`job.id`)
 
