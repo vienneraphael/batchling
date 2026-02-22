@@ -47,13 +47,7 @@ plugins:
       default_handler: python
 
 markdown_extensions:
-  - material.extensions.preview:
-      sources:
-        include:
-          - "*"
-      targets:
-        include:
-          - "*"
+  - attr_list
   - admonition
   - md_in_html
   - pymdownx.snippets:

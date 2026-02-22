@@ -1,6 +1,6 @@
 # How it works
 
-This documentation section aims to give a high-level explanation of what happens under the hood when you run `batchling` through the [SDK](./python-sdk.md) or [CLI](./cli.md).
+This documentation section aims to give a high-level explanation of what happens under the hood when you run `batchling` through the [SDK](./python-sdk.md){ data-preview } or [CLI](./cli.md){ data-preview }.
 
 There are basically three components working together hand in hand, in order:
 

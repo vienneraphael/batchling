@@ -1,8 +1,8 @@
 # Python SDK
 
-To use `batchling`, you only need to learn to use one function exposed through the library: [`batchify`](./batchify.md)
+To use `batchling`, you only need to learn to use one function exposed through the library: [`batchify`](./batchify.md){ data-preview }
 
-The [`batchify`](./batchify.md) function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.
+The `batchify` function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.
 
 ## Example
 

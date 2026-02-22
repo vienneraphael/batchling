@@ -1,6 +1,6 @@
 # Anthropic
 
-`batchling` is compatible with Anthropic through any [supported framework](../frameworks.md)
+`batchling` is compatible with Anthropic through any [supported framework](../frameworks.md){ data-preview }
 
 The following endpoints are made batch-compatible by Anthropic:
 

@@ -1,6 +1,6 @@
 # Doubleword
 
-`batchling` is compatible with Doubleword through any [supported framework](../frameworks.md)
+`batchling` is compatible with Doubleword through any [supported framework](../frameworks.md){ data-preview }
 
 The following endpoints are made batch-compatible by Doubleword:
 

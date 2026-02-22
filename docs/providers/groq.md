@@ -1,6 +1,6 @@
 # Groq
 
-`batchling` is compatible with Groq through any [supported framework](../frameworks.md)
+`batchling` is compatible with Groq through any [supported framework](../frameworks.md){ data-preview }
 
 The following endpoints are made batch-compatible by Groq:
 

@@ -1,6 +1,6 @@
 # Together
 
-`batchling` is compatible with Together through any [supported framework](../frameworks.md)
+`batchling` is compatible with Together through any [supported framework](../frameworks.md){ data-preview }
 
 The following endpoints are made batch-compatible by Together:
 

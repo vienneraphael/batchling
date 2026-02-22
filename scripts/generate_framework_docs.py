@@ -278,7 +278,7 @@ def render_provider_page(*, provider: Provider) -> str:
     lines = [
         f"# {provider.display_name}",
         "",
-        f"`batchling` is compatible with {provider.display_name} through any [supported framework](../frameworks.md)",
+        f"`batchling` is compatible with {provider.display_name} through any [supported framework](../frameworks.md){{ data-preview }}",
         "",
         f"The following endpoints are made batch-compatible by {provider.display_name}:",
         "",
