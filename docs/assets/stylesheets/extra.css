@@ -739,6 +739,10 @@ html {
     display: none;
   }
 
+  .md-sidebar--primary .md-nav[data-md-level] > .md-nav__list > .md-nav__item--active > label.md-nav__link[for="__toc"] {
+    display: none;
+  }
+
   .md-content__inner {
     box-sizing: border-box;
     margin-left: 0;
