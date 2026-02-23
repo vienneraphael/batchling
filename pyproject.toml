@@ -17,7 +17,9 @@ dependencies = [
 batchling = "batchling.cli.main:app"
 
 [project.urls]
-source = "https://github.com/vienneraphael/batchling"
+Documentation = "https://vienneraphael.github.io/batchling/"
+Source = "https://github.com/vienneraphael/batchling"
+Issues = "https://github.com/vienneraphael/batchling/issues"
 
 [dependency-groups]
 dev = [
