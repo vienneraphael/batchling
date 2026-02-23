@@ -290,15 +290,14 @@ def render_provider_page(*, provider: Provider) -> str:
     else:
         lines.append("- _No declared `batchable_endpoints` found in the provider file._")
 
-    lines.extend(
-        [
-            "",
-            f"Here's an example showing how to use `batchling` with {provider.display_name}:",
-            "",
-        ]
-    )
-
     if provider.has_example:
+        lines.extend(
+            [
+                "",
+                f"Here's an example showing how to use `batchling` with {provider.display_name}:",
+                "",
+            ]
+        )
         lines.extend(
             [
                 "```python",
@@ -306,8 +305,6 @@ def render_provider_page(*, provider: Provider) -> str:
                 "```",
             ]
         )
-    else:
-        lines.append("- _No example file found in `examples/providers`._")
 
     lines.append("")
     return "\n".join(lines)
