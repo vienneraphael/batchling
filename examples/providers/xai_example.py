@@ -2,7 +2,7 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
-from google import genai
+from openai import AsyncOpenAI
 
 from batchling import batchify
 
@@ -10,26 +10,26 @@ load_dotenv()
 
 
 async def build_tasks() -> list:
-    """Build Gemini requests."""
-    client = genai.Client(api_key=os.getenv(key="GEMINI_API_KEY")).aio
+    """Build OpenAI requests."""
+    client = AsyncOpenAI(api_key=os.getenv(key="XAI_API_KEY"), base_url="https://api.x.ai/v1")
     questions = [
         "Who is the best French painter? Answer in one short sentence.",
         "What is the capital of France?",
     ]
     return [
-        client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=question,
+        client.chat.completions.create(
+            messages=[{"role": "user", "content": question}], model="grok-4-1-fast-non-reasoning"
         )
         for question in questions
     ]
 
 
 async def main() -> None:
-    """Run the Gemini example."""
+    """Run the OpenAI example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        print(response)
 
 
 async def run_with_batchify() -> None:

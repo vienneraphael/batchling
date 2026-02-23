@@ -297,6 +297,7 @@ dev = [
     { name = "ruff" },
     { name = "skylos" },
     { name = "together" },
+    { name = "xai-sdk" },
 ]
 
 [package.metadata]
@@ -333,6 +334,7 @@ dev = [
     { name = "ruff", specifier = ">=0.14.2" },
     { name = "skylos", specifier = ">=3.2.3" },
     { name = "together", specifier = ">=2.1.1" },
+    { name = "xai-sdk", specifier = ">=1.7.0" },
 ]
 
 [[package]]

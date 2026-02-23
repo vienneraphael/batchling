@@ -71,6 +71,19 @@ batch response shapes:
 - overrides batch file upload form fields (`file_name`, `purpose=batch-api`)
 - extracts batch id from nested response payload (`job.id`)
 
+## Xai provider
+
+The Xai provider uses a provider-specific batch lifecycle and response envelope:
+
+- `hostnames = ("api.x.ai",)`
+- `batchable_endpoints = ("/v1/chat/completions",)`
+- batch container creation at `/v1/batches`, followed by request ingestion at
+  `/v1/batches/{batch_id}/requests`
+- poll status derived from nested state counters (`state.num_pending`,
+  `state.num_completed`) and normalized to `pending` / `running` / `ended`
+- result retrieval from `/v1/batches/{batch_id}/results`
+- provider-specific result row key (`custom_id_field_name = "batch_request_id"`)
+
 ## Doubleword provider
 
 The Doubleword provider reuses the OpenAI provider implementation and only changes:
@@ -117,6 +130,8 @@ Provider configuration on `BaseProvider` includes:
 - Override provider methods as needed (`build_jsonl_lines()`,
   `build_file_based_batch_payload()`, `build_inline_batch_payload()`,
   `build_api_headers()`, `from_batch_result()`).
+- Add optional provider-page notes in `docs/providers/_notes/{provider_slug}.md`;
+  the docs generator injects them right after the provider endpoint list.
 - Define `batch_terminal_states` for the provider so `Batcher` can stop polling at the
   correct lifecycle states.
 - Keep `matches_url()` conservative if you override it.
@@ -125,4 +140,5 @@ Provider configuration on `BaseProvider` includes:
 
 - `src/batchling/providers/base.py`
 - `src/batchling/providers/openai.py`
+- `src/batchling/providers/xai.py`
 - `src/batchling/providers/__init__.py`

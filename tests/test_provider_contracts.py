@@ -12,6 +12,7 @@ from batchling.providers.groq import GroqProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
 from batchling.providers.together import TogetherProvider
+from batchling.providers.xai import XaiProvider
 
 
 @pytest.mark.parametrize(
@@ -24,6 +25,7 @@ from batchling.providers.together import TogetherProvider
         GroqProvider(),
         TogetherProvider(),
         DoublewordProvider(),
+        XaiProvider(),
     ],
 )
 def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
@@ -55,6 +57,7 @@ def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
         GroqProvider(),
         TogetherProvider(),
         DoublewordProvider(),
+        XaiProvider(),
     ],
 )
 def test_build_resume_context_adds_internal_header(provider: t.Any) -> None:
@@ -111,3 +114,58 @@ def test_decode_results_content_maps_custom_ids() -> None:
     )
     assert "req-2" in gemini_results
     assert isinstance(gemini_results["req-2"], httpx.Response)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("payload", "expected_status"),
+    [
+        ({"state": {"num_pending": 2, "num_completed": 0}}, "pending"),
+        ({"state": {"num_pending": 1, "num_completed": 1}}, "running"),
+        ({"state": {"num_pending": 0, "num_completed": 2}}, "ended"),
+        ({}, "ended"),
+    ],
+)
+async def test_parse_poll_response_xai_state_mapping(
+    payload: dict[str, t.Any], expected_status: str
+) -> None:
+    """
+    Ensure Xai poll payload state counts map to normalized poll statuses.
+
+    Parameters
+    ----------
+    payload : dict[str, typing.Any]
+        Xai poll response payload.
+    expected_status : str
+        Expected normalized poll status.
+    """
+    provider = XaiProvider()
+    snapshot = await provider.parse_poll_response(payload=payload)
+    assert snapshot.status == expected_status
+    assert snapshot.output_file_id == ""
+    assert snapshot.error_file_id == ""
+
+
+def test_decode_results_content_xai_maps_response_and_error_rows() -> None:
+    """
+    Ensure Xai result payload maps request IDs to ``httpx.Response`` objects.
+    """
+    provider = XaiProvider()
+    xai_results = provider.decode_results_content(
+        batch_id="batch-xai",
+        content=(
+            '{"results":['
+            '{"batch_request_id":"req-ok","batch_result":{"response":{"headers":{"x-test":"1"},"id":"ok"}}},'
+            '{"batch_result":{"response":{"id":"missing-id"}}},'
+            '{"batch_request_id":"req-error","batch_result":{"error":{"message":"boom"}}}'
+            "]}"
+        ),
+    )
+
+    assert set(xai_results.keys()) == {"req-ok", "req-error"}
+    assert xai_results["req-ok"].status_code == 200
+    assert xai_results["req-ok"].headers["x-test"] == "1"
+    assert xai_results["req-ok"].json()["id"] == "ok"
+
+    assert xai_results["req-error"].status_code == 500
+    assert xai_results["req-error"].json()["message"] == "boom"

@@ -12,6 +12,8 @@ The following endpoints are made batch-compatible by OpenAI:
 - `/v1/images/generations`
 - `/v1/images/edits`
 
+## Example Usage
+
 Here's an example showing how to use `batchling` with OpenAI:
 
 ```python

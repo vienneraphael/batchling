@@ -10,6 +10,8 @@ The following endpoints are made batch-compatible by Doubleword:
 - `/v1/moderations`
 - `/v1/completions`
 
+## Example Usage
+
 Here's an example showing how to use `batchling` with Doubleword:
 
 ```python
