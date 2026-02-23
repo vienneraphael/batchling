@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from batchling.providers.anthropic import AnthropicProvider
+from batchling.providers.cerebras import CerebrasProvider
 from batchling.providers.doubleword import DoublewordProvider
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.groq import GroqProvider
@@ -22,6 +23,7 @@ from batchling.providers.xai import XaiProvider
         MistralProvider(),
         GeminiProvider(),
         AnthropicProvider(),
+        CerebrasProvider(),
         GroqProvider(),
         TogetherProvider(),
         DoublewordProvider(),
@@ -54,6 +56,7 @@ def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
         MistralProvider(),
         GeminiProvider(),
         AnthropicProvider(),
+        CerebrasProvider(),
         GroqProvider(),
         TogetherProvider(),
         DoublewordProvider(),

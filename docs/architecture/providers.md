@@ -93,6 +93,20 @@ The Doubleword provider reuses the OpenAI provider implementation and only chang
 
 Terminal states are inherited unchanged from the OpenAI provider.
 
+## Cerebras provider
+
+The Cerebras provider follows the OpenAI-style file-based flow with a provider-specific
+upload path nuance:
+
+- `hostnames = ("api.cerebras.ai",)`
+- `batchable_endpoints = ("/v1/responses", "/v1/chat/completions", "/v1/embeddings",`
+  `"/v1/completions", "/v1/moderations", "/v1/images/generations",`
+  `"/v1/images/edits")`
+- `file_upload_endpoint = "/v1/files/"` (trailing slash avoids provider-side redirect on
+  upload)
+- `file_content_endpoint = "/v1/files/{id}/content"`
+- `batch_endpoint = "/v1/batches"`
+
 Common helpers now live on `BaseProvider` and can be reused by all providers:
 
 - `matches_url()`

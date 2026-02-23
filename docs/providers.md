@@ -5,6 +5,7 @@
 The following providers are supported by `batchling`:
 
 - [Anthropic](providers/anthropic.md)
+- [Cerebras](providers/cerebras.md)
 - [Doubleword](providers/doubleword.md)
 - [Gemini](providers/gemini.md)
 - [Groq](providers/groq.md)

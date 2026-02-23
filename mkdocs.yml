@@ -84,6 +84,7 @@ nav:
       - Overview: providers.md
       # BEGIN AUTO-GENERATED PROVIDER NAV
       - Anthropic: providers/anthropic.md
+      - Cerebras: providers/cerebras.md
       - Doubleword: providers/doubleword.md
       - Gemini: providers/gemini.md
       - Groq: providers/groq.md

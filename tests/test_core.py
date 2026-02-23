@@ -13,6 +13,7 @@ from batchling.cache import CacheEntry
 from batchling.core import Batcher, _ActiveBatch, _PendingRequest
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
+from batchling.providers.cerebras import CerebrasProvider
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
@@ -1709,6 +1710,64 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
     assert calls["inline_lines"][0]["params"]["model"] == "claude"
     assert calls["queue_key"] == queue_key
     assert submission.batch_id == "msgbatch-123"
+
+
+@pytest.mark.asyncio
+async def test_cerebras_upload_uses_trailing_slash_endpoint() -> None:
+    """
+    Ensure Cerebras file uploads target ``/v1/files/`` and avoid 307 redirects.
+
+    Returns
+    -------
+    None
+        This test asserts Cerebras upload endpoint normalization.
+    """
+    provider = CerebrasProvider()
+    queue_key = _queue_key(
+        provider_name=provider.name,
+        endpoint="/v1/chat/completions",
+        model_name="cerebras-small",
+    )
+    request = _PendingRequest(
+        custom_id="request-1",
+        queue_key=queue_key,
+        params={
+            "client_type": "httpx",
+            "method": "POST",
+            "url": "api.cerebras.ai",
+            "endpoint": "/v1/chat/completions",
+            "body": b'{"model":"cerebras-small","messages":[]}',
+            "headers": {"Authorization": "Bearer test-token"},
+        },
+        provider=provider,
+        future=asyncio.get_running_loop().create_future(),
+        request_hash="hash-request-1",
+    )
+
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        if request.method == "POST" and request.url.path == "/v1/files":
+            return httpx.Response(
+                status_code=307,
+                headers={"location": "http://api.cerebras.ai/v1/files/"},
+            )
+        if request.method == "POST" and request.url.path == "/v1/files/":
+            return httpx.Response(status_code=200, json={"id": "file-123"})
+        if request.method == "POST" and request.url.path == "/v1/batches":
+            return httpx.Response(status_code=200, json={"id": "batch-123"})
+        return httpx.Response(status_code=404, json={"error": "not found"})
+
+    submission = await provider.process_batch(
+        requests=[request],
+        client_factory=lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        queue_key=queue_key,
+    )
+
+    assert seen_paths[0] == "/v1/files/"
+    assert "/v1/files" not in seen_paths
+    assert submission.batch_id == "batch-123"
 
 
 @pytest.mark.asyncio
