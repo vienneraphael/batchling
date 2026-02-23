@@ -13,3 +13,7 @@ Here's an example showing how to use `batchling` with Anthropic:
 ```python
 --8<-- "examples/providers/anthropic_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/anthropic.md"

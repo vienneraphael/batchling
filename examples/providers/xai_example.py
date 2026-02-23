@@ -29,7 +29,9 @@ async def main() -> None:
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
     for response in responses:
-        print(response)
+        model = response.chat_get_completion["model"]
+        content = response.chat_get_completion["choices"][0]["message"]["content"]
+        print(f"{model} answer:\n{content}\n")
 
 
 async def run_with_batchify() -> None:

@@ -16,6 +16,7 @@ PROVIDERS_SOURCE_DIR = REPO_ROOT / "src" / "batchling" / "providers"
 PROVIDER_EXAMPLES_DIR = REPO_ROOT / "examples" / "providers"
 PROVIDERS_DIR = DOCS_ROOT / "providers"
 PROVIDER_NOTES_DIR = PROVIDERS_DIR / "_notes"
+PROVIDER_OUTPUTS_DIR = PROVIDERS_DIR / "_outputs"
 PROVIDERS_INDEX = DOCS_ROOT / "providers.md"
 MKDOCS_CONFIG = REPO_ROOT / "mkdocs.yml"
 EXAMPLE_SUFFIX = "_example.py"
@@ -119,6 +120,26 @@ class Provider:
     def notes_snippet_path(self) -> str:
         """Return the snippet include path for provider notes."""
         return f"docs/providers/_notes/{self.notes_filename}"
+
+    @property
+    def output_filename(self) -> str:
+        """Return the provider output filename."""
+        return f"{self.slug}.md"
+
+    @property
+    def output_path(self) -> Path:
+        """Return the provider output file path."""
+        return PROVIDER_OUTPUTS_DIR / self.output_filename
+
+    @property
+    def has_output(self) -> bool:
+        """Return whether a provider output file exists."""
+        return self.output_path.exists()
+
+    @property
+    def output_snippet_path(self) -> str:
+        """Return the snippet include path for provider output."""
+        return f"docs/providers/_outputs/{self.output_filename}"
 
 
 def discover_frameworks() -> list[Framework]:
@@ -332,6 +353,15 @@ def render_provider_page(*, provider: Provider) -> str:
                 "```",
             ]
         )
+        if provider.has_output:
+            lines.extend(
+                [
+                    "",
+                    "Output:",
+                    "",
+                    f'--8<-- "{provider.output_snippet_path}"',
+                ]
+            )
 
     lines.append("")
     return "\n".join(lines)

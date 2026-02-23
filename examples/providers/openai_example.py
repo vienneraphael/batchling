@@ -25,7 +25,7 @@ async def main() -> None:
     responses = await asyncio.gather(*tasks)
     for response in responses:
         content = response.output[-1].content  # skip reasoning output, get straight to the answer
-        print(f"{response.model} answer: {content[0].text}")
+        print(f"{response.model} answer:\n{content[0].text}\n")
 
 
 async def run_with_batchify() -> None:

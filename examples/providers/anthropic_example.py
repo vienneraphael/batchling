@@ -19,7 +19,12 @@ async def build_tasks() -> list:
     return [
         client.messages.create(
             max_tokens=1024,
-            messages=question,
+            messages=[
+                {
+                    "role": "user",
+                    "content": question,
+                }
+            ],
             model="claude-haiku-4-5",
         )
         for question in questions
@@ -30,7 +35,8 @@ async def main() -> None:
     """Run the Anthropic example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        print(f"{response.model} answer:\n{response.content[0].text}\n")
 
 
 async def run_with_batchify() -> None:

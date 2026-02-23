@@ -14,3 +14,7 @@ Here's an example showing how to use `batchling` with Together:
 ```python
 --8<-- "examples/providers/together_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/together.md"

@@ -19,7 +19,12 @@ async def build_tasks() -> list:
     return [
         client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=question,
+            messages=[
+                {
+                    "role": "user",
+                    "content": question,
+                }
+            ],
         )
         for question in questions
     ]
@@ -29,7 +34,8 @@ async def main() -> None:
     """Run the Groq example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        print(f"{response.model} answer:\n{response.choices[0].message.content}\n")
 
 
 async def run_with_batchify() -> None:

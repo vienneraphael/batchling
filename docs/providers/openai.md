@@ -19,3 +19,7 @@ Here's an example showing how to use `batchling` with OpenAI:
 ```python
 --8<-- "examples/providers/openai_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/openai.md"

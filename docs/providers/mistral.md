@@ -19,3 +19,7 @@ Here's an example showing how to use `batchling` with Mistral:
 ```python
 --8<-- "examples/providers/mistral_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/mistral.md"

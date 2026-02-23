@@ -15,3 +15,7 @@ Here's an example showing how to use `batchling` with XAI:
 ```python
 --8<-- "examples/providers/xai_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/xai.md"

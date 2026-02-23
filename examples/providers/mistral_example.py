@@ -19,10 +19,12 @@ async def build_tasks() -> list:
     return [
         client.chat.complete_async(
             model="mistral-medium-2505",
-            messages={
-                "role": "user",
-                "content": question,
-            },
+            messages=[
+                {
+                    "role": "user",
+                    "content": question,
+                }
+            ],
             stream=False,
             response_format={"type": "text"},
         )
@@ -34,7 +36,8 @@ async def main() -> None:
     """Run the Mistral example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        print(f"{response.model} answer:\n{response.choices[0].message.content}\n")
 
 
 async def run_with_batchify() -> None:
