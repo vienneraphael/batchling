@@ -17,3 +17,7 @@ Here's an example showing how to use `batchling` with Doubleword:
 ```python
 --8<-- "examples/providers/doubleword_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/doubleword.md"

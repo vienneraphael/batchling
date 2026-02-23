@@ -21,7 +21,7 @@ async def build_tasks() -> list:
     return [
         client.responses.create(
             input=question,
-            model="Qwen/Qwen3-14B-FP8",
+            model="openai/gpt-oss-20b",
         )
         for question in questions
     ]
@@ -33,7 +33,7 @@ async def main() -> None:
     responses = await asyncio.gather(*tasks)
     for response in responses:
         content = response.output[-1].content  # skip reasoning output, get straight to the answer
-        print(f"{response.model} answer: {content[0].text}")
+        print(f"{response.model} answer:\n{content[0].text}\n")
 
 
 async def run_with_batchify() -> None:

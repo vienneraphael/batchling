@@ -86,3 +86,62 @@ def test_render_provider_page_skips_notes_when_file_is_missing(tmp_path: Path) -
     content = module.render_provider_page(provider=provider)
 
     assert '--8<-- "docs/providers/_notes/openai.md"' not in content
+
+
+def test_render_provider_page_includes_output_after_example_block(tmp_path: Path) -> None:
+    """
+    Ensure provider output snippets are injected after the example code block.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory used to stage provider outputs.
+
+    Returns
+    -------
+    None
+        This test asserts output snippet placement.
+    """
+    module = load_generator_module()
+    outputs_dir = tmp_path / "_outputs"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    output_file = outputs_dir / "openai.md"
+    output_file.write_text(data="```text\nexpected output\n```\n", encoding="utf-8")
+    module.PROVIDER_OUTPUTS_DIR = outputs_dir
+
+    provider = module.Provider(slug="openai", batchable_endpoints=("/v1/responses",))
+    content = module.render_provider_page(provider=provider)
+
+    example_include = '--8<-- "examples/providers/openai_example.py"'
+    output_label = "Output:"
+    output_include = '--8<-- "docs/providers/_outputs/openai.md"'
+
+    assert output_include in content
+    assert content.index(output_label) > content.index(example_include)
+    assert content.index(output_include) > content.index(output_label)
+
+
+def test_render_provider_page_skips_output_when_file_is_missing(tmp_path: Path) -> None:
+    """
+    Ensure no output snippet is included when a provider output file does not exist.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory used as provider outputs root.
+
+    Returns
+    -------
+    None
+        This test asserts output omission.
+    """
+    module = load_generator_module()
+    outputs_dir = tmp_path / "_outputs"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    module.PROVIDER_OUTPUTS_DIR = outputs_dir
+
+    provider = module.Provider(slug="openai", batchable_endpoints=("/v1/responses",))
+    content = module.render_provider_page(provider=provider)
+
+    assert "Output:" not in content
+    assert '--8<-- "docs/providers/_outputs/openai.md"' not in content
