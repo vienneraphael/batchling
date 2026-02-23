@@ -11,4 +11,4 @@ The following providers are supported by `batchling`:
 - [Mistral](providers/mistral.md)
 - [OpenAI](providers/openai.md)
 - [Together](providers/together.md)
-- [Xai](providers/xai.md)
+- [XAI](providers/xai.md)

@@ -15,6 +15,7 @@ FRAMEWORKS_INDEX = DOCS_ROOT / "frameworks.md"
 PROVIDERS_SOURCE_DIR = REPO_ROOT / "src" / "batchling" / "providers"
 PROVIDER_EXAMPLES_DIR = REPO_ROOT / "examples" / "providers"
 PROVIDERS_DIR = DOCS_ROOT / "providers"
+PROVIDER_NOTES_DIR = PROVIDERS_DIR / "_notes"
 PROVIDERS_INDEX = DOCS_ROOT / "providers.md"
 MKDOCS_CONFIG = REPO_ROOT / "mkdocs.yml"
 EXAMPLE_SUFFIX = "_example.py"
@@ -27,6 +28,7 @@ PROVIDER_SKIP_FILES = {"__init__.py", "base.py"}
 DISPLAY_NAME_OVERRIDES = {
     "langchain": "LangChain",
     "openai": "OpenAI",
+    "xai": "XAI",
 }
 
 
@@ -97,6 +99,26 @@ class Provider:
         """Return whether a provider example file exists."""
         example_path = PROVIDER_EXAMPLES_DIR / self.example_filename
         return example_path.exists()
+
+    @property
+    def notes_filename(self) -> str:
+        """Return the provider notes filename."""
+        return f"{self.slug}.md"
+
+    @property
+    def notes_path(self) -> Path:
+        """Return the provider notes file path."""
+        return PROVIDER_NOTES_DIR / self.notes_filename
+
+    @property
+    def has_notes(self) -> bool:
+        """Return whether a provider notes file exists."""
+        return self.notes_path.exists()
+
+    @property
+    def notes_snippet_path(self) -> str:
+        """Return the snippet include path for provider notes."""
+        return f"docs/providers/_notes/{self.notes_filename}"
 
 
 def discover_frameworks() -> list[Framework]:
@@ -289,6 +311,9 @@ def render_provider_page(*, provider: Provider) -> str:
             lines.append(f"- `{endpoint}`")
     else:
         lines.append("- _No declared `batchable_endpoints` found in the provider file._")
+
+    if provider.has_notes:
+        lines.extend(["", f'--8<-- "{provider.notes_snippet_path}"'])
 
     if provider.has_example:
         lines.extend(

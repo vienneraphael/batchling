@@ -130,6 +130,8 @@ Provider configuration on `BaseProvider` includes:
 - Override provider methods as needed (`build_jsonl_lines()`,
   `build_file_based_batch_payload()`, `build_inline_batch_payload()`,
   `build_api_headers()`, `from_batch_result()`).
+- Add optional provider-page notes in `docs/providers/_notes/{provider_slug}.md`;
+  the docs generator injects them right after the provider endpoint list.
 - Define `batch_terminal_states` for the provider so `Batcher` can stop polling at the
   correct lifecycle states.
 - Keep `matches_url()` conservative if you override it.
