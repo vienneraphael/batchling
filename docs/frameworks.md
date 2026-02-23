@@ -8,3 +8,4 @@ Below are the frameworks we tested that we are sure are compatible with `batchli
 - [LangChain](frameworks/langchain.md)
 - [LiteLLM](frameworks/litellm.md)
 - [Pydantic AI](frameworks/pydantic_ai.md)
+- [Pydantic Evals](frameworks/pydantic_evals.md)

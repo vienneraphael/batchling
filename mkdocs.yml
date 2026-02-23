@@ -99,6 +99,7 @@ nav:
       - LangChain: frameworks/langchain.md
       - LiteLLM: frameworks/litellm.md
       - Pydantic AI: frameworks/pydantic_ai.md
+      - Pydantic Evals: frameworks/pydantic_evals.md
       # END AUTO-GENERATED FRAMEWORK NAV
   - Use-Cases: use-cases.md
   - Advanced Features:
