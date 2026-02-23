@@ -21,7 +21,7 @@ Things you might not want to run with batchling (yes, there are some..):
 
 ## Installation
 
-batchling is available on PyPI as `batchling`, install using either `pip` or `uv`:
+batchling is available on [PyPI](https://pypi.org/project/batchling/) as `batchling`, install using either `pip` or `uv`:
 
 === "uv"
 
