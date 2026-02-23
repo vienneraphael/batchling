@@ -84,6 +84,24 @@ def test_provider_lookup_resolves_doubleword() -> None:
     assert provider.name == "doubleword"
 
 
+def test_provider_lookup_resolves_xai() -> None:
+    """
+    Ensure hostname lookup resolves the Xai provider adapter.
+
+    Returns
+    -------
+    None
+        This test asserts hostname-to-provider mapping.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="api.x.ai",
+        path="/v1/chat/completions",
+        method="POST",
+    )
+    assert provider is not None
+    assert provider.name == "xai"
+
+
 def test_batchable_lookup_requires_post_method() -> None:
     """
     Ensure batchable lookup only routes POST requests.
