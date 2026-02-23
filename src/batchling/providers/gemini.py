@@ -158,7 +158,7 @@ class GeminiProvider(BaseProvider):
         str
             Results path for Gemini batch output.
         """
-        return f"/download/v1beta/files/{file_id}:download?alt=media"
+        return f"/download/v1beta/{file_id}:download?alt=media"
 
     def extract_batch_status(self, *, payload: dict[str, t.Any]) -> str:
         """
