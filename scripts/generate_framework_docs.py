@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPO_ROOT / "docs"
 FRAMEWORK_EXAMPLES_DIR = REPO_ROOT / "examples" / "frameworks"
 FRAMEWORKS_DIR = DOCS_ROOT / "frameworks"
+FRAMEWORK_OUTPUTS_DIR = FRAMEWORKS_DIR / "_outputs"
 FRAMEWORKS_INDEX = DOCS_ROOT / "frameworks.md"
 PROVIDERS_SOURCE_DIR = REPO_ROOT / "src" / "batchling" / "providers"
 PROVIDER_EXAMPLES_DIR = REPO_ROOT / "examples" / "providers"
@@ -29,6 +30,7 @@ PROVIDER_SKIP_FILES = {"__init__.py", "base.py"}
 DISPLAY_NAME_OVERRIDES = {
     "langchain": "LangChain",
     "openai": "OpenAI",
+    "litellm": "LiteLLM",
     "xai": "XAI",
 }
 
@@ -62,6 +64,26 @@ class Framework:
     def example_filename(self) -> str:
         """Return the framework example filename."""
         return f"{self.slug}{EXAMPLE_SUFFIX}"
+
+    @property
+    def output_filename(self) -> str:
+        """Return the framework output filename."""
+        return f"{self.slug}.md"
+
+    @property
+    def output_path(self) -> Path:
+        """Return the framework output file path."""
+        return FRAMEWORK_OUTPUTS_DIR / self.output_filename
+
+    @property
+    def has_output(self) -> bool:
+        """Return whether a framework output file exists."""
+        return self.output_path.exists()
+
+    @property
+    def output_snippet_path(self) -> str:
+        """Return the snippet include path for framework output."""
+        return f"docs/frameworks/_outputs/{self.output_filename}"
 
 
 @dataclass(frozen=True)
@@ -269,8 +291,12 @@ def render_framework_page(*, framework: Framework) -> str:
         "```python",
         f'--8<-- "examples/frameworks/{framework.example_filename}"',
         "```",
-        "",
     ]
+
+    if framework.has_output:
+        lines.extend(["", "Output:", "", f'--8<-- "{framework.output_snippet_path}"'])
+
+    lines.append("")
     return "\n".join(lines)
 
 

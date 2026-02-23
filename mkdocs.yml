@@ -95,7 +95,9 @@ nav:
   - Frameworks:
       - Overview: frameworks.md
       # BEGIN AUTO-GENERATED FRAMEWORK NAV
+      - Instructor: frameworks/instructor.md
       - LangChain: frameworks/langchain.md
+      - LiteLLM: frameworks/litellm.md
       - Pydantic AI: frameworks/pydantic_ai.md
       # END AUTO-GENERATED FRAMEWORK NAV
   - Use-Cases: use-cases.md

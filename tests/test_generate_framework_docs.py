@@ -145,3 +145,62 @@ def test_render_provider_page_skips_output_when_file_is_missing(tmp_path: Path) 
 
     assert "Output:" not in content
     assert '--8<-- "docs/providers/_outputs/openai.md"' not in content
+
+
+def test_render_framework_page_includes_output_after_example_block(tmp_path: Path) -> None:
+    """
+    Ensure framework output snippets are injected after the example code block.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory used to stage framework outputs.
+
+    Returns
+    -------
+    None
+        This test asserts output snippet placement.
+    """
+    module = load_generator_module()
+    outputs_dir = tmp_path / "_outputs"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    output_file = outputs_dir / "langchain.md"
+    output_file.write_text(data="```text\nexpected output\n```\n", encoding="utf-8")
+    module.FRAMEWORK_OUTPUTS_DIR = outputs_dir
+
+    framework = module.Framework(slug="langchain")
+    content = module.render_framework_page(framework=framework)
+
+    example_include = '--8<-- "examples/frameworks/langchain_example.py"'
+    output_label = "Output:"
+    output_include = '--8<-- "docs/frameworks/_outputs/langchain.md"'
+
+    assert output_include in content
+    assert content.index(output_label) > content.index(example_include)
+    assert content.index(output_include) > content.index(output_label)
+
+
+def test_render_framework_page_skips_output_when_file_is_missing(tmp_path: Path) -> None:
+    """
+    Ensure no output snippet is included when a framework output file does not exist.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory used as framework outputs root.
+
+    Returns
+    -------
+    None
+        This test asserts output omission.
+    """
+    module = load_generator_module()
+    outputs_dir = tmp_path / "_outputs"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    module.FRAMEWORK_OUTPUTS_DIR = outputs_dir
+
+    framework = module.Framework(slug="langchain")
+    content = module.render_framework_page(framework=framework)
+
+    assert "Output:" not in content
+    assert '--8<-- "docs/frameworks/_outputs/langchain.md"' not in content

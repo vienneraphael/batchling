@@ -2,6 +2,7 @@ import asyncio
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
+from langchain.messages import AIMessage
 
 from batchling import batchify
 
@@ -33,7 +34,10 @@ async def main() -> None:
     """Run the LangChain example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        for message in response["messages"]:
+            if isinstance(message, AIMessage):
+                print(f"{message.response_metadata['model_name']} answer:\n{message.content}\n")
 
 
 async def run_with_batchify() -> None:

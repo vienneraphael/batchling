@@ -1,7 +1,7 @@
 import asyncio
 
 from dotenv import load_dotenv
-from pydantic_ai import Agent
+from litellm import acompletion
 
 from batchling import batchify
 
@@ -9,16 +9,15 @@ load_dotenv()
 
 
 async def build_tasks() -> list:
-    """Build pydantic-ai requests."""
-    agent = Agent(
-        model="openai:gpt-5-nano",
-        tools=[],
-    )
+    """Build LiteLLM requests."""
     questions = [
         "Who is the best French painter? Answer in one short sentence.",
         "What is the capital of France?",
     ]
-    return [agent.run(user_prompt=question) for question in questions]
+    return [
+        acompletion(model="openai/gpt-5-nano", messages=[{"role": "user", "content": question}])
+        for question in questions
+    ]
 
 
 async def main() -> None:
@@ -26,7 +25,7 @@ async def main() -> None:
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
     for response in responses:
-        print(f"{response._state.message_history[-1].model_name} answer:\n{response.output}\n")
+        print(f"{response.model} answer:\n{response.choices[0].message.content}\n")
 
 
 async def run_with_batchify() -> None:

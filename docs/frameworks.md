@@ -4,5 +4,7 @@ Since it operates at the network level by intercepting select async GenAI reques
 
 Below are the frameworks we tested that we are sure are compatible with `batchling`, along with examples of how to use `batchling` with them:
 
+- [Instructor](frameworks/instructor.md)
 - [LangChain](frameworks/langchain.md)
+- [LiteLLM](frameworks/litellm.md)
 - [Pydantic AI](frameworks/pydantic_ai.md)
