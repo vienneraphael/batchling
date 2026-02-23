@@ -148,16 +148,19 @@ batchling main.py:generate
 
 | Name        | Batch API Docs URL                                                       |
 |-------------|--------------------------------------------------------------------------|
-| OpenAI      | <https://platform.openai.com/docs/guides/batch>                          |
 | Anthropic   | <https://docs.anthropic.com/en/docs/build-with-claude/batch-processing>  |
+| Doubleword  | <https://docs.doubleword.ai/batches/getting-started-with-batched-api>    |
 | Gemini      | <https://ai.google.dev/gemini-api/docs/batch-mode>                       |
 | Groq        | <https://console.groq.com/docs/batch>                                    |
 | Mistral     | <https://docs.mistral.ai/capabilities/batch/>                            |
+| OpenAI      | <https://platform.openai.com/docs/guides/batch>                          |
 | Together    | <https://docs.together.ai/docs/batch-inference>                          |
-| Doubleword  | <https://docs.doubleword.ai/batches/getting-started-with-batched-api>    |
+| XAI         | <https://docs.x.ai/developers/advanced-api-usage/batch-api>              |
 
 ## Next Steps
 
 To try `batchling` for yourself, follow  this [quickstart guide](https://vienneraphael.github.io/batchling/quickstart/).
 
 Read the [docs](https://vienneraphael.github.io/batchling/batchify/) to learn more about how you can save on your GenAI expenses with `batchling`.
+
+If you have any question, file an [issue](https://github.com/vienneraphael/batchling/issues) on GitHub.
