@@ -90,6 +90,7 @@ nav:
       - Mistral: providers/mistral.md
       - OpenAI: providers/openai.md
       - Together: providers/together.md
+      - Xai: providers/xai.md
       # END AUTO-GENERATED PROVIDER NAV
   - Frameworks:
       - Overview: frameworks.md

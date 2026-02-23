@@ -13,6 +13,8 @@
 
 ## Development workflows
 
+- When asking me questions in Plan Mode, give me extensive information to make an informed choice: define the impact of each invidual choice and give context about the question before asking it.
+
 - Run tests (using pytest) for every code change but not when changing code comments or documentation-related stuff.
 If the pytest command does not work due to missing imports, try activating the environment first with `source .venv/bin/activate`
 - Run pre-commits (using `prek run -a`) for every code change including code comments or documentation.
