@@ -1115,7 +1115,7 @@ def test_gemini_uses_distinct_submit_poll_and_results_paths() -> None:
             file_id="files/gemini-output-123",
             batch_id="batch-123",
         )
-        == "/download/v1beta/files/files/gemini-output-123:download?alt=media"
+        == "/download/v1beta/files/gemini-output-123:download?alt=media"
     )
 
 
