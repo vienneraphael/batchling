@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block extrahead %}
+  {{ super() }}
+  {% set social_preview = config.extra.get('social_preview', {}) %}
+  {% set social_title = social_preview.get('title', config.site_name) %}
+  {% set social_description = social_preview.get('description', config.site_description) %}
+  {% set social_image = social_preview.get('image', config.site_url ~ 'assets/images/batchling.png') %}
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ social_title }}">
+  <meta property="og:description" content="{{ social_description }}">
+  <meta property="og:url" content="{{ page.canonical_url or config.site_url }}">
+  <meta property="og:image" content="{{ social_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ social_title }}">
+  <meta name="twitter:description" content="{{ social_description }}">
+  <meta name="twitter:image" content="{{ social_image }}">
+{% endblock %}
