@@ -11,7 +11,7 @@ theme:
   name: material
   custom_dir: docs/overrides
   logo: assets/images/batchling-transparent-cropped.png
-  favicon: assets/images/batchling.png
+  favicon: assets/images/batchling-transparent-cropped.png
   pygments_style: tango
   pygments_style_dark: monokai
   font:
