@@ -12,6 +12,8 @@ The following endpoints are made batch-compatible by Mistral:
 - `/v1/classifications`
 - `/v1/conversations/v1/audio/transcriptions`
 
+## Example Usage
+
 Here's an example showing how to use `batchling` with Mistral:
 
 ```python

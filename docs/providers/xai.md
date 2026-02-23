@@ -8,6 +8,8 @@ The following endpoints are made batch-compatible by XAI:
 
 --8<-- "docs/providers/_notes/xai.md"
 
+## Example Usage
+
 Here's an example showing how to use `batchling` with XAI:
 
 ```python
