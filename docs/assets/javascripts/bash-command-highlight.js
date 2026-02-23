@@ -85,6 +85,13 @@ function hasActiveSelectionInBlock(blockElement) {
   return blockElement.contains(range.commonAncestorContainer);
 }
 
+function isCopyDisabledForCodeBlock(codeBlock) {
+  return (
+    codeBlock.classList.contains("language-text") ||
+    codeBlock.classList.contains("language-plaintext")
+  );
+}
+
 function installQuickCopyOnCodeBlockClick() {
   const codeBlocks = document.querySelectorAll(".md-typeset .highlight");
 
@@ -109,6 +116,10 @@ function installQuickCopyOnCodeBlockClick() {
 
     codeBlock.addEventListener("click", (event) => {
       if (event.button !== 0) {
+        return;
+      }
+
+      if (isCopyDisabledForCodeBlock(codeBlock)) {
         return;
       }
 
