@@ -372,3 +372,37 @@ class GeminiProvider(BaseProvider):
                 },
             }
         }
+
+    def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
+        """
+        Convert provider batch results into an ``httpx.Response``.
+
+        Parameters
+        ----------
+        result_item : dict[str, typing.Any]
+            provider batch result JSON line.
+
+        Returns
+        -------
+        httpx.Response
+            HTTP response derived from the batch result.
+        """
+        response = result_item.get("response")
+        error = result_item.get("error") or {}
+        if response:
+            status_code = int(response.get("status_code", 200))
+            headers = dict(response.get("headers") or {})
+            body = response
+        else:
+            status_code = int(error.get("status_code", 500))
+            headers = {}
+            body = error or {"error": "Missing response"}
+
+        content, content_headers = self.encode_body(body=body)
+        headers.update(content_headers)
+
+        return httpx.Response(
+            status_code=status_code,
+            headers=headers,
+            content=content,
+        )

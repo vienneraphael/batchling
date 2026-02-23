@@ -29,7 +29,8 @@ async def main() -> None:
     """Run the Gemini example."""
     tasks = await build_tasks()
     responses = await asyncio.gather(*tasks)
-    print(responses)
+    for response in responses:
+        print(f"{response.model_version} answer:\n{response.text}\n")
 
 
 async def run_with_batchify() -> None:

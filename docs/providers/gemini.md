@@ -13,3 +13,7 @@ Here's an example showing how to use `batchling` with Gemini:
 ```python
 --8<-- "examples/providers/gemini_example.py"
 ```
+
+Output:
+
+--8<-- "docs/providers/_outputs/gemini.md"
