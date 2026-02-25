@@ -1,11 +1,24 @@
 [project]
 name = "batchling"
 version = "0.1.0"
-description = "A python library to abstract GenAI Batch API usage"
+description = "Save 50% off GenAI costs in two lines of code"
 authors = [{ name = "Raphael Vienne", email = "raphaelvienne.work@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
-keywords = ["batch", "genai", "llm", "openai", "anthropic", "inference"]
+keywords = [
+  "batch",
+  "batch-processing",
+  "request-batching",
+  "llm",
+  "generative-ai",
+  "ai-inference",
+  "asyncio",
+  "openai",
+  "anthropic",
+  "gemini",
+  "mistral",
+  "togetherai",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
