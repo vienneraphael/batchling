@@ -18,6 +18,7 @@ PROVIDER_EXAMPLES_DIR = REPO_ROOT / "examples" / "providers"
 PROVIDERS_DIR = DOCS_ROOT / "providers"
 PROVIDER_NOTES_DIR = PROVIDERS_DIR / "_notes"
 PROVIDER_OUTPUTS_DIR = PROVIDERS_DIR / "_outputs"
+PROVIDER_URLS_DIR = PROVIDERS_DIR / "_urls"
 PROVIDERS_INDEX = DOCS_ROOT / "providers.md"
 MKDOCS_CONFIG = REPO_ROOT / "mkdocs.yml"
 EXAMPLE_SUFFIX = "_example.py"
@@ -37,6 +38,9 @@ PROVIDER_PRICING_NOTE_TITLE = "Check model support and batch pricing"
 PROVIDER_PRICING_NOTE_BODY = (
     "Before sending batches, review the provider's official pricing page for supported "
     "models and batch pricing details."
+)
+PROVIDER_URL_NOTE_BODY = (
+    "The Batch API docs for {provider_display_name} can be found on the following URL:"
 )
 PROVIDER_API_KEY_NOTE_TITLE = "API key required"  # pragma: allowlist secret
 PROVIDER_API_KEY_NOTE_BODY = (
@@ -172,6 +176,26 @@ class Provider:
     def output_snippet_path(self) -> str:
         """Return the snippet include path for provider output."""
         return f"docs/providers/_outputs/{self.output_filename}"
+
+    @property
+    def url_filename(self) -> str:
+        """Return the provider URL filename."""
+        return f"{self.slug}.md"
+
+    @property
+    def url_path(self) -> Path:
+        """Return the provider URL file path."""
+        return PROVIDER_URLS_DIR / self.url_filename
+
+    @property
+    def has_url(self) -> bool:
+        """Return whether a provider URL file exists."""
+        return self.url_path.exists()
+
+    @property
+    def url_snippet_path(self) -> str:
+        """Return the snippet include path for provider URL."""
+        return f"docs/providers/_urls/{self.url_filename}"
 
     @property
     def api_key_env_var(self) -> str:
@@ -381,6 +405,14 @@ def render_provider_page(*, provider: Provider) -> str:
             f"    {PROVIDER_PRICING_NOTE_BODY}",
         ]
     )
+    if provider.has_url:
+        lines.extend(
+            [
+                "",
+                PROVIDER_URL_NOTE_BODY.format(provider_display_name=provider.display_name),
+                f'--8<-- "{provider.url_snippet_path}"',
+            ]
+        )
 
     if provider.has_notes:
         lines.extend(["", f'--8<-- "{provider.notes_snippet_path}"'])

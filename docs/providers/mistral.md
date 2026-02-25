@@ -15,6 +15,9 @@ The following endpoints are made batch-compatible by Mistral:
 !!! warning "Check model support and batch pricing"
     Before sending batches, review the provider's official pricing page for supported models and batch pricing details.
 
+The Batch API docs for Mistral can be found on the following URL:
+--8<-- "docs/providers/_urls/mistral.md"
+
 ## Example Usage
 
 !!! note "API key required"

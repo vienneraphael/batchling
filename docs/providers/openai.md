@@ -15,6 +15,9 @@ The following endpoints are made batch-compatible by OpenAI:
 !!! warning "Check model support and batch pricing"
     Before sending batches, review the provider's official pricing page for supported models and batch pricing details.
 
+The Batch API docs for OpenAI can be found on the following URL:
+--8<-- "docs/providers/_urls/openai.md"
+
 ## Example Usage
 
 !!! note "API key required"
