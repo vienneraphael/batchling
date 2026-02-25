@@ -266,7 +266,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "click" },
     { name = "httpx" },
     { name = "structlog" },
     { name = "typer" },
@@ -305,7 +304,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.3" },
-    { name = "click", specifier = ">=8.3.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "structlog", specifier = ">=25.5.0" },
     { name = "typer", specifier = ">=0.20.0" },
