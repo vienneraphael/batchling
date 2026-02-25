@@ -194,3 +194,5 @@ Now that you've seen how `batchling` can be used and want to learn more about it
 - [Learn more about CLI usage](./cli.md)
 
 - Learn about supported [Providers](./providers.md) & [Frameworks](./frameworks.md)
+
+- Stream batch results progressively with [`asyncio.as_completed`](./use-cases/streaming-batches.md)

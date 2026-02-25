@@ -93,4 +93,6 @@ If you haven't yet, look at how you can:
 
 - use `batchling` with any [provider](./providers.md) / [framework](./frameworks.md) with examples
 
+- stream batch results progressively with [`asyncio.as_completed`](./use-cases/streaming-batches.md)
+
 - learn about [advanced features](./advanced-features.md)
