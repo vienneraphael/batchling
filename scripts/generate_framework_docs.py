@@ -38,6 +38,11 @@ PROVIDER_PRICING_NOTE_BODY = (
     "Before sending batches, review the provider's official pricing page for supported "
     "models and batch pricing details."
 )
+PROVIDER_API_KEY_NOTE_TITLE = "API key required"  # pragma: allowlist secret
+PROVIDER_API_KEY_NOTE_BODY = (
+    "Set `{api_key_env_var}` in `.env` or ensure it is already loaded in your "
+    "environment variables before running batches."
+)
 
 
 @dataclass(frozen=True)
@@ -167,6 +172,11 @@ class Provider:
     def output_snippet_path(self) -> str:
         """Return the snippet include path for provider output."""
         return f"docs/providers/_outputs/{self.output_filename}"
+
+    @property
+    def api_key_env_var(self) -> str:
+        """Return the provider API key environment variable name."""
+        return f"{self.slug.upper()}_API_KEY"
 
 
 def discover_frameworks() -> list[Framework]:
@@ -380,6 +390,9 @@ def render_provider_page(*, provider: Provider) -> str:
             [
                 "",
                 "## Example Usage",
+                "",
+                f'!!! note "{PROVIDER_API_KEY_NOTE_TITLE}"',
+                f"    {PROVIDER_API_KEY_NOTE_BODY.format(api_key_env_var=provider.api_key_env_var)}",
                 "",
                 f"Here's an example showing how to use `batchling` with {provider.display_name}:",
                 "",

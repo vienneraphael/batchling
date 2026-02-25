@@ -17,6 +17,9 @@ The following endpoints are made batch-compatible by Mistral:
 
 ## Example Usage
 
+!!! note "API key required"
+    Set `MISTRAL_API_KEY` in `.env` or ensure it is already loaded in your environment variables before running batches.
+
 Here's an example showing how to use `batchling` with Mistral:
 
 ```python

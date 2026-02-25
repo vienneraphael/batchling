@@ -13,6 +13,9 @@ The following endpoints are made batch-compatible by Groq:
 
 ## Example Usage
 
+!!! note "API key required"
+    Set `GROQ_API_KEY` in `.env` or ensure it is already loaded in your environment variables before running batches.
+
 Here's an example showing how to use `batchling` with Groq:
 
 ```python
