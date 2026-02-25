@@ -10,7 +10,19 @@
     <img src="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml/badge.svg" alt="CI">
 </a>
 <a href="https://pypi.org/project/batchling" target="_blank">
-    <img src="https://img.shields.io/pypi/v/batchling?color=%2334D058&label=pypi%20package" alt="Package version">
+    <img src="https://img.shields.io/pypi/v/batchling?color=%2334D058&label=pypi" alt="PyPI version">
+</a>
+<a href="https://github.com/vienneraphael/batchling" target="_blank">
+    <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python versions">
+</a>
+<a href="https://github.com/vienneraphael/batchling/blob/main/LICENSE" target="_blank">
+    <img src="https://img.shields.io/badge/license-MIT-34D058" alt="MIT license">
+</a>
+<a href="https://discord.gg/8sdXXCXaHK" target="_blank">
+    <img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Join Discord">
+</a>
+<a href="https://www.linkedin.com/in/raphael-vienne/" target="_blank">
+    <img src="https://img.shields.io/badge/linkedin-connect-0A66C2?logo=linkedin&logoColor=white" alt="LinkedIn">
 </a>
 </p>
 
