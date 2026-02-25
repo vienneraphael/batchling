@@ -49,6 +49,16 @@ extra:
     title: "batchling"
     description: "Save 50% off GenAI costs in two lines of code"
     image: "https://vienneraphael.github.io/batchling/assets/images/batchling.png"
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/vienneraphael/batchling
+      name: GitHub
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/raphael-vienne/
+      name: LinkedIn
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/8sdXXCXaHK
+      name: Discord
 
 
 plugins:
