@@ -1,3 +1,3 @@
-# Streaming batches with `asyncio.as_completed`
+# Streaming batches
 
 Under construction -- incoming!
