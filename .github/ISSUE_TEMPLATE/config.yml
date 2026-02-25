@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/vienneraphael/batchling/security
+    about: Do not open public issues for security problems. Use the Security tab.
