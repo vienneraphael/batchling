@@ -16,6 +16,8 @@
   --shadow-soft: 0 10px 24px rgba(34, 23, 16, 0.08);
   --radius: 0.7rem;
   --hero-glow: radial-gradient(circle at top right, rgba(107, 63, 36, 0.18), transparent 55%);
+  --docs-readable-width: 88ch;
+  --docs-readable-width-desktop: clamp(88ch, 70vw, 120ch);
   --md-primary-fg-color: var(--brand);
   --md-primary-fg-color--light: #7f4f31;
   --md-primary-fg-color--dark: #4f2f1a;
@@ -80,7 +82,7 @@ html {
 
 .md-content__inner {
   margin-top: clamp(1rem, 0.9rem + 0.5vw, 1.45rem);
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
   margin-left: auto;
   margin-right: auto;
 }
@@ -111,12 +113,12 @@ html {
 .md-typeset ul,
 .md-typeset ol,
 .md-typeset blockquote {
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
 }
 
 .md-typeset hr {
   width: 100%;
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
 }
 
 .md-typeset a {
@@ -315,7 +317,7 @@ html {
   border-radius: var(--radius);
   background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
   box-shadow: var(--shadow-soft);
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
 }
 
 .md-typeset .highlight {
@@ -324,7 +326,7 @@ html {
   background-color: color-mix(in srgb, var(--code-bg) 92%, transparent);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
 }
 
 .md-typeset .highlight pre {
@@ -354,12 +356,12 @@ html {
 }
 
 .md-typeset .tabbed-set {
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
 }
 
 .md-typeset .tabbed-labels {
   width: 100%;
-  max-width: 88ch;
+  max-width: var(--docs-readable-width);
 }
 
 .md-clipboard {
@@ -633,6 +635,7 @@ html {
 @media screen and (min-width: 76.25em) {
   :root {
     --docs-outer-gutter: clamp(2rem, 4vw, 4.5rem);
+    --docs-readable-width: var(--docs-readable-width-desktop);
   }
 
   .md-header__inner {
