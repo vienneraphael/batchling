@@ -164,3 +164,8 @@ To try `batchling` for yourself, follow  this [quickstart guide](https://vienner
 Read the [docs](https://vienneraphael.github.io/batchling/batchify/) to learn more about how you can save on your GenAI expenses with `batchling`.
 
 If you have any question, file an [issue](https://github.com/vienneraphael/batchling/issues) on GitHub.
+
+## Connect
+
+- Community (Discord): <https://discord.gg/8sdXXCXaHK>
+- LinkedIn: <https://www.linkedin.com/in/raphael-vienne/>
