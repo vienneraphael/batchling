@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "batchling"
+type: software
+authors:
+  - family-names: "Vienne"
+    given-names: "Raphael"
+    email: "raphaelvienne.work@gmail.com"
+version: "0.1.0"
+abstract: "Save 50% off GenAI costs in two lines of code"
+license: "MIT"
+repository-code: "https://github.com/vienneraphael/batchling"
+url: "https://vienneraphael.github.io/batchling/"
+keywords:
+  - large language models
+  - generative ai
+  - batch processing
+  - request batching
+  - asynchronous api
+  - ai inference
+  - cost optimization
+  - openai
+  - anthropic
+  - gemini
+  - mistral
+  - together ai
