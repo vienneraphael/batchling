@@ -6,24 +6,12 @@
     <em>Save 50% off GenAI costs in two lines of code</em>
 </p>
 <p align="center">
-<a href="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml" target="_blank">
-    <img src="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml/badge.svg" alt="CI">
-</a>
-<a href="https://pypi.org/project/batchling" target="_blank">
-    <img src="https://img.shields.io/pypi/v/batchling?color=%2334D058&label=pypi" alt="PyPI version">
-</a>
-<a href="https://github.com/vienneraphael/batchling" target="_blank">
-    <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python versions">
-</a>
-<a href="https://github.com/vienneraphael/batchling/blob/main/LICENSE" target="_blank">
-    <img src="https://img.shields.io/badge/license-MIT-34D058" alt="MIT license">
-</a>
-<a href="https://discord.gg/8sdXXCXaHK" target="_blank">
-    <img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Join Discord">
-</a>
-<a href="https://www.linkedin.com/in/raphael-vienne/" target="_blank">
-    <img src="https://img.shields.io/badge/linkedin-connect-0A66C2?logo=linkedin&logoColor=white" alt="LinkedIn">
-</a>
+<a href="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml" target="_blank"><img src="https://github.com/vienneraphael/batchling/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+<a href="https://pypi.org/project/batchling" target="_blank"><img src="https://img.shields.io/pypi/v/batchling?color=%2334D058&label=pypi" alt="PyPI version"></a>
+<a href="https://github.com/vienneraphael/batchling" target="_blank"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python versions"></a>
+<a href="https://github.com/vienneraphael/batchling/blob/main/LICENSE" target="_blank"><img src="https://img.shields.io/badge/license-MIT-34D058" alt="MIT license"></a>
+<a href="https://discord.gg/8sdXXCXaHK" target="_blank"><img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Join Discord"></a>
+<a href="https://www.linkedin.com/in/raphael-vienne/" target="_blank"><img src="https://img.shields.io/badge/linkedin-connect-0A66C2?logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
 
 ---
@@ -32,7 +20,7 @@ batchling is a frictionless, batteries-included plugin to convert any GenAI asyn
 
 Key features:
 
-- **Simplicity**: a simple 2-liner gets you 50% off your GenAI bill instantly.
+- **Simple**: a simple 2-liner gets you 50% off your GenAI bill instantly.
 - **Transparent**: Your code remains the same, no added behaviors. Track sent batches easily.
 - **Global**: Integrates with most providers and all frameworks.
 - **Safe**: Get a complete breakdown of your cost savings before launching a single batch.
