@@ -119,7 +119,9 @@ nav:
       - Pydantic AI: frameworks/pydantic_ai.md
       - Pydantic Evals: frameworks/pydantic_evals.md
       # END AUTO-GENERATED FRAMEWORK NAV
-  - Use-Cases: use-cases.md
+  - Use-Cases:
+      - Overview: use-cases.md
+      - Streaming batches: use-cases/streaming-batches.md
   - Advanced Features:
       - Overview: advanced-features.md
       - Cache: cache.md
