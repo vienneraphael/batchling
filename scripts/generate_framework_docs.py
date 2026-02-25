@@ -33,6 +33,11 @@ DISPLAY_NAME_OVERRIDES = {
     "litellm": "LiteLLM",
     "xai": "XAI",
 }
+PROVIDER_PRICING_NOTE_TITLE = "Check model support and batch pricing"
+PROVIDER_PRICING_NOTE_BODY = (
+    "Before sending batches, review the provider's official pricing page for supported "
+    "models and batch pricing details."
+)
 
 
 @dataclass(frozen=True)
@@ -358,6 +363,14 @@ def render_provider_page(*, provider: Provider) -> str:
             lines.append(f"- `{endpoint}`")
     else:
         lines.append("- _No declared `batchable_endpoints` found in the provider file._")
+
+    lines.extend(
+        [
+            "",
+            f'!!! warning "{PROVIDER_PRICING_NOTE_TITLE}"',
+            f"    {PROVIDER_PRICING_NOTE_BODY}",
+        ]
+    )
 
     if provider.has_notes:
         lines.extend(["", f'--8<-- "{provider.notes_snippet_path}"'])

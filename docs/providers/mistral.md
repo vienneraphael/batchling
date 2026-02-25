@@ -12,6 +12,9 @@ The following endpoints are made batch-compatible by Mistral:
 - `/v1/classifications`
 - `/v1/conversations/v1/audio/transcriptions`
 
+!!! warning "Check model support and batch pricing"
+    Before sending batches, review the provider's official pricing page for supported models and batch pricing details.
+
 ## Example Usage
 
 Here's an example showing how to use `batchling` with Mistral:

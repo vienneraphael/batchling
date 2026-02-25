@@ -55,10 +55,14 @@ def test_render_provider_page_includes_notes_after_endpoints(tmp_path: Path) -> 
     content = module.render_provider_page(provider=provider)
 
     note_include = '--8<-- "docs/providers/_notes/openai.md"'
+    pricing_note = '!!! note "Check model support and batch pricing"'
     endpoint_line = "- `/v1/responses`"
     example_heading = "Here's an example showing how to use `batchling` with OpenAI:"
 
     assert note_include in content
+    assert pricing_note in content
+    assert content.index(pricing_note) > content.index(endpoint_line)
+    assert content.index(pricing_note) < content.index(example_heading)
     assert content.index(note_include) > content.index(endpoint_line)
     assert content.index(note_include) < content.index(example_heading)
 
@@ -85,7 +89,26 @@ def test_render_provider_page_skips_notes_when_file_is_missing(tmp_path: Path) -
     provider = module.Provider(slug="openai", batchable_endpoints=("/v1/responses",))
     content = module.render_provider_page(provider=provider)
 
+    assert '!!! note "Check model support and batch pricing"' in content
     assert '--8<-- "docs/providers/_notes/openai.md"' not in content
+
+
+def test_render_provider_page_always_includes_pricing_note() -> None:
+    """
+    Ensure the pricing note is rendered even when no example exists.
+
+    Returns
+    -------
+    None
+        This test asserts the default provider warning callout.
+    """
+    module = load_generator_module()
+
+    provider = module.Provider(slug="unknown_provider", batchable_endpoints=("/v1/responses",))
+    content = module.render_provider_page(provider=provider)
+
+    assert '!!! note "Check model support and batch pricing"' in content
+    assert "Before sending batches, review the provider's official pricing page" in content
 
 
 def test_render_provider_page_includes_output_after_example_block(tmp_path: Path) -> None:

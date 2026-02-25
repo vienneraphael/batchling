@@ -6,6 +6,9 @@ The following endpoints are made batch-compatible by XAI:
 
 - `/v1/chat/completions`
 
+!!! warning "Check model support and batch pricing"
+    Before sending batches, review the provider's official pricing page for supported models and batch pricing details.
+
 --8<-- "docs/providers/_notes/xai.md"
 
 ## Example Usage
