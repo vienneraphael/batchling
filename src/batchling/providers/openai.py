@@ -23,7 +23,7 @@ class OpenAIProvider(BaseProvider):
     """Provider adapter for OpenAI's HTTP and Batch APIs."""
 
     name = "openai"
-    hostnames = ("api.openai.com",)
+    hostname = "api.openai.com"
     batchable_endpoints = (
         "/v1/responses",
         "/v1/chat/completions",

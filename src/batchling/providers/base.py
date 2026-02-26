@@ -146,7 +146,7 @@ class BaseProvider(ABC):
     """
 
     name: str = "base"
-    hostnames: tuple[str, ...] = ()
+    hostname: str = ""
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
     is_file_based: bool = True
@@ -197,7 +197,8 @@ class BaseProvider(ABC):
         bool
             ``True`` if the hostname matches this provider.
         """
-        is_match = bool(hostname) and hostname.endswith(self.hostnames)
+        configured_hostname = self.hostname.lower()
+        is_match = bool(hostname) and hostname == configured_hostname
         log.debug(
             event="Provider URL match evaluated",
             provider=self.name,

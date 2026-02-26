@@ -26,7 +26,7 @@ class XaiProvider(BaseProvider):
     """Provider adapter for OpenAI's HTTP and Batch APIs."""
 
     name = "xai"
-    hostnames = ("api.x.ai",)
+    hostname = "api.x.ai"
     batchable_endpoints = ("/v1/chat/completions",)
     file_upload_endpoint = "/v1/batches"
     file_content_endpoint = "/v1/batches/{id}/results"

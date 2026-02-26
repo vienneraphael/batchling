@@ -29,7 +29,7 @@ class GeminiProvider(BaseProvider):
     """Provider adapter for Gemini's HTTP and Batch APIs."""
 
     name = "gemini"
-    hostnames = ("generativelanguage.googleapis.com",)
+    hostname = "generativelanguage.googleapis.com"
     batchable_endpoints = ("/v1beta/models/{model}:generateContent",)
     file_upload_endpoint = "/upload/v1beta/files"
     batch_endpoint = "/v1beta/models/{model}:batchGenerateContent"

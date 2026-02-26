@@ -6,7 +6,7 @@ batch results.
 
 ## Responsibilities
 
-- Declare supported hostnames.
+- Declare supported hostname.
 - Declare explicit batchable HTTP endpoints (`path`) for hook routing.
 - Declare provider-specific terminal batch states used by the core poller.
 - Identify whether a URL belongs to a provider.
@@ -54,7 +54,7 @@ The Anthropic provider implements:
 
 The Mistral provider reuses the file-based flow with provider-specific endpoints:
 
-- `hostnames = ("api.mistral.ai",)`
+- `hostname = "api.mistral.ai"`
 - `batch_endpoint = "/v1/batch/jobs"`
 - `file_upload_endpoint = "/v1/files"`
 - `file_content_endpoint = "/v1/files/{id}/content"`
@@ -64,7 +64,7 @@ The Mistral provider reuses the file-based flow with provider-specific endpoints
 The Together provider follows the same batch lifecycle with provider-specific upload and
 batch response shapes:
 
-- `hostnames = ("api.together.xyz",)`
+- `hostname = "api.together.xyz"`
 - `batchable_endpoints = ("/v1/chat/completions", "/v1/audio/transcriptions")`
 - `file_upload_endpoint = "/v1/files/upload"`
 - `file_content_endpoint = "/v1/files/{id}/content"`
@@ -75,7 +75,7 @@ batch response shapes:
 
 The Xai provider uses a provider-specific batch lifecycle and response envelope:
 
-- `hostnames = ("api.x.ai",)`
+- `hostname = "api.x.ai"`
 - `batchable_endpoints = ("/v1/chat/completions",)`
 - batch container creation at `/v1/batches`, followed by request ingestion at
   `/v1/batches/{batch_id}/requests`
@@ -88,7 +88,7 @@ The Xai provider uses a provider-specific batch lifecycle and response envelope:
 
 The Doubleword provider reuses the OpenAI provider implementation and only changes:
 
-- `hostnames = ("api.doubleword.ai",)`
+- `hostname = "api.doubleword.ai"`
 - `batchable_endpoints = ("/v1/chat/completions", "/v1/responses", "/v1/embeddings", "/v1/moderations", "/v1/completions")`
 
 Terminal states are inherited unchanged from the OpenAI provider.
@@ -111,7 +111,7 @@ Common helpers now live on `BaseProvider` and can be reused by all providers:
 
 Provider configuration on `BaseProvider` includes:
 
-- `hostnames`
+- `hostname`
 - `batch_method`
 - `batchable_endpoints`
 - `is_file_based` (switch between file upload flow and inline flow)
@@ -127,6 +127,7 @@ Provider configuration on `BaseProvider` includes:
 
 - Add new provider classes by subclassing `BaseProvider` in a new module under
   `src/batchling/providers/`.
+- Define a single non-empty `hostname` string on each concrete provider class.
 - Override provider methods as needed (`build_jsonl_lines()`,
   `build_file_based_batch_payload()`, `build_inline_batch_payload()`,
   `build_api_headers()`, `from_batch_result()`).

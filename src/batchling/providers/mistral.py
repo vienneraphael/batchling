@@ -23,7 +23,7 @@ class MistralProvider(BaseProvider):
     """Provider adapter for Mistral's HTTP and Batch APIs."""
 
     name = "mistral"
-    hostnames = ("api.mistral.ai",)
+    hostname = "api.mistral.ai"
     batchable_endpoints = (
         "/v1/chat/completions",
         "/v1/fim/completions",
