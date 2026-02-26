@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from batchling.providers.anthropic import AnthropicProvider
+from batchling.providers.base import BaseProvider
 from batchling.providers.doubleword import DoublewordProvider
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.groq import GroqProvider
@@ -13,6 +14,20 @@ from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
 from batchling.providers.together import TogetherProvider
 from batchling.providers.xai import XaiProvider
+
+
+def test_legacy_hostnames_attribute_raises() -> None:
+    """
+    Ensure providers fail fast when defining removed ``hostnames``.
+    """
+    with pytest.raises(
+        expected_exception=TypeError,
+        match="`hostnames` has been removed",
+    ):
+
+        class LegacyHostnamesProvider(BaseProvider):
+            name = "legacy"
+            hostnames = ("api.legacy.example",)
 
 
 @pytest.mark.parametrize(

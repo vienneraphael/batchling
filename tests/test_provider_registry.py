@@ -102,6 +102,23 @@ def test_provider_lookup_resolves_xai() -> None:
     assert provider.name == "xai"
 
 
+def test_provider_lookup_requires_exact_hostname_match() -> None:
+    """
+    Ensure provider lookup does not match hostname suffixes or subdomains.
+
+    Returns
+    -------
+    None
+        This test asserts exact hostname matching.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="proxy.api.openai.com",
+        path="/v1/chat/completions",
+        method="POST",
+    )
+    assert provider is None
+
+
 def test_batchable_lookup_requires_post_method() -> None:
     """
     Ensure batchable lookup only routes POST requests.
