@@ -1,6 +1,6 @@
 <!-- markdownlint-disable-file MD041 MD001 -->
 <div align="center">
-<img src="https://raw.githubusercontent.com/vienneraphael/batchling/main/docs/assets/images/batchling.png" alt="batchling logo" width="500" role="img">
+<img src="https://raw.githubusercontent.com/vienneraphael/batchling/main/docs/assets/images/batchling-compressed.png" alt="batchling logo" width="500" role="img">
 </div>
 <p align="center">
     <em>Save 50% off GenAI costs in two lines of code</em>

@@ -48,7 +48,7 @@ extra:
   social_preview:
     title: "batchling"
     description: "Save 50% off GenAI costs in two lines of code"
-    image: "https://batchling.pages.dev/assets/images/batchling.png"
+    image: "https://batchling.pages.dev/assets/images/batchling-compressed.png"
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/vienneraphael/batchling
