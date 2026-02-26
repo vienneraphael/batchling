@@ -39,7 +39,7 @@ dependencies = [
 batchling = "batchling.cli.main:app"
 
 [project.urls]
-Documentation = "https://vienneraphael.github.io/batchling/"
+Documentation = "https://batchling.pages.dev/"
 Source = "https://github.com/vienneraphael/batchling"
 Issues = "https://github.com/vienneraphael/batchling/issues"
 Changelog = "https://github.com/vienneraphael/batchling/releases"

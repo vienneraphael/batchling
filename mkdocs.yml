@@ -1,6 +1,6 @@
 site_name: batchling
 site_description: Save 50% off GenAI costs in two lines of code
-site_url: https://vienneraphael.github.io/batchling/
+site_url: https://batchling.pages.dev/
 repo_name: vienneraphael/batchling
 repo_url: https://github.com/vienneraphael/batchling
 site_dir: docs-site
@@ -48,7 +48,7 @@ extra:
   social_preview:
     title: "batchling"
     description: "Save 50% off GenAI costs in two lines of code"
-    image: "https://vienneraphael.github.io/batchling/assets/images/batchling.png"
+    image: "https://batchling.pages.dev/assets/images/batchling.png"
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/vienneraphael/batchling

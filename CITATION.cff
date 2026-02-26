@@ -10,7 +10,7 @@ version: "0.1.0"
 abstract: "Save 50% off GenAI costs in two lines of code"
 license: "MIT"
 repository-code: "https://github.com/vienneraphael/batchling"
-url: "https://vienneraphael.github.io/batchling/"
+url: "https://batchling.pages.dev/"
 keywords:
   - large language models
   - generative ai

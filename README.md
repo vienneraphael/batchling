@@ -159,9 +159,9 @@ batchling main.py:generate
 
 ## Next Steps
 
-To try `batchling` for yourself, follow  this [quickstart guide](https://vienneraphael.github.io/batchling/quickstart/).
+To try `batchling` for yourself, follow  this [quickstart guide](https://batchling.pages.dev/quickstart/).
 
-Read the [docs](https://vienneraphael.github.io/batchling/batchify/) to learn more about how you can save on your GenAI expenses with `batchling`.
+Read the [docs](https://batchling.pages.dev/batchify/) to learn more about how you can save on your GenAI expenses with `batchling`.
 
 If you have any question, file an [issue](https://github.com/vienneraphael/batchling/issues) on GitHub.
 
