@@ -1,6 +1,6 @@
 [project]
 name = "batchling"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Save 50% off GenAI costs in two lines of code"
 authors = [{ name = "Raphael Vienne", email = "raphaelvienne.work@gmail.com" }]
 readme = "README.md"
