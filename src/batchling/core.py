@@ -532,7 +532,7 @@ class Batcher:
             except asyncio.CancelledError:
                 raise
             except Exception as error:
-                log.warning(
+                log.info(
                     event="Cache route failed; falling back to fresh batch submission",
                     provider=provider_name,
                     endpoint=endpoint,
@@ -910,7 +910,7 @@ class Batcher:
             return 0
         deleted_rows = self._cache_store.delete_by_hashes(request_hashes=request_hashes)
         if deleted_rows:
-            log.warning(
+            log.info(
                 event="Invalidated stale cache rows",
                 deleted_rows=deleted_rows,
             )

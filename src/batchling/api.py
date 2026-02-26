@@ -7,6 +7,7 @@ the active Batcher for the duration of a context manager.
 from batchling.context import BatchingContext
 from batchling.core import Batcher
 from batchling.hooks import install_hooks
+from batchling.logging import setup_logging
 
 
 def batchify(
@@ -42,7 +43,13 @@ def batchify(
     BatchingContext
         Context manager that yields ``None``.<br>
         The context manager is only used to scope the batching context and is not used to yield any target.
+
+    Notes
+    -----
+    Calling ``batchify`` configures batchling logging with a default ``WARNING`` level.
     """
+    setup_logging()
+
     # 1. Install hooks globally (idempotent)
     install_hooks()
 
