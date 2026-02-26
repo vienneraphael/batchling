@@ -6,7 +6,7 @@ import structlog
 
 
 def setup_logging() -> None:
-    logging.getLogger("batchling").setLevel(logging.DEBUG)
+    logging.getLogger("batchling").setLevel(logging.WARNING)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,  # Critical for context vars
