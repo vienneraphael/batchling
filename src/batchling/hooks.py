@@ -8,21 +8,23 @@ The context var is set by the `batchify` function upon calling.
 
 import contextvars
 import json
+import logging
 import typing as t
 from urllib.parse import urlparse
 
 import aiohttp
 import httpx
-import structlog
 from aiohttp.client_reqrep import RequestInfo
 from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
 from batchling.core import Batcher
+from batchling.logging import log_debug
 from batchling.providers import get_provider_for_batch_request
 from batchling.providers.base import BaseProvider
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(name=__name__)
+
 
 # ContextVar to hold the active Batcher for the current Task
 active_batcher: contextvars.ContextVar = contextvars.ContextVar("active_batcher", default=None)
@@ -239,58 +241,6 @@ def _ensure_response_request(
     return response
 
 
-def _log_httpx_request(
-    *,
-    method: str,
-    url: str,
-    headers: dict[str, str] | None,
-    body: t.Any = None,
-) -> None:
-    """
-    Emit structured logs for an intercepted HTTPX request.
-
-    Parameters
-    ----------
-    method : str
-        HTTP method.
-    url : str
-        Request URL.
-    headers : dict[str, str] | None
-        Request headers.
-    body : typing.Any, optional
-        Generic body payload.
-    """
-    log_context: dict[str, t.Any] = {
-        "method": method,
-        "url": url,
-    }
-
-    if headers:
-        log_context["headers"] = {k: "***" for k in headers.keys()}
-    log_context["body"] = body
-    log.info(event="httpx request intercepted", **log_context)
-
-
-def _log_aiohttp_request(
-    *,
-    method: str,
-    url: str,
-    headers: dict[str, str] | None,
-    body: t.Any = None,
-) -> None:
-    """
-    Emit structured logs for an intercepted aiohttp request.
-    """
-    log_context: dict[str, t.Any] = {
-        "method": method,
-        "url": url,
-    }
-    if headers:
-        log_context["headers"] = {k: "***" for k in headers.keys()}
-    log_context["body"] = body
-    log.info(event="aiohttp request intercepted", **log_context)
-
-
 def _extract_aiohttp_body(*, kwargs: dict[str, t.Any]) -> bytes | None:
     """
     Convert aiohttp request kwargs into raw body bytes for queueing.
@@ -349,8 +299,9 @@ def _maybe_route_to_batcher(
             reason = "no active batcher"
         else:
             reason = "provider not matched"
-        log.debug(
-            event="httpx request not routed",
+        log_debug(
+            logger=log,
+            event="Request not routed to batcher",
             reason=reason,
             hostname=hostname,
             path=path,
@@ -396,13 +347,6 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
     if headers.get("x-batchling-internal") == "1":
         return await _BASE_HTTPX_ASYNC_SEND(self, request, **kwargs)
 
-    _log_httpx_request(
-        method=request.method,
-        url=url_str,
-        headers=headers,
-        body=body,
-    )
-
     routed = _maybe_route_to_batcher(
         method=request.method,
         url=url_str,
@@ -447,13 +391,6 @@ async def _aiohttp_async_request_hook(
     # Keep interception narrow: only route JSON/bytes request bodies.
     if headers.get("x-batchling-internal") == "1":
         return await _BASE_AIOHTTP_REQUEST(self, method, str_or_url, **kwargs)
-
-    _log_aiohttp_request(
-        method=method,
-        url=url_str,
-        headers=headers,
-        body=body,
-    )
 
     routed = _maybe_route_to_batcher(
         method=method,

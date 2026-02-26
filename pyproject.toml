@@ -31,7 +31,6 @@ classifiers = [
 dependencies = [
     "aiohttp>=3.13.3",
     "httpx>=0.28.1",
-    "structlog>=25.5.0",
     "typer>=0.20.0",
 ]
 

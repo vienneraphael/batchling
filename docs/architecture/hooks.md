@@ -6,8 +6,8 @@ implementation targets `httpx.AsyncClient.send` and `aiohttp.ClientSession._requ
 ## Responsibilities
 
 - Patch supported HTTP client methods once globally (idempotent install).
-- Capture request details for logging and diagnostics (request headers are redacted
-  in logs only).
+- Emit minimal routing diagnostics only when needed (`DEBUG` level).
+- Never log intercepted request payloads or headers.
 - Look up the active `Batcher` context and route supported provider endpoints into batching.
 - Fall back to the original client behavior for unsupported URLs or when no active
   batcher is set.
@@ -15,8 +15,8 @@ implementation targets `httpx.AsyncClient.send` and `aiohttp.ClientSession._requ
 ## Flow summary
 
 1. `install_hooks()` stores original methods and patches both `httpx` and `aiohttp`.
-2. Hook handlers (`_httpx_async_send_hook()` and `_aiohttp_async_request_hook()`) log request
-   details and check `active_batcher`.
+2. Hook handlers (`_httpx_async_send_hook()` and `_aiohttp_async_request_hook()`) check
+   `active_batcher` and route eligible requests.
 3. If the request is marked as internal (`x-batchling-internal: 1`), the hook bypasses
    batching to avoid recursion.
 4. If a provider marks the `method + endpoint` as batchable and a batcher is active,

@@ -1,38 +1,114 @@
 import logging
-from collections.abc import Iterator
-from contextlib import contextmanager
+import typing as t
 
-import structlog
+_DROP_LOG_FIELDS = frozenset(
+    {
+        "body",
+        "content",
+        "data",
+        "files",
+        "headers",
+        "json",
+        "payload",
+        "result_item",
+    }
+)
 
 
 def setup_logging() -> None:
-    logging.getLogger("batchling").setLevel(logging.WARNING)
-    structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,  # Critical for context vars
-            structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.UnicodeDecoder(),
-            structlog.dev.ConsoleRenderer(colors=True),
-        ],
-        context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.stdlib.BoundLogger,
-        cache_logger_on_first_use=True,
-    )
+    """
+    Configure package logger defaults.
+    """
+    logging.getLogger(name="batchling").setLevel(level=logging.WARNING)
 
 
-@contextmanager
-def logging_context(**required_context) -> Iterator[None]:
-    current = structlog.contextvars.get_contextvars()
-    to_bind = {k: v for k, v in required_context.items() if k not in current}
+def _format_log_message(*, event: str, **context: t.Any) -> str:
+    """
+    Build a compact key/value log message.
 
-    if to_bind:
-        with structlog.contextvars.bound_contextvars(**to_bind):
-            yield
-    else:
-        yield
+    Parameters
+    ----------
+    event : str
+        Log event summary.
+    **context : typing.Any
+        Optional context values.
+
+    Returns
+    -------
+    str
+        Formatted message.
+    """
+    parts = [event]
+    filtered_context = {
+        key: value
+        for key, value in context.items()
+        if value is not None and key not in _DROP_LOG_FIELDS
+    }
+    if filtered_context:
+        context_fields = " ".join(f"{key}={value}" for key, value in filtered_context.items())
+        parts.append(context_fields)
+    return " | ".join(parts)
+
+
+def log_debug(*, logger: logging.Logger, event: str, **context: t.Any) -> None:
+    """
+    Emit a debug log with normalized message formatting.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        Target logger instance.
+    event : str
+        Event summary.
+    **context : typing.Any
+        Optional log context.
+    """
+    logger.debug(msg=_format_log_message(event=event, **context))
+
+
+def log_info(*, logger: logging.Logger, event: str, **context: t.Any) -> None:
+    """
+    Emit an info log with normalized message formatting.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        Target logger instance.
+    event : str
+        Event summary.
+    **context : typing.Any
+        Optional log context.
+    """
+    logger.info(msg=_format_log_message(event=event, **context))
+
+
+def log_warning(*, logger: logging.Logger, event: str, **context: t.Any) -> None:
+    """
+    Emit a warning log with normalized message formatting.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        Target logger instance.
+    event : str
+        Event summary.
+    **context : typing.Any
+        Optional log context.
+    """
+    logger.warning(msg=_format_log_message(event=event, **context))
+
+
+def log_error(*, logger: logging.Logger, event: str, **context: t.Any) -> None:
+    """
+    Emit an error log with normalized message formatting.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        Target logger instance.
+    event : str
+        Event summary.
+    **context : typing.Any
+        Optional log context.
+    """
+    logger.error(msg=_format_log_message(event=event, **context))

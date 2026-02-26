@@ -2,7 +2,7 @@
 Tests for the httpx request hook system.
 """
 
-from unittest.mock import patch
+import logging
 
 import aiohttp
 import httpx
@@ -157,29 +157,28 @@ async def test_hook_handles_post_with_data(restore_hooks):
 
 
 @pytest.mark.asyncio
-async def test_hook_logs_request_details(restore_hooks):
-    """Test that the hook logs request details using structlog."""
+async def test_hook_skips_request_detail_info_logs(restore_hooks, caplog):
+    """Test that hooks avoid per-request info logs and sensitive request data."""
     install_hooks()
+    caplog.set_level(level=logging.DEBUG, logger="batchling.hooks")
 
-    # Mock structlog logger to capture log calls
-    with patch.object(hooks_module.log, "info") as mock_info:
-        with respx.mock:
-            respx.get("https://example.com/test").mock(
-                return_value=httpx.Response(200, json={"status": "ok"})
+    with respx.mock:
+        respx.post("https://example.com/test").mock(
+            return_value=httpx.Response(200, json={"status": "ok"})
+        )
+
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "https://example.com/test",
+                headers={"Authorization": "Bearer token123"},
+                json={"secret": "value"},
             )
 
-            async with httpx.AsyncClient() as client:
-                await client.get("https://example.com/test", headers={"X-Test": "header-value"})
-
-        # Verify that log.info was called
-        assert mock_info.called
-        call_args = mock_info.call_args
-        assert call_args[1]["event"] == "httpx request intercepted"
-        assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "https://example.com/test"
-        logged_headers = call_args[1]["headers"]
-        header_value = logged_headers.get("X-Test") or logged_headers.get("x-test")
-        assert header_value == "***"
+    assert all(record.levelno != logging.INFO for record in caplog.records)
+    captured_logs = " ".join(record.getMessage() for record in caplog.records)
+    assert "token123" not in captured_logs
+    assert "secret" not in captured_logs
+    assert "Bearer" not in captured_logs
 
 
 @pytest.mark.asyncio

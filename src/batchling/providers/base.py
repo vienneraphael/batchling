@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import typing as t
 from abc import ABC
@@ -8,9 +9,10 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 
 import httpx
-import structlog
 
-log = structlog.get_logger(__name__)
+from batchling.logging import log_debug, log_info
+
+log = logging.getLogger(name=__name__)
 
 
 @dataclass(frozen=True)
@@ -198,15 +200,7 @@ class BaseProvider(ABC):
             ``True`` if the hostname matches this provider.
         """
         configured_hostname = self.hostname.lower()
-        is_match = bool(hostname) and hostname == configured_hostname
-        log.debug(
-            event="Provider URL match evaluated",
-            provider=self.name,
-            input_hostname=hostname,
-            parsed_hostname=hostname,
-            matched=is_match,
-        )
-        return is_match
+        return bool(hostname) and hostname == configured_hostname
 
     def is_batchable_request(self, *, method: str, hostname: str, path: str) -> bool:
         """
@@ -231,19 +225,7 @@ class BaseProvider(ABC):
             return False
         method_ok = normalized_method == self.batch_method
         endpoint_ok = self.matches_batchable_endpoint(path=path)
-        is_batchable = method_ok and endpoint_ok
-        log.debug(
-            event="Provider batchable endpoint evaluated",
-            provider=self.name,
-            method=normalized_method,
-            path=path,
-            expected_method=self.batch_method,
-            method_ok=method_ok,
-            endpoint_ok=endpoint_ok,
-            matched=is_batchable,
-            configured_endpoints=self.batchable_endpoints,
-        )
-        return is_batchable
+        return method_ok and endpoint_ok
 
     def matches_batchable_endpoint(self, *, path: str) -> bool:
         """
@@ -492,15 +474,7 @@ class BaseProvider(ABC):
         dict[str, str]
             Headers including internal bypass marker.
         """
-        internal_headers = {**headers, "x-batchling-internal": "1"}
-        log.debug(
-            event="Built internal provider headers",
-            provider=self.name,
-            input_header_count=len(headers),
-            output_header_count=len(internal_headers),
-            output_header_keys=list(internal_headers.keys()),
-        )
-        return internal_headers
+        return {**headers, "x-batchling-internal": "1"}
 
     def build_jsonl_lines(
         self,
@@ -656,12 +630,11 @@ class BaseProvider(ABC):
         files = self._build_batch_file_files_payload(file_content=file_content)
         data = self._build_batch_file_data_payload()
 
-        log.debug(
+        log_debug(
+            logger=log,
             event="Uploading batch file",
-            url=f"{base_url}{self.file_upload_endpoint}",
-            headers={k: "***" for k in api_headers.keys()},
-            files=files,
-            data=data,
+            provider=self.name,
+            request_count=len(jsonl_lines),
         )
 
         async with client_factory() as client:
@@ -770,11 +743,11 @@ class BaseProvider(ABC):
             endpoint=endpoint,
             queue_key=queue_key,
         )
-        log.debug(
-            "Sending batch request",
-            url=f"{base_url}{submit_path}",
-            headers={k: "***" for k in api_headers.keys()},
-            payload=payload,
+        log_debug(
+            logger=log,
+            event="Sending batch request",
+            provider=self.name,
+            request_path=submit_path,
         )
         async with client_factory() as client:
             response = await client.post(
@@ -814,11 +787,11 @@ class BaseProvider(ABC):
         """
         submit_path = self.build_batch_submit_path(queue_key=queue_key)
         payload = await self.build_inline_batch_payload(jsonl_lines=jsonl_lines)
-        log.debug(
+        log_debug(
+            logger=log,
             event="Sending inline batch request",
-            url=f"{base_url}{submit_path}",
-            headers={k: "***" for k in api_headers.keys()},
-            payload=payload,
+            provider=self.name,
+            request_path=submit_path,
         )
         async with client_factory() as client:
             response = await client.post(
@@ -857,7 +830,8 @@ class BaseProvider(ABC):
 
         _, endpoint, _ = queue_key
         base_url = self._normalize_base_url(url=requests[0].params["url"])
-        log.debug(
+        log_debug(
+            logger=log,
             event="Resolved batch submission target",
             provider=self.name,
             base_url=base_url,
@@ -870,7 +844,8 @@ class BaseProvider(ABC):
         api_headers = self.build_internal_headers(headers=api_headers)
 
         jsonl_lines = self.build_jsonl_lines(requests=requests)
-        log.debug(
+        log_debug(
+            logger=log,
             event="Built JSONL lines",
             provider=self.name,
             request_count=len(jsonl_lines),
@@ -882,7 +857,8 @@ class BaseProvider(ABC):
                 jsonl_lines=jsonl_lines,
                 client_factory=client_factory,
             )
-            log.info(
+            log_info(
+                logger=log,
                 event="Uploaded batch file",
                 provider=self.name,
                 file_id=file_id,
@@ -972,7 +948,8 @@ class BaseProvider(ABC):
             result_item = json.loads(s=line)
             custom_id = result_item.get(self.custom_id_field_name)
             if custom_id is None:
-                log.debug(
+                log_debug(
+                    logger=log,
                     event="Batch result missing custom_id",
                     provider=self.name,
                     batch_id=batch_id,

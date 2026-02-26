@@ -1,11 +1,12 @@
 import json
+import logging
 import re
 import typing as t
 from enum import StrEnum
 
 import httpx
-import structlog
 
+from batchling.logging import log_debug
 from batchling.providers.base import (
     BaseProvider,
     BatchTerminalStatesLike,
@@ -15,7 +16,7 @@ from batchling.providers.base import (
     ResumeContext,
 )
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(name=__name__)
 
 
 class GeminiBatchTerminalStates(StrEnum):
@@ -317,10 +318,10 @@ class GeminiProvider(BaseProvider):
         str
             OpenAI file ID.
         """
-        log.debug(
+        log_debug(
+            logger=log,
             event="Creating resumable upload session",
-            url=f"{base_url}{self.file_upload_endpoint}",
-            headers={k: "***" for k in api_headers.keys()},
+            provider=self.name,
         )
         upload_url = await self._create_resumable_upload_session(
             base_url=base_url,
@@ -335,9 +336,11 @@ class GeminiProvider(BaseProvider):
         file_content = ("\n".join(json.dumps(obj=line) for line in jsonl_lines) + "\n").encode(
             encoding="utf-8"
         )
-        log.debug(
+        log_debug(
+            logger=log,
             event="Uploading batch file",
-            url=upload_url,
+            provider=self.name,
+            request_count=len(jsonl_lines),
         )
         async with client_factory() as client:
             response = await client.post(

@@ -1,10 +1,11 @@
 import json
+import logging
 import typing as t
 from enum import StrEnum
 
 import httpx
-from structlog import get_logger
 
+from batchling.logging import log_debug
 from batchling.providers.base import (
     BaseProvider,
     BatchSubmission,
@@ -15,7 +16,7 @@ from batchling.providers.base import (
     ResumeContext,
 )
 
-log = get_logger()
+log = logging.getLogger(name=__name__)
 
 
 class XaiBatchTerminalStates(StrEnum):
@@ -128,7 +129,8 @@ class XaiProvider(BaseProvider):
         for result in results.get("results") or []:
             custom_id = result.get(self.custom_id_field_name)
             if custom_id is None:
-                log.debug(
+                log_debug(
+                    logger=log,
                     event="Batch result missing custom_id",
                     provider=self.name,
                     batch_id=batch_id,
@@ -164,10 +166,6 @@ class XaiProvider(BaseProvider):
         httpx.Response
             HTTP response derived from the batch result.
         """
-        log.debug(
-            event="Decoding Xai batch results",
-            result_item=result_item,
-        )
         response = t.cast(dict[str, t.Any] | None, result_item.get("response"))
         if response:
             status_code = 200
@@ -232,11 +230,10 @@ class XaiProvider(BaseProvider):
         data = {
             "name": "batchling runtime batch",
         }
-        log.debug(
+        log_debug(
+            logger=log,
             event="Creating batch container",
-            url=f"{base_url}{self.file_upload_endpoint}",
-            headers={k: "***" for k in api_headers.keys()},
-            json=data,
+            provider=self.name,
         )
 
         async with client_factory() as client:
@@ -261,10 +258,10 @@ class XaiProvider(BaseProvider):
         """
         Add requests to a batch.
         """
-        log.debug(
+        log_debug(
+            logger=log,
             event="Adding requests to batch",
-            url=f"{base_url}{self.file_upload_endpoint}/{batch_id}/requests",
-            headers={k: "***" for k in api_headers.keys()},
+            provider=self.name,
             batch_id=batch_id,
             request_count=len(jsonl_lines),
         )
@@ -306,7 +303,8 @@ class XaiProvider(BaseProvider):
 
         _, endpoint, _ = queue_key
         base_url = self._normalize_base_url(url=requests[0].params["url"])
-        log.debug(
+        log_debug(
+            logger=log,
             event="Resolved batch submission target",
             provider=self.name,
             base_url=base_url,
@@ -319,7 +317,8 @@ class XaiProvider(BaseProvider):
         api_headers = self.build_internal_headers(headers=api_headers)
 
         jsonl_lines = self.build_jsonl_lines(requests=requests)
-        log.debug(
+        log_debug(
+            logger=log,
             event="Built JSONL lines",
             provider=self.name,
             request_count=len(jsonl_lines),
