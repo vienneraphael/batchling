@@ -22,7 +22,7 @@ class AnthropicProvider(BaseProvider):
     """Provider adapter for OpenAI's HTTP and Batch APIs."""
 
     name = "anthropic"
-    hostnames = ("api.anthropic.com",)
+    hostname = "api.anthropic.com"
     batchable_endpoints = ("/v1/messages",)
     is_file_based = False
     file_content_endpoint = "/v1/messages/batches/{id}/results"

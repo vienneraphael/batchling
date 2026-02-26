@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import re
 import typing as t
@@ -146,7 +147,7 @@ class BaseProvider(ABC):
     """
 
     name: str = "base"
-    hostnames: tuple[str, ...] = ()
+    hostname: str = ""
     batch_method: str = "POST"
     batchable_endpoints: tuple[str, ...] = ()
     is_file_based: bool = True
@@ -158,6 +159,38 @@ class BaseProvider(ABC):
     custom_id_field_name: str = "custom_id"
     output_file_field_name: str
     error_file_field_name: str
+
+    def __init_subclass__(cls, **kwargs: t.Any) -> None:
+        """
+        Validate provider hostname configuration at class-definition time.
+
+        Parameters
+        ----------
+        **kwargs : dict[str, typing.Any]
+            Extra subclass construction kwargs.
+
+        Raises
+        ------
+        TypeError
+            If the provider uses removed ``hostnames`` or defines invalid ``hostname``.
+        """
+        super().__init_subclass__(**kwargs)
+        if cls is BaseProvider:
+            return
+
+        if "hostnames" in cls.__dict__:
+            raise TypeError(
+                "Provider `hostnames` has been removed; define a single `hostname` string instead."
+            )
+
+        if inspect.isabstract(object=cls):
+            return
+
+        hostname = getattr(cls, "hostname", "")
+        if not isinstance(hostname, str) or not hostname.strip():
+            raise TypeError(
+                f"{cls.__name__} must define non-empty class attribute `hostname: str`."
+            )
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
@@ -197,7 +230,8 @@ class BaseProvider(ABC):
         bool
             ``True`` if the hostname matches this provider.
         """
-        is_match = bool(hostname) and hostname.endswith(self.hostnames)
+        configured_hostname = self.hostname.lower()
+        is_match = bool(hostname) and hostname == configured_hostname
         log.debug(
             event="Provider URL match evaluated",
             provider=self.name,

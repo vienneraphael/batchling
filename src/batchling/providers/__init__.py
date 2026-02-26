@@ -87,8 +87,7 @@ def _build_provider_indexes(
     """
     hostname_index: dict[str, list[BaseProvider]] = {}
     for provider in providers:
-        for hostname in provider.hostnames:
-            hostname_index.setdefault(hostname.lower(), []).append(provider)
+        hostname_index.setdefault(provider.hostname.lower(), []).append(provider)
     return hostname_index
 
 

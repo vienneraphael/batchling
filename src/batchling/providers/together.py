@@ -23,7 +23,7 @@ class TogetherProvider(BaseProvider):
     """Provider adapter for OpenAI's HTTP and Batch APIs."""
 
     name = "together"
-    hostnames = ("api.together.xyz",)
+    hostname = "api.together.xyz"
     batchable_endpoints = (
         "/v1/chat/completions",
         "/v1/audio/transcriptions",

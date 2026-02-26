@@ -15,7 +15,7 @@ class GroqProvider(OpenAIProvider):
     """Provider adapter for Groq's HTTP and Batch APIs."""
 
     name = "groq"
-    hostnames = ("api.groq.com",)
+    hostname = "api.groq.com"
     batchable_endpoints = (
         "/openai/v1/chat/completions",
         "/openai/v1/audio/transcriptions",
