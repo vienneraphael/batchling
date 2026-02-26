@@ -10,8 +10,8 @@ exclude_docs: architecture/**
 theme:
   name: material
   custom_dir: docs/overrides
-  logo: assets/images/batchling-transparent-cropped.png
-  favicon: assets/images/batchling-transparent-cropped.png
+  logo: assets/images/batchling-transparent.png
+  favicon: assets/images/batchling-transparent.png
   pygments_style: tango
   pygments_style_dark: monokai
   font:
