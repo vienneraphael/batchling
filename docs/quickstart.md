@@ -63,7 +63,7 @@ For each art piece, we will generate the following metadata:
 Let's suppose we have an existing script `art_metadata.py` that uses the OpenAI client to make parallel calls using `asyncio.gather` to generate metadata to the three art pieces:
 
 <!-- markdownlint-disable-next-line MD046 -->
-```python
+```py title="art_metadata.py"
 --8<-- "examples/art_metadata.py:quickstart"
 ```
 

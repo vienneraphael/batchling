@@ -19,7 +19,7 @@ The Batch API docs for Gemini can be found on the following URL:
 
 Here's an example showing how to use `batchling` with Gemini:
 
-```python
+```py title="gemini_example.py"
 --8<-- "examples/providers/gemini_example.py"
 ```
 

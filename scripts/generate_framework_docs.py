@@ -327,7 +327,7 @@ def render_framework_page(*, framework: Framework) -> str:
         "",
         f"Here's an example showing how to use `batchling` with {framework.display_name}:",
         "",
-        "```python",
+        f'```py title="{framework.example_filename}"',
         f'--8<-- "examples/frameworks/{framework.example_filename}"',
         "```",
     ]
@@ -432,7 +432,7 @@ def render_provider_page(*, provider: Provider) -> str:
         )
         lines.extend(
             [
-                "```python",
+                f'```py title="{provider.example_filename}"',
                 f'--8<-- "examples/providers/{provider.example_filename}"',
                 "```",
             ]

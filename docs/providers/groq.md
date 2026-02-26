@@ -21,7 +21,7 @@ The Batch API docs for Groq can be found on the following URL:
 
 Here's an example showing how to use `batchling` with Groq:
 
-```python
+```py title="groq_example.py"
 --8<-- "examples/providers/groq_example.py"
 ```
 

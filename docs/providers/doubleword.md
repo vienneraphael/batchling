@@ -23,7 +23,7 @@ The Batch API docs for Doubleword can be found on the following URL:
 
 Here's an example showing how to use `batchling` with Doubleword:
 
-```python
+```py title="doubleword_example.py"
 --8<-- "examples/providers/doubleword_example.py"
 ```
 

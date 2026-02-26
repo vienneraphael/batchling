@@ -10,7 +10,7 @@ Suppose you work in e-commerce and you have a cutting-edge business which uses G
 You have a function `generate_image` that takes a prompt (string) as input and generates the corresponding image using an API, returning image bytes.
 You would typically run concurrent tasks using `asyncio` for tasks not blocking each other in the execution loop.
 
-```python
+```py title="generate_product_images.py"
 # generate_product_images.py
 import asyncio
 

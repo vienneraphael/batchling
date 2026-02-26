@@ -19,7 +19,7 @@ The Batch API docs for Anthropic can be found on the following URL:
 
 Here's an example showing how to use `batchling` with Anthropic:
 
-```python
+```py title="anthropic_example.py"
 --8<-- "examples/providers/anthropic_example.py"
 ```
 

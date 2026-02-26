@@ -20,7 +20,7 @@ The Batch API docs for Together can be found on the following URL:
 
 Here's an example showing how to use `batchling` with Together:
 
-```python
+```py title="together_example.py"
 --8<-- "examples/providers/together_example.py"
 ```
 

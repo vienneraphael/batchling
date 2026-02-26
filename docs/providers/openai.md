@@ -25,7 +25,7 @@ The Batch API docs for OpenAI can be found on the following URL:
 
 Here's an example showing how to use `batchling` with OpenAI:
 
-```python
+```py title="openai_example.py"
 --8<-- "examples/providers/openai_example.py"
 ```
 

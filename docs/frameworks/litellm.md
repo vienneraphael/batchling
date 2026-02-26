@@ -2,7 +2,7 @@
 
 Here's an example showing how to use `batchling` with LiteLLM:
 
-```python
+```py title="litellm_example.py"
 --8<-- "examples/frameworks/litellm_example.py"
 ```
 

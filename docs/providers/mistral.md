@@ -25,7 +25,7 @@ The Batch API docs for Mistral can be found on the following URL:
 
 Here's an example showing how to use `batchling` with Mistral:
 
-```python
+```py title="mistral_example.py"
 --8<-- "examples/providers/mistral_example.py"
 ```
 

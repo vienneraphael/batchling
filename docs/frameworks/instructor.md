@@ -2,7 +2,7 @@
 
 Here's an example showing how to use `batchling` with Instructor:
 
-```python
+```py title="instructor_example.py"
 --8<-- "examples/frameworks/instructor_example.py"
 ```
 

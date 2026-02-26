@@ -21,7 +21,7 @@ The Batch API docs for XAI can be found on the following URL:
 
 Here's an example showing how to use `batchling` with XAI:
 
-```python
+```py title="xai_example.py"
 --8<-- "examples/providers/xai_example.py"
 ```
 

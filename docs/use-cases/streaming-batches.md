@@ -13,7 +13,7 @@ Before looking at how you can stream batches results, let's go through a quick r
 
 If you need to stream batches results as they are made available (for logging, tracking progress, saving intermediate results to db..), you can stream batches like so:
 
-```python
+```py title="streaming_batches.py"
 --8<-- "examples/streaming_batches.py"
 ```
 

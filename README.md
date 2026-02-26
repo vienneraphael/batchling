@@ -69,7 +69,7 @@ Let's suppose we have an existing script `main.py` that uses the OpenAI client t
 
 To selectively batchify certain pieces of your code execution, you can rely on the `batchify` function, which exposes an async context manager.
 
-```python
+```py title="main.py"
 import asyncio
 from batchling import batchify
 from openai import AsyncOpenAI
@@ -111,7 +111,7 @@ The capital of France is Paris.
 
 For you to switch this async execution to a batched inference one, you just have to run your script using the `batchling` CLI and targetting the main function ran by `asyncio`:
 
-```python
+```py title="main.py"
 import asyncio
 from openai import AsyncOpenAI
 
