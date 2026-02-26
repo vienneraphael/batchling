@@ -93,14 +93,24 @@ function isCopyDisabledForCodeBlock(codeBlock) {
 }
 
 function triggerCopyWithoutFocusScroll(copyButton) {
-  copyButton.dispatchEvent(
-    new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      view: window,
-    }),
-  );
+  const originalFocus = copyButton.focus;
+
+  copyButton.focus = (focusOptions) => {
+    originalFocus.call(copyButton, { ...focusOptions, preventScroll: true });
+  };
+
+  try {
+    copyButton.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+      }),
+    );
+  } finally {
+    copyButton.focus = originalFocus;
+  }
 }
 
 function installQuickCopyOnCodeBlockClick() {
