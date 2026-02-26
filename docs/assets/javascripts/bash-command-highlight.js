@@ -92,6 +92,17 @@ function isCopyDisabledForCodeBlock(codeBlock) {
   );
 }
 
+function triggerCopyWithoutFocusScroll(copyButton) {
+  copyButton.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+    }),
+  );
+}
+
 function installQuickCopyOnCodeBlockClick() {
   const codeBlocks = document.querySelectorAll(".md-typeset .highlight");
 
@@ -140,7 +151,7 @@ function installQuickCopyOnCodeBlockClick() {
       }
 
       event.preventDefault();
-      copyButton.click();
+      triggerCopyWithoutFocusScroll(copyButton);
     });
 
     codeBlock.dataset.quickCopyBound = "true";
