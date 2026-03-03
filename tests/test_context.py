@@ -12,7 +12,9 @@ import pytest
 
 from batchling.context import BatchingContext
 from batchling.core import Batcher
+from batchling.exceptions import DryRunEarlyExit
 from batchling.hooks import active_batcher
+from batchling.providers.openai import OpenAIProvider
 
 
 @pytest.fixture
@@ -216,3 +218,92 @@ def test_batching_context_uses_polling_progress_fallback_when_auto_disabled(
 
     context._stop_live_display()
     assert context._self_polling_progress_logger is None
+
+
+def test_batching_context_skips_live_display_in_dry_run(
+    reset_context: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test dry-run mode does not start live display listeners."""
+
+    class DummyDisplay:
+        """Simple display stub."""
+
+        def __init__(self) -> None:
+            self.started = False
+
+        def start(self) -> None:
+            self.started = True
+
+        def stop(self) -> None:
+            return None
+
+        def on_event(self, event: dict[str, t.Any]) -> None:
+            del event
+
+    dummy_display = DummyDisplay()
+    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=1.0,
+        dry_run=True,
+        cache=False,
+    )
+    context = BatchingContext(
+        batcher=batcher,
+        live_display=True,
+    )
+
+    context._start_live_display()
+    assert dummy_display.started is False
+    assert context._self_live_display is None
+    assert context._self_polling_progress_logger is None
+
+
+@pytest.mark.asyncio
+async def test_batching_context_prints_dry_run_report_when_live_display_disabled(
+    reset_context: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test dry-run report prints on context exit even when live display is disabled."""
+
+    class DummyDryRunSummaryDisplay:
+        """Minimal dry-run summary display stub."""
+
+        def __init__(self) -> None:
+            self.print_calls = 0
+
+        def on_event(self, event: dict[str, t.Any]) -> None:
+            del event
+
+        def print_summary(self) -> None:
+            self.print_calls += 1
+
+    dry_run_display = DummyDryRunSummaryDisplay()
+    monkeypatch.setattr("batchling.context.DryRunSummaryDisplay", lambda: dry_run_display)
+
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=1.0,
+        dry_run=True,
+        cache=False,
+    )
+    context = BatchingContext(
+        batcher=batcher,
+        live_display=False,
+    )
+
+    with pytest.raises(DryRunEarlyExit):
+        async with context:
+            _ = await batcher.submit(
+                client_type="httpx",
+                method="POST",
+                url="api.openai.com",
+                endpoint="/v1/chat/completions",
+                provider=OpenAIProvider(),
+                body=b'{"model":"model-a","messages":[]}',
+            )
+
+    assert dry_run_display.print_calls == 1

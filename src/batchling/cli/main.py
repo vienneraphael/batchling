@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 
 from batchling import batchify
+from batchling.exceptions import DryRunEarlyExit
 
 # syncify = lambda f: wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
@@ -177,16 +178,19 @@ def main(
         raise typer.BadParameter("Script path must be a module path, use 'module:func' syntax")
     script_args = list(ctx.args)
 
-    asyncio.run(
-        run_script_with_batchify(
-            module_path=Path(module_path),
-            func_name=func_name,
-            script_args=script_args,
-            batch_size=batch_size,
-            batch_window_seconds=batch_window_seconds,
-            batch_poll_interval_seconds=batch_poll_interval_seconds,
-            dry_run=dry_run,
-            cache=cache,
-            live_display=live_display,
+    try:
+        asyncio.run(
+            run_script_with_batchify(
+                module_path=Path(module_path),
+                func_name=func_name,
+                script_args=script_args,
+                batch_size=batch_size,
+                batch_window_seconds=batch_window_seconds,
+                batch_poll_interval_seconds=batch_poll_interval_seconds,
+                dry_run=dry_run,
+                cache=cache,
+                live_display=live_display,
+            )
         )
-    )
+    except DryRunEarlyExit:
+        return

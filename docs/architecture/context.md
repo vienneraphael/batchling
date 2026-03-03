@@ -10,6 +10,7 @@ a context variable.
 - Yield `None` for scope-only lifecycle control.
 - Support sync and async context manager patterns for cleanup and context scoping.
 - Start and stop optional Rich live activity display while the context is active.
+- In dry-run mode, aggregate and print a static Rich summary at teardown.
 
 ## Flow summary
 
@@ -20,9 +21,10 @@ a context variable.
 4. If `live_display=True`, the context attempts to start Rich panel rendering at
    enter-time when terminal auto-detection passes (`TTY`, non-`dumb`, non-`CI`).
    Otherwise it registers an `INFO` logging fallback that emits progress at poll-time.
-5. `__aexit__` resets the context and awaits `batcher.close()` to flush pending work.
-6. The live display listener is removed and the panel is stopped when context cleanup
-   finishes.
+5. In dry-run mode, a dedicated summary listener is also registered at enter-time.
+6. `__aexit__` resets the context and awaits `batcher.close()` to flush pending work.
+7. On teardown, the context prints one static dry-run summary report when dry-run is enabled.
+8. Display/listener cleanup runs after close completes.
 
 ## Code reference
 

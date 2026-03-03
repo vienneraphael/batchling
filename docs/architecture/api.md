@@ -21,8 +21,9 @@ yields `None`. Import it from `batchling`.
   strict queue key `(provider, endpoint, model)`.
 - **`dry_run` behavior**: when `dry_run=True`, requests are still intercepted, queued,
   and grouped using normal window/size triggers, but provider batch submission and polling
-  are skipped. Requests resolve with synthetic `httpx.Response` objects marked with
-  `x-batchling-dry-run: 1`.
+  are skipped. Intercepted requests raise `DryRunEarlyExit` on return instead of
+  producing synthetic provider responses. A static dry-run summary report is emitted
+  at context teardown.
 - **`cache` behavior**: when `cache=True` (default), intercepted requests are fingerprinted
   and looked up in a persistent request cache. Cache hits bypass queueing and resume polling
   from an existing provider batch when not in dry-run mode.

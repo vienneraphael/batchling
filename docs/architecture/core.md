@@ -34,9 +34,11 @@ resolves futures back to callers.
 7. `close()` flushes remaining requests and cancels timers.
 
 In `dry_run` mode, step 3 and provider polling are bypassed: `_process_batch()` still
-creates `_ActiveBatch` for tracking, then resolves each request immediately with a
-synthetic `httpx.Response` (`200`) marked with `x-batchling-dry-run: 1`.
+creates `_ActiveBatch` for tracking, then resolves each request by raising
+`DryRunEarlyExit`.
 Cache lookups remain enabled in dry-run mode for hit accounting, but cache writes are disabled.
+`close()` also waits for in-flight background submission/poll tasks so teardown
+reporting has stable totals.
 
 ## Extension notes
 

@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 import httpx
 
 from batchling.cache import CacheEntry, RequestCacheStore
+from batchling.exceptions import DryRunEarlyExit
 from batchling.logging import log_debug, log_error, log_info, log_warning
 from batchling.providers import BaseProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec
@@ -493,10 +494,14 @@ class Batcher:
                 future=future,
                 request_hash=request_hash,
             )
-            future.set_result(
-                self._build_dry_run_response(
-                    request=dry_run_request,
-                    cache_hit=True,
+            future.set_exception(
+                DryRunEarlyExit(
+                    source="cache_dry_run",
+                    provider=dry_run_request.provider.name,
+                    endpoint=dry_run_request.queue_key[1],
+                    model=dry_run_request.queue_key[2],
+                    batch_id=cache_entry.batch_id,
+                    custom_id=dry_run_request.custom_id,
                 )
             )
             return cache_entry
@@ -640,6 +645,8 @@ class Batcher:
             try:
                 return await future
             except asyncio.CancelledError:
+                raise
+            except DryRunEarlyExit:
                 raise
             except Exception as error:
                 log_warning(
@@ -1051,9 +1058,14 @@ class Batcher:
                 self._active_batches.append(active_batch)
                 for req in requests:
                     if not req.future.done():
-                        req.future.set_result(
-                            self._build_dry_run_response(
-                                request=req,
+                        req.future.set_exception(
+                            DryRunEarlyExit(
+                                source="dry_run",
+                                provider=req.provider.name,
+                                endpoint=req.queue_key[1],
+                                model=req.queue_key[2],
+                                batch_id=dry_run_batch_id,
+                                custom_id=req.custom_id,
                             )
                         )
                 log_info(
@@ -1156,42 +1168,6 @@ class Batcher:
             for req in requests:
                 if not req.future.done():
                     req.future.set_exception(e)
-
-    def _build_dry_run_response(
-        self,
-        *,
-        request: _PendingRequest,
-        cache_hit: bool = False,
-    ) -> httpx.Response:
-        """
-        Build a synthetic response for dry-run batch mode.
-
-        Parameters
-        ----------
-        request : _PendingRequest
-            Pending request metadata.
-        cache_hit : bool, optional
-            Whether this dry-run response came from a cache lookup.
-
-        Returns
-        -------
-        httpx.Response
-            Synthetic successful response.
-        """
-        return httpx.Response(
-            status_code=200,
-            headers={
-                "x-batchling-dry-run": "1",
-                "x-batchling-cache-hit": "1" if cache_hit else "0",
-            },
-            json={
-                "dry_run": True,
-                "custom_id": request.custom_id,
-                "provider": request.provider.name,
-                "status": "simulated",
-                "cache_hit": cache_hit,
-            },
-        )
 
     async def _poll_batch_once(
         self,
@@ -1712,3 +1688,17 @@ class Batcher:
                 queue_key=queue_key,
                 requests=requests,
             )
+
+        # Wait for in-flight batch submission and resumed poll tasks so close()
+        # leaves the batcher in a stable state for summary/report consumers.
+        while True:
+            pending_batch_tasks = [task for task in self._batch_tasks if not task.done()]
+            if not pending_batch_tasks:
+                break
+            _ = await asyncio.gather(*pending_batch_tasks, return_exceptions=True)
+
+        while True:
+            pending_resumed_tasks = [task for task in self._resumed_poll_tasks if not task.done()]
+            if not pending_resumed_tasks:
+                break
+            _ = await asyncio.gather(*pending_resumed_tasks, return_exceptions=True)
