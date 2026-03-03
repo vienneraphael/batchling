@@ -20,20 +20,21 @@ LiveDisplayMode = t.Literal["auto", "on", "off"]
 
 @dataclass
 class _BatchActivity:
-    """In-memory batch activity snapshot for rendering."""
+    """In-memory batch activity snapshot for progress aggregation."""
 
     batch_id: str
-    provider: str = "-"
-    endpoint: str = "-"
-    model: str = "-"
     size: int = 0
     latest_status: str = "submitted"
+    completed: bool = False
     updated_at: float = 0.0
 
 
 class BatcherRichDisplay:
     """
-    Render sent-batch lifecycle activity through a Rich ``Live`` panel.
+    Render context-level sample progress through a Rich ``Live`` panel.
+
+    Progress is computed from tracked sent batches as:
+    ``sum(size of completed batches) / sum(size of all tracked batches)``.
 
     Parameters
     ----------
@@ -88,33 +89,26 @@ class BatcherRichDisplay:
 
         if batch_id is not None and event_type == "batch_processing":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
             request_count = event.get("request_count")
             if isinstance(request_count, int):
                 batch.size = max(batch.size, request_count)
-            if source == "dry_run":
-                batch.latest_status = "simulated"
-            else:
-                batch.latest_status = "submitted"
+            batch.latest_status = "simulated" if source == "dry_run" else "submitted"
         elif batch_id is not None and event_type == "batch_polled":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
             status = event.get("status")
             if status is not None:
                 batch.latest_status = str(object=status)
         elif batch_id is not None and event_type == "batch_terminal":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
-            status = event.get("status")
-            if status is not None:
-                batch.latest_status = str(object=status)
+            status = str(object=event.get("status", "completed"))
+            batch.latest_status = status
+            batch.completed = self._status_counts_as_completed(status=status)
         elif batch_id is not None and event_type == "batch_failed":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
             batch.latest_status = "failed"
+            batch.completed = False
         elif batch_id is not None and event_type == "cache_hit_routed" and source == "resumed_poll":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
             batch.size += 1
             if batch.latest_status == "submitted":
                 batch.latest_status = "resumed"
@@ -144,64 +138,65 @@ class BatcherRichDisplay:
         return batch
 
     @staticmethod
-    def _update_batch_identity(*, batch: _BatchActivity, event: BatcherEvent) -> None:
+    def _status_counts_as_completed(*, status: str) -> bool:
         """
-        Update provider/endpoint/model metadata from one lifecycle event.
+        Determine whether a terminal status counts as completed samples.
 
         Parameters
         ----------
-        batch : _BatchActivity
-            Mutable batch row.
-        event : BatcherEvent
-            Lifecycle event payload.
+        status : str
+            Terminal provider status.
+
+        Returns
+        -------
+        bool
+            ``True`` when terminal state should contribute to completed samples.
         """
-        provider = event.get("provider")
-        endpoint = event.get("endpoint")
-        model = event.get("model")
-        if provider is not None:
-            batch.provider = str(object=provider)
-        if endpoint is not None:
-            batch.endpoint = str(object=endpoint)
-        if model is not None:
-            batch.model = str(object=model)
+        lowered_status = status.lower()
+        negative_markers = ("fail", "error", "cancel", "expired", "timeout")
+        if any(marker in lowered_status for marker in negative_markers):
+            return False
+        return True
+
+    def _compute_progress(self) -> tuple[int, int, float]:
+        """
+        Compute aggregate context progress from tracked batches.
+
+        Returns
+        -------
+        tuple[int, int, float]
+            ``(completed_samples, total_samples, percent)``.
+        """
+        total_samples = sum(batch.size for batch in self._batches.values())
+        completed_samples = sum(batch.size for batch in self._batches.values() if batch.completed)
+        if total_samples <= 0:
+            return 0, 0, 0.0
+        percent = (completed_samples / total_samples) * 100
+        return completed_samples, total_samples, percent
 
     def _render(self) -> Panel:
         """Build the current Rich panel renderable."""
-        table = self._build_batches_table()
+        table = self._build_progress_table()
         return Panel(
             renderable=table,
-            title="batchling sent batches",
+            title="batchling context progress",
             border_style="cyan",
         )
 
-    def _build_batches_table(self) -> Table:
-        """Build sent-batches activity table."""
-        table = Table(title="Sent Batches", expand=True)
-        table.add_column(header="Batch ID", style="bold")
-        table.add_column(header="Provider")
-        table.add_column(header="Endpoint")
-        table.add_column(header="Model")
-        table.add_column(header="Size", justify="right")
-        table.add_column(header="Latest Status")
+    def _build_progress_table(self) -> Table:
+        """Build aggregate context progress table."""
+        completed_samples, total_samples, percent = self._compute_progress()
 
-        if not self._batches:
-            table.add_row("-", "-", "-", "-", "0", "waiting")
-            return table
+        table = Table(title="Overall Progress", expand=True)
+        table.add_column(header="Completed Samples", justify="right")
+        table.add_column(header="Total Samples", justify="right")
+        table.add_column(header="Completion", justify="right")
 
-        ordered_batches = sorted(
-            self._batches.values(),
-            key=lambda batch: batch.updated_at,
-            reverse=True,
+        table.add_row(
+            str(completed_samples),
+            str(total_samples),
+            f"{percent:.1f}%",
         )
-        for batch in ordered_batches:
-            table.add_row(
-                batch.batch_id,
-                batch.provider,
-                batch.endpoint,
-                batch.model,
-                str(batch.size),
-                batch.latest_status,
-            )
         return table
 
 

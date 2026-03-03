@@ -37,13 +37,12 @@ def test_should_enable_live_display_auto_disabled_in_ci(monkeypatch) -> None:
     assert rich_display.should_enable_live_display(mode="auto") is False
 
 
-def test_batcher_rich_display_shows_sent_batches() -> None:
-    """Test sent-batch table tracks batch metadata and latest status."""
+def test_batcher_rich_display_computes_context_progress() -> None:
+    """Test context progress is derived from completed batch sizes."""
     display = rich_display.BatcherRichDisplay(
         console=Console(file=io.StringIO(), force_terminal=False),
     )
 
-    display.start()
     processing_event: rich_display.BatcherEvent = {
         "event_type": "batch_processing",
         "timestamp": 1.0,
@@ -55,38 +54,47 @@ def test_batcher_rich_display_shows_sent_batches() -> None:
         "request_count": 3,
         "source": "poll_start",
     }
-    polled_event: rich_display.BatcherEvent = {
-        "event_type": "batch_polled",
-        "timestamp": 2.0,
-        "provider": "openai",
-        "batch_id": "batch-1",
-        "status": "running",
-        "source": "active_poll",
-    }
     terminal_event: rich_display.BatcherEvent = {
         "event_type": "batch_terminal",
-        "timestamp": 3.0,
+        "timestamp": 2.0,
         "provider": "openai",
         "batch_id": "batch-1",
         "status": "completed",
         "source": "active_poll",
     }
+    failed_batch_event: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 3.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-2",
+        "request_count": 2,
+        "source": "poll_start",
+    }
+    failed_terminal_event: rich_display.BatcherEvent = {
+        "event_type": "batch_terminal",
+        "timestamp": 4.0,
+        "provider": "openai",
+        "batch_id": "batch-2",
+        "status": "failed",
+        "source": "active_poll",
+    }
 
     display.on_event(processing_event)
-    display.on_event(polled_event)
     display.on_event(terminal_event)
-    display.stop()
+    display.on_event(failed_batch_event)
+    display.on_event(failed_terminal_event)
 
-    batch = display._batches["batch-1"]
-    assert batch.provider == "openai"
-    assert batch.endpoint == "/v1/chat/completions"
-    assert batch.model == "model-a"
-    assert batch.size == 3
-    assert batch.latest_status == "completed"
+    completed_samples, total_samples, percent = display._compute_progress()
+    assert completed_samples == 3
+    assert total_samples == 5
+    assert percent == 60.0
 
 
-def test_batcher_rich_display_tracks_resumed_batch_size() -> None:
-    """Test resumed cache-hit routing increments displayed batch size."""
+def test_batcher_rich_display_tracks_resumed_batch_progress() -> None:
+    """Test resumed cache-hit routing contributes to total and completion."""
     display = rich_display.BatcherRichDisplay(
         console=Console(file=io.StringIO(), force_terminal=False),
     )
@@ -101,10 +109,20 @@ def test_batcher_rich_display_tracks_resumed_batch_size() -> None:
         "source": "resumed_poll",
         "custom_id": "custom-1",
     }
+    terminal_event: rich_display.BatcherEvent = {
+        "event_type": "batch_terminal",
+        "timestamp": 2.0,
+        "provider": "openai",
+        "batch_id": "batch-cached-1",
+        "status": "completed",
+        "source": "resumed_poll",
+    }
 
     display.on_event(cache_event)
     display.on_event(cache_event)
+    display.on_event(terminal_event)
 
-    batch = display._batches["batch-cached-1"]
-    assert batch.size == 2
-    assert batch.latest_status == "resumed"
+    completed_samples, total_samples, percent = display._compute_progress()
+    assert completed_samples == 2
+    assert total_samples == 2
+    assert percent == 100.0

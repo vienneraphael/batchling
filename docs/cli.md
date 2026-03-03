@@ -78,8 +78,8 @@ batchling generate_product_images.py:main --live-display auto
 - `on`: always render the panel
 - `off`: never render the panel
 
-When enabled, the panel shows every sent batch with:
-`batch_id`, `provider`, `endpoint`, `model`, `size`, and latest status.
+When enabled, the panel shows overall context progress:
+`completed_samples / total_samples` and completion percentage.
 
 ## Next Steps
 
