@@ -97,6 +97,9 @@ async with batchify(live_display="on"):
 When enabled, the panel shows context-level progress only:
 `completed_samples / total_samples`, completion percentage, and `Time Elapsed`
 since the first batch seen in the context.
+It also shows request counters and a pending-batches table (`batch_id`,
+`provider`, `endpoint`, `model`, `status`) truncated to 5 rows
+(`top 2`, `...`, `last 2`).
 
 You can now run this script normally using python and start saving money:
 

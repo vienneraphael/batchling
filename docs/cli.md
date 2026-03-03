@@ -81,6 +81,9 @@ batchling generate_product_images.py:main --live-display auto
 When enabled, the panel shows overall context progress:
 `completed_samples / total_samples`, completion percentage, and `Time Elapsed`
 since the first batch seen in the context.
+It also shows request counters and a pending-batches table (`batch_id`,
+`provider`, `endpoint`, `model`, `status`) truncated to 5 rows
+(`top 2`, `...`, `last 2`).
 
 ## Next Steps
 

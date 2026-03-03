@@ -257,3 +257,83 @@ def test_batcher_rich_display_request_metrics_line() -> None:
     assert cached_samples == 2
     assert completed_samples == 5
     assert in_progress_samples == 2
+
+
+def test_batcher_rich_display_pending_batches_table_truncates_with_ellipsis() -> None:
+    """Test pending table shows top2/ellipsis/last2 for more than five rows."""
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    for batch_index in range(1, 7):
+        processing_event: rich_display.BatcherEvent = {
+            "event_type": "batch_processing",
+            "timestamp": float(batch_index),
+            "provider": "openai",
+            "endpoint": f"/v1/endpoint/{batch_index}",
+            "model": f"model-{batch_index}",
+            "queue_key": ("openai", f"/v1/endpoint/{batch_index}", f"model-{batch_index}"),
+            "batch_id": f"batch-{batch_index}",
+            "request_count": batch_index,
+            "source": "poll_start",
+        }
+        display.on_event(processing_event)
+
+    table = display._build_pending_batches_table()
+    batch_id_cells = table.columns[0]._cells
+
+    assert len(batch_id_cells) == 5
+    assert batch_id_cells[0] == "batch-1"
+    assert batch_id_cells[1] == "batch-2"
+    assert batch_id_cells[2] == "..."
+    assert batch_id_cells[3] == "batch-5"
+    assert batch_id_cells[4] == "batch-6"
+
+
+def test_batcher_rich_display_pending_batches_excludes_terminal() -> None:
+    """Test pending table includes only non-terminal batches."""
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    pending_event: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 1.0,
+        "provider": "openai",
+        "endpoint": "/v1/pending",
+        "model": "model-pending",
+        "queue_key": ("openai", "/v1/pending", "model-pending"),
+        "batch_id": "batch-pending",
+        "request_count": 1,
+        "source": "poll_start",
+    }
+    completed_event: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 2.0,
+        "provider": "openai",
+        "endpoint": "/v1/completed",
+        "model": "model-completed",
+        "queue_key": ("openai", "/v1/completed", "model-completed"),
+        "batch_id": "batch-completed",
+        "request_count": 1,
+        "source": "poll_start",
+    }
+    terminal_event: rich_display.BatcherEvent = {
+        "event_type": "batch_terminal",
+        "timestamp": 3.0,
+        "provider": "openai",
+        "batch_id": "batch-completed",
+        "status": "completed",
+        "source": "active_poll",
+    }
+
+    display.on_event(pending_event)
+    display.on_event(completed_event)
+    display.on_event(terminal_event)
+
+    pending_batches = display._get_pending_batches()
+    assert len(pending_batches) == 1
+    assert pending_batches[0].batch_id == "batch-pending"
+
+    pending_line = display._build_pending_batches_line()
+    assert "Pending batches: 1" in pending_line.plain

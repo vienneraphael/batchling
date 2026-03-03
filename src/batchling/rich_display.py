@@ -12,6 +12,7 @@ from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, TextColumn
+from rich.table import Table
 from rich.text import Text
 
 from batchling.core import BatcherEvent
@@ -24,10 +25,14 @@ class _BatchActivity:
     """In-memory batch activity snapshot for progress aggregation."""
 
     batch_id: str
+    provider: str = "-"
+    endpoint: str = "-"
+    model: str = "-"
     size: int = 0
     latest_status: str = "submitted"
     completed: bool = False
     terminal: bool = False
+    created_at: float = 0.0
     updated_at: float = 0.0
 
 
@@ -93,6 +98,7 @@ class BatcherRichDisplay:
 
         if batch_id is not None and event_type == "batch_processing":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
+            self._update_batch_identity(batch=batch, event=event)
             request_count = event.get("request_count")
             if isinstance(request_count, int):
                 batch.size = max(batch.size, request_count)
@@ -100,23 +106,27 @@ class BatcherRichDisplay:
             batch.terminal = False
         elif batch_id is not None and event_type == "batch_polled":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
+            self._update_batch_identity(batch=batch, event=event)
             status = event.get("status")
             if status is not None:
                 batch.latest_status = str(object=status)
             batch.terminal = False
         elif batch_id is not None and event_type == "batch_terminal":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
+            self._update_batch_identity(batch=batch, event=event)
             status = str(object=event.get("status", "completed"))
             batch.latest_status = status
             batch.completed = self._status_counts_as_completed(status=status)
             batch.terminal = True
         elif batch_id is not None and event_type == "batch_failed":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
+            self._update_batch_identity(batch=batch, event=event)
             batch.latest_status = "failed"
             batch.completed = False
             batch.terminal = True
         elif batch_id is not None and event_type == "cache_hit_routed" and source == "resumed_poll":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
+            self._update_batch_identity(batch=batch, event=event)
             batch.size += 1
             self._cached_samples += 1
             if batch.latest_status == "submitted":
@@ -148,12 +158,37 @@ class BatcherRichDisplay:
         now = time.time()
         batch = self._batches.get(batch_id)
         if batch is None:
-            batch = _BatchActivity(batch_id=batch_id)
+            batch = _BatchActivity(
+                batch_id=batch_id,
+                created_at=now,
+            )
             self._batches[batch_id] = batch
             if self._first_batch_created_at is None:
                 self._first_batch_created_at = now
         batch.updated_at = now
         return batch
+
+    @staticmethod
+    def _update_batch_identity(*, batch: _BatchActivity, event: BatcherEvent) -> None:
+        """
+        Update batch metadata from lifecycle event payload.
+
+        Parameters
+        ----------
+        batch : _BatchActivity
+            Mutable batch row.
+        event : BatcherEvent
+            Lifecycle event payload.
+        """
+        provider = event.get("provider")
+        endpoint = event.get("endpoint")
+        model = event.get("model")
+        if provider is not None:
+            batch.provider = str(object=provider)
+        if endpoint is not None:
+            batch.endpoint = str(object=endpoint)
+        if model is not None:
+            batch.model = str(object=model)
 
     @staticmethod
     def _status_counts_as_completed(*, status: str) -> bool:
@@ -245,8 +280,12 @@ class BatcherRichDisplay:
         """Build the current Rich panel renderable."""
         progress_bar = self._build_progress_bar()
         requests_line = self._build_requests_line()
+        pending_batches_line = self._build_pending_batches_line()
+        pending_batches_table = self._build_pending_batches_table()
         return Panel(
-            renderable=Group(progress_bar, requests_line),
+            renderable=Group(
+                progress_bar, requests_line, pending_batches_line, pending_batches_table
+            ),
             title="batchling context progress",
             border_style="cyan",
         )
@@ -310,6 +349,80 @@ class BatcherRichDisplay:
         line.append(text=": ", style="grey70")
         line.append(text=str(object=in_progress_samples), style="bold yellow")
         return line
+
+    def _get_pending_batches(self) -> list[_BatchActivity]:
+        """
+        Return pending (non-terminal) batches sorted by oldest first.
+
+        Returns
+        -------
+        list[_BatchActivity]
+            Sorted pending batches.
+        """
+        pending_batches = [batch for batch in self._batches.values() if not batch.terminal]
+        return sorted(pending_batches, key=lambda batch: batch.created_at)
+
+    def _build_pending_batches_line(self) -> Text:
+        """
+        Build one-line pending batches summary shown above the table.
+
+        Returns
+        -------
+        Text
+            Styled summary line.
+        """
+        pending_count = len(self._get_pending_batches())
+        line = Text()
+        line.append(text="Pending batches", style="bold white")
+        line.append(text=": ", style="white")
+        line.append(text=str(object=pending_count), style="bold yellow")
+        return line
+
+    def _build_pending_batches_table(self) -> Table:
+        """
+        Build pending-batches table with dataframe-style truncation.
+
+        Returns
+        -------
+        Table
+            Pending batches table.
+        """
+        pending_batches = self._get_pending_batches()
+        table = Table(expand=True)
+        table.add_column(header="batch_id", style="bold")
+        table.add_column(header="provider")
+        table.add_column(header="endpoint")
+        table.add_column(header="model")
+        table.add_column(header="status")
+
+        if not pending_batches:
+            table.add_row("-", "-", "-", "-", "-")
+            return table
+
+        display_batches: list[_BatchActivity | None]
+        if len(pending_batches) <= 5:
+            display_batches = [*pending_batches]
+        else:
+            display_batches = [
+                pending_batches[0],
+                pending_batches[1],
+                None,
+                pending_batches[-2],
+                pending_batches[-1],
+            ]
+
+        for batch in display_batches:
+            if batch is None:
+                table.add_row("...", "...", "...", "...", "...")
+                continue
+            table.add_row(
+                batch.batch_id,
+                batch.provider,
+                batch.endpoint,
+                batch.model,
+                batch.latest_status,
+            )
+        return table
 
 
 def should_enable_live_display(*, mode: LiveDisplayMode) -> bool:
