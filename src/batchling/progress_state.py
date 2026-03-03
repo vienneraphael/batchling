@@ -22,6 +22,14 @@ class _TrackedBatch:
     terminal: bool = False
 
 
+@dataclass
+class _DryRunQueueSummary:
+    """Aggregated dry-run counters per queue key."""
+
+    expected_requests: int = 0
+    expected_batches: int = 0
+
+
 class BatchProgressState:
     """
     Track batch lifecycle state and compute shared aggregate metrics.
@@ -221,3 +229,131 @@ class BatchProgressState:
         if any(marker in lowered_status for marker in negative_markers):
             return False
         return True
+
+
+class DryRunSummaryState:
+    """
+    Aggregate dry-run request and batch estimates from lifecycle events.
+
+    Notes
+    -----
+    This state tracks only dry-run relevant counters and is intended to feed
+    a static summary rendered at context teardown.
+    """
+
+    def __init__(self) -> None:
+        self._would_batch_requests_total = 0
+        self._would_cache_requests_total = 0
+        self._queue_counts: dict[tuple[str, str, str], _DryRunQueueSummary] = {}
+
+    def on_event(self, *, event: BatcherEvent) -> None:
+        """
+        Update summary counters using one lifecycle event.
+
+        Parameters
+        ----------
+        event : BatcherEvent
+            Lifecycle event emitted by ``Batcher``.
+        """
+        event_type = str(object=event.get("event_type", "unknown"))
+        source = str(object=event.get("source", ""))
+
+        if event_type == "request_queued":
+            queue_key = self._extract_queue_key(event=event)
+            if queue_key is None:
+                return
+            self._would_batch_requests_total += 1
+            queue_summary = self._queue_counts.setdefault(queue_key, _DryRunQueueSummary())
+            queue_summary.expected_requests += 1
+            return
+
+        if event_type == "batch_processing" and source == "dry_run":
+            queue_key = self._extract_queue_key(event=event)
+            if queue_key is None:
+                return
+            queue_summary = self._queue_counts.setdefault(queue_key, _DryRunQueueSummary())
+            queue_summary.expected_batches += 1
+            return
+
+        if event_type == "cache_hit_routed" and source == "cache_dry_run":
+            self._would_cache_requests_total += 1
+
+    @property
+    def would_batch_requests_total(self) -> int:
+        """
+        Total number of requests that would have been batched.
+
+        Returns
+        -------
+        int
+            Global count of queued requests.
+        """
+        return self._would_batch_requests_total
+
+    @property
+    def would_cache_requests_total(self) -> int:
+        """
+        Total number of dry-run cache-hit requests.
+
+        Returns
+        -------
+        int
+            Global dry-run cache-hit count.
+        """
+        return self._would_cache_requests_total
+
+    def compute_queue_rows(self) -> list[tuple[str, str, str, int, int]]:
+        """
+        Return sorted per-queue dry-run summary rows.
+
+        Returns
+        -------
+        list[tuple[str, str, str, int, int]]
+            Rows formatted as
+            ``(provider, endpoint, model, expected_requests, expected_batches)``.
+        """
+        rows = [
+            (
+                provider,
+                endpoint,
+                model,
+                queue_summary.expected_requests,
+                queue_summary.expected_batches,
+            )
+            for (provider, endpoint, model), queue_summary in self._queue_counts.items()
+        ]
+        return sorted(rows, key=lambda row: (row[0], row[1], row[2]))
+
+    @staticmethod
+    def _extract_queue_key(*, event: BatcherEvent) -> tuple[str, str, str] | None:
+        """
+        Extract queue key from lifecycle event payload.
+
+        Parameters
+        ----------
+        event : BatcherEvent
+            Lifecycle event payload.
+
+        Returns
+        -------
+        tuple[str, str, str] | None
+            Queue key when available.
+        """
+        queue_key = event.get("queue_key")
+        if (
+            isinstance(queue_key, tuple)
+            and len(queue_key) == 3
+            and all(isinstance(part, str) for part in queue_key)
+        ):
+            return queue_key
+
+        provider = event.get("provider")
+        endpoint = event.get("endpoint")
+        model = event.get("model")
+        if provider is None or endpoint is None or model is None:
+            return None
+        return (
+            str(object=provider),
+            str(object=endpoint),
+            str(object=model),
+        )

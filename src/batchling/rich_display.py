@@ -14,7 +14,7 @@ from rich.table import Table
 from rich.text import Text
 
 from batchling.core import BatcherEvent
-from batchling.progress_state import BatchProgressState
+from batchling.progress_state import BatchProgressState, DryRunSummaryState
 
 
 class BatcherRichDisplay:
@@ -302,6 +302,136 @@ class BatcherRichDisplay:
         progress.append(text=f"{percent:.1f}%", style="bold green")
         progress.append(text=")", style="white")
         return progress
+
+
+class DryRunSummaryDisplay:
+    """
+    Render a static Rich report for dry-run planning totals.
+
+    Parameters
+    ----------
+    console : Console | None, optional
+        Rich console to render to. Defaults to ``Console(stderr=True)``.
+    """
+
+    def __init__(
+        self,
+        *,
+        console: Console | None = None,
+    ) -> None:
+        self._console = console or Console(stderr=True)
+        self._summary_state = DryRunSummaryState()
+
+    def on_event(self, event: BatcherEvent) -> None:
+        """
+        Consume one lifecycle event for dry-run summary aggregation.
+
+        Parameters
+        ----------
+        event : BatcherEvent
+            Lifecycle event emitted by ``Batcher``.
+        """
+        self._summary_state.on_event(event=event)
+
+    def print_summary(self) -> None:
+        """Print the static dry-run report panel."""
+        self._console.print(self._render())
+
+    def _render(self) -> Panel:
+        """Build the static dry-run summary panel."""
+        return Panel(
+            renderable=Group(
+                self._build_totals_line(),
+                self._build_queue_summary_table(),
+            ),
+            title="batchling dry run summary",
+            border_style="yellow",
+        )
+
+    def _build_totals_line(self) -> Text:
+        """
+        Build top-level totals line for the dry-run report.
+
+        Returns
+        -------
+        Text
+            Styled totals text.
+        """
+        line = Text()
+        line.append(text="Would Batch", style="grey70")
+        line.append(text=": ", style="grey70")
+        line.append(
+            text=str(object=self._summary_state.would_batch_requests_total),
+            style="bold cyan",
+        )
+        line.append(text="  -  ", style="grey70")
+        line.append(text="Would Cache", style="grey70")
+        line.append(text=": ", style="grey70")
+        line.append(
+            text=str(object=self._summary_state.would_cache_requests_total),
+            style="bold magenta",
+        )
+        return line
+
+    def _build_queue_summary_table(self) -> Table:
+        """
+        Build queue-level dry-run estimate table.
+
+        Returns
+        -------
+        Table
+            Queue estimate table.
+        """
+        queue_rows = self._summary_state.compute_queue_rows()
+        table = Table(expand=False)
+        table.add_column(
+            header="provider",
+            style="bold blue",
+            width=12,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="endpoint",
+            width=34,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="model",
+            style="bold magenta",
+            width=28,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="expected requests",
+            justify="right",
+            width=17,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="expected batches",
+            justify="right",
+            width=16,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+
+        if not queue_rows:
+            table.add_row("-", "-", "-", "0", "0")
+            return table
+
+        for provider, endpoint, model, expected_requests, expected_batches in queue_rows:
+            table.add_row(
+                provider,
+                endpoint,
+                model,
+                str(object=expected_requests),
+                str(object=expected_batches),
+            )
+        return table
 
 
 def should_enable_live_display(*, enabled: bool) -> bool:

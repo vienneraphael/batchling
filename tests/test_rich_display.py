@@ -368,3 +368,93 @@ def test_batcher_rich_display_queue_progress_pads_to_total_width() -> None:
         completed=1,
     )
     assert progress_text.plain == "  1/100 (1.0%)"
+
+
+def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
+    """Test dry-run static summary tracks expected totals and queue estimates."""
+    display = rich_display.DryRunSummaryDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    display.on_event(
+        {
+            "event_type": "request_queued",
+            "provider": "openai",
+            "endpoint": "/v1/chat/completions",
+            "model": "model-a",
+            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+            "custom_id": "1",
+        }
+    )
+    display.on_event(
+        {
+            "event_type": "request_queued",
+            "provider": "openai",
+            "endpoint": "/v1/chat/completions",
+            "model": "model-a",
+            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+            "custom_id": "2",
+        }
+    )
+    display.on_event(
+        {
+            "event_type": "request_queued",
+            "provider": "groq",
+            "endpoint": "/openai/v1/chat/completions",
+            "model": "llama-3.1-8b-instant",
+            "queue_key": ("groq", "/openai/v1/chat/completions", "llama-3.1-8b-instant"),
+            "custom_id": "3",
+        }
+    )
+    display.on_event(
+        {
+            "event_type": "batch_processing",
+            "source": "dry_run",
+            "provider": "openai",
+            "endpoint": "/v1/chat/completions",
+            "model": "model-a",
+            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+            "request_count": 2,
+        }
+    )
+    display.on_event(
+        {
+            "event_type": "batch_processing",
+            "source": "dry_run",
+            "provider": "groq",
+            "endpoint": "/openai/v1/chat/completions",
+            "model": "llama-3.1-8b-instant",
+            "queue_key": ("groq", "/openai/v1/chat/completions", "llama-3.1-8b-instant"),
+            "request_count": 1,
+        }
+    )
+    display.on_event(
+        {
+            "event_type": "cache_hit_routed",
+            "source": "cache_dry_run",
+            "provider": "openai",
+            "endpoint": "/v1/chat/completions",
+            "model": "model-a",
+            "batch_id": "batch-1",
+            "custom_id": "4",
+        }
+    )
+
+    totals_line = display._build_totals_line()
+    assert totals_line.plain == "Would Batch: 3  -  Would Cache: 1"
+
+    queue_table = display._build_queue_summary_table()
+    assert queue_table.columns[0]._cells == ["groq", "openai"]
+    assert queue_table.columns[3]._cells == ["1", "2"]
+    assert queue_table.columns[4]._cells == ["1", "1"]
+
+
+def test_dry_run_summary_display_renders_empty_state() -> None:
+    """Test dry-run summary table defaults to zero row without events."""
+    display = rich_display.DryRunSummaryDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+    queue_table = display._build_queue_summary_table()
+    assert queue_table.columns[0]._cells == ["-"]
+    assert queue_table.columns[3]._cells == ["0"]
+    assert queue_table.columns[4]._cells == ["0"]

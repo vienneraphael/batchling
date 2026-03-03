@@ -13,6 +13,7 @@ from batchling.logging import log_info
 from batchling.progress_state import BatchProgressState
 from batchling.rich_display import (
     BatcherRichDisplay,
+    DryRunSummaryDisplay,
     should_enable_live_display,
 )
 
@@ -87,7 +88,84 @@ class BatchingContext:
         self._self_live_display: BatcherRichDisplay | None = None
         self._self_live_display_heartbeat_task: asyncio.Task[None] | None = None
         self._self_polling_progress_logger: _PollingProgressLogger | None = None
+        self._self_dry_run_summary_display: DryRunSummaryDisplay | None = None
+        self._self_dry_run_summary_printed = False
         self._self_context_token: t.Any | None = None
+
+    def _start_dry_run_summary_listener(self) -> None:
+        """
+        Start dry-run summary listener for static teardown reporting.
+
+        Notes
+        -----
+        Listener errors are downgraded to warnings to avoid breaking batching.
+        """
+        if not self._self_batcher._dry_run:
+            return
+        if self._self_dry_run_summary_display is not None:
+            return
+        try:
+            display = DryRunSummaryDisplay()
+            self._self_batcher._add_event_listener(listener=display.on_event)
+            self._self_dry_run_summary_display = display
+        except Exception as error:
+            warnings.warn(
+                message=f"Failed to start batchling dry-run summary listener: {error}",
+                category=UserWarning,
+                stacklevel=2,
+            )
+
+    def _stop_dry_run_summary_listener(self) -> None:
+        """
+        Stop and unregister the dry-run summary listener.
+
+        Notes
+        -----
+        Listener shutdown errors are downgraded to warnings.
+        """
+        display = self._self_dry_run_summary_display
+        if display is None:
+            return
+        self._self_dry_run_summary_display = None
+        try:
+            self._self_batcher._remove_event_listener(listener=display.on_event)
+        except Exception as error:
+            warnings.warn(
+                message=f"Failed to stop batchling dry-run summary listener: {error}",
+                category=UserWarning,
+                stacklevel=2,
+            )
+
+    def _print_dry_run_summary_once(self) -> None:
+        """
+        Print static dry-run summary report exactly once.
+
+        Notes
+        -----
+        Reporting errors are downgraded to warnings.
+        """
+        display = self._self_dry_run_summary_display
+        if display is None:
+            return
+        if self._self_dry_run_summary_printed:
+            return
+        try:
+            display.print_summary()
+            self._self_dry_run_summary_printed = True
+        except Exception as error:
+            warnings.warn(
+                message=f"Failed to print batchling dry-run summary: {error}",
+                category=UserWarning,
+                stacklevel=2,
+            )
+
+    def _finalize_context_displays(self) -> None:
+        """
+        Stop live display and finalize dry-run reporting/listeners.
+        """
+        self._stop_live_display()
+        self._print_dry_run_summary_once()
+        self._stop_dry_run_summary_listener()
 
     def _start_polling_progress_logger(self) -> None:
         """
@@ -213,6 +291,7 @@ class BatchingContext:
             ``None`` for scoped activation.
         """
         self._self_context_token = active_batcher.set(self._self_batcher)
+        self._start_dry_run_summary_listener()
         self._start_live_display()
         return None
 
@@ -251,18 +330,28 @@ class BatchingContext:
                 category=UserWarning,
                 stacklevel=2,
             )
-            self._stop_live_display()
+            self._finalize_context_displays()
 
-    def _on_sync_close_done(self, _: asyncio.Task[None]) -> None:
+    def _on_sync_close_done(self, close_task: asyncio.Task[None]) -> None:
         """
         Callback run when sync-context close task completes.
 
         Parameters
         ----------
-        _ : asyncio.Task[None]
+        close_task : asyncio.Task[None]
             Completed close task.
         """
-        self._stop_live_display()
+        try:
+            _ = close_task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as error:
+            warnings.warn(
+                message=f"Failed to close batcher in sync context: {error}",
+                category=UserWarning,
+                stacklevel=2,
+            )
+        self._finalize_context_displays()
 
     async def __aenter__(self) -> None:
         """
@@ -274,6 +363,7 @@ class BatchingContext:
             ``None`` for scoped activation.
         """
         self._self_context_token = active_batcher.set(self._self_batcher)
+        self._start_dry_run_summary_listener()
         self._start_live_display()
         return None
 
@@ -301,4 +391,4 @@ class BatchingContext:
         try:
             await self._self_batcher.close()
         finally:
-            self._stop_live_display()
+            self._finalize_context_displays()
