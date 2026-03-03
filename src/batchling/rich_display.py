@@ -302,7 +302,7 @@ class BatcherRichDisplay:
                 text_format=(
                     "[bold green]{task.fields[completed_samples]}[/bold green]/"
                     "[bold cyan]{task.fields[total_samples]}[/bold cyan] "
-                    "([bold yellow]{task.percentage:.1f}%[/bold yellow])"
+                    "([bold green]{task.percentage:.1f}%[/bold green])"
                 )
             ),
             TextColumn(text_format=f"Time Elapsed: [bold magenta]{elapsed_label}[/bold magenta]"),
