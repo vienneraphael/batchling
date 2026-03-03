@@ -235,11 +235,12 @@ class BatcherRichDisplay:
             BarColumn(bar_width=None),
             TextColumn(
                 text_format=(
-                    "{task.fields[completed_samples]}/"
-                    "{task.fields[total_samples]} ({task.percentage:.1f}%)"
+                    "[bold green]{task.fields[completed_samples]}[/bold green]/"
+                    "[bold cyan]{task.fields[total_samples]}[/bold cyan] "
+                    "([bold yellow]{task.percentage:.1f}%[/bold yellow])"
                 )
             ),
-            TextColumn(text_format=f"Time Elapsed: {elapsed_label}"),
+            TextColumn(text_format=f"Time Elapsed: [bold magenta]{elapsed_label}[/bold magenta]"),
             expand=True,
         )
         display_total = max(total_samples, 1)
