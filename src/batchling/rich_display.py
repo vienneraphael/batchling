@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
-from rich.table import Table
+from rich.progress import BarColumn, Progress, TextColumn
 
 from batchling.core import BatcherEvent
 
@@ -176,28 +176,33 @@ class BatcherRichDisplay:
 
     def _render(self) -> Panel:
         """Build the current Rich panel renderable."""
-        table = self._build_progress_table()
+        progress_bar = self._build_progress_bar()
         return Panel(
-            renderable=table,
+            renderable=progress_bar,
             title="batchling context progress",
             border_style="cyan",
         )
 
-    def _build_progress_table(self) -> Table:
-        """Build aggregate context progress table."""
+    def _build_progress_bar(self) -> Progress:
+        """Build aggregate context progress as a Rich progress bar."""
         completed_samples, total_samples, percent = self._compute_progress()
 
-        table = Table(title="Overall Progress", expand=True)
-        table.add_column(header="Completed Samples", justify="right")
-        table.add_column(header="Total Samples", justify="right")
-        table.add_column(header="Completion", justify="right")
-
-        table.add_row(
-            str(completed_samples),
-            str(total_samples),
-            f"{percent:.1f}%",
+        progress = Progress(
+            TextColumn(text_format="[bold]Progress[/bold]"),
+            BarColumn(),
+            TextColumn(text_format="{task.fields[completed_samples]}/{task.fields[total_samples]}"),
+            TextColumn(text_format=f"{percent:.1f}%"),
+            expand=True,
         )
-        return table
+        display_total = max(total_samples, 1)
+        _ = progress.add_task(
+            description="samples",
+            total=display_total,
+            completed=min(completed_samples, display_total),
+            completed_samples=completed_samples,
+            total_samples=total_samples,
+        )
+        return progress
 
 
 def should_enable_live_display(*, mode: LiveDisplayMode) -> bool:
