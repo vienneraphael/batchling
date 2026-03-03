@@ -186,3 +186,74 @@ def test_batcher_rich_display_elapsed_starts_with_cache_batch(monkeypatch) -> No
 
     current_time["value"] = 206.0
     assert display._compute_elapsed_seconds() == 6
+
+
+def test_batcher_rich_display_request_metrics_line() -> None:
+    """Test requests metrics aggregate total/cached/completed/in-progress samples."""
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    processing_event_batch_1: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 1.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-1",
+        "request_count": 3,
+        "source": "poll_start",
+    }
+    terminal_event_batch_1: rich_display.BatcherEvent = {
+        "event_type": "batch_terminal",
+        "timestamp": 2.0,
+        "provider": "openai",
+        "batch_id": "batch-1",
+        "status": "completed",
+        "source": "active_poll",
+    }
+    processing_event_batch_2: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 3.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-2",
+        "request_count": 2,
+        "source": "poll_start",
+    }
+    cache_event_batch_3: rich_display.BatcherEvent = {
+        "event_type": "cache_hit_routed",
+        "timestamp": 4.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "batch_id": "batch-3",
+        "source": "resumed_poll",
+        "custom_id": "custom-1",
+    }
+    terminal_event_batch_3: rich_display.BatcherEvent = {
+        "event_type": "batch_terminal",
+        "timestamp": 5.0,
+        "provider": "openai",
+        "batch_id": "batch-3",
+        "status": "completed",
+        "source": "resumed_poll",
+    }
+
+    display.on_event(processing_event_batch_1)
+    display.on_event(terminal_event_batch_1)
+    display.on_event(processing_event_batch_2)
+    display.on_event(cache_event_batch_3)
+    display.on_event(cache_event_batch_3)
+    display.on_event(terminal_event_batch_3)
+
+    total_samples, cached_samples, completed_samples, in_progress_samples = (
+        display._compute_request_metrics()
+    )
+    assert total_samples == 7
+    assert cached_samples == 2
+    assert completed_samples == 5
+    assert in_progress_samples == 2

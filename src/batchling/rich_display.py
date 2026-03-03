@@ -8,10 +8,11 @@ import time
 import typing as t
 from dataclasses import dataclass
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, TextColumn
+from rich.text import Text
 
 from batchling.core import BatcherEvent
 
@@ -26,6 +27,7 @@ class _BatchActivity:
     size: int = 0
     latest_status: str = "submitted"
     completed: bool = False
+    terminal: bool = False
     updated_at: float = 0.0
 
 
@@ -53,6 +55,7 @@ class BatcherRichDisplay:
         self._console = console or Console(stderr=True)
         self._refresh_per_second = refresh_per_second
         self._batches: dict[str, _BatchActivity] = {}
+        self._cached_samples = 0
         self._first_batch_created_at: float | None = None
         self._live: Live | None = None
 
@@ -94,25 +97,31 @@ class BatcherRichDisplay:
             if isinstance(request_count, int):
                 batch.size = max(batch.size, request_count)
             batch.latest_status = "simulated" if source == "dry_run" else "submitted"
+            batch.terminal = False
         elif batch_id is not None and event_type == "batch_polled":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             status = event.get("status")
             if status is not None:
                 batch.latest_status = str(object=status)
+            batch.terminal = False
         elif batch_id is not None and event_type == "batch_terminal":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             status = str(object=event.get("status", "completed"))
             batch.latest_status = status
             batch.completed = self._status_counts_as_completed(status=status)
+            batch.terminal = True
         elif batch_id is not None and event_type == "batch_failed":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             batch.latest_status = "failed"
             batch.completed = False
+            batch.terminal = True
         elif batch_id is not None and event_type == "cache_hit_routed" and source == "resumed_poll":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             batch.size += 1
+            self._cached_samples += 1
             if batch.latest_status == "submitted":
                 batch.latest_status = "resumed"
+            batch.terminal = False
 
         self.refresh()
 
@@ -183,6 +192,22 @@ class BatcherRichDisplay:
         percent = (completed_samples / total_samples) * 100
         return completed_samples, total_samples, percent
 
+    def _compute_request_metrics(self) -> tuple[int, int, int, int]:
+        """
+        Compute aggregate request counters shown under the progress bar.
+
+        Returns
+        -------
+        tuple[int, int, int, int]
+            ``(total_samples, cached_samples, completed_samples, in_progress_samples)``.
+        """
+        total_samples = sum(batch.size for batch in self._batches.values())
+        completed_samples = sum(batch.size for batch in self._batches.values() if batch.completed)
+        in_progress_samples = sum(
+            batch.size for batch in self._batches.values() if not batch.terminal
+        )
+        return total_samples, self._cached_samples, completed_samples, in_progress_samples
+
     def _compute_elapsed_seconds(self) -> int:
         """
         Compute elapsed seconds since first batch creation in this context.
@@ -219,8 +244,9 @@ class BatcherRichDisplay:
     def _render(self) -> Panel:
         """Build the current Rich panel renderable."""
         progress_bar = self._build_progress_bar()
+        requests_line = self._build_requests_line()
         return Panel(
-            renderable=progress_bar,
+            renderable=Group(progress_bar, requests_line),
             title="batchling context progress",
             border_style="cyan",
         )
@@ -252,6 +278,38 @@ class BatcherRichDisplay:
             total_samples=total_samples,
         )
         return progress
+
+    def _build_requests_line(self) -> Text:
+        """
+        Build one-line request metrics shown under the progress bar.
+
+        Returns
+        -------
+        Text
+            Styled metrics line.
+        """
+        total_samples, cached_samples, completed_samples, in_progress_samples = (
+            self._compute_request_metrics()
+        )
+        line = Text()
+        line.append(text="Requests", style="bold white")
+        line.append(text=": ", style="white")
+        line.append(text="Total", style="grey70")
+        line.append(text=": ", style="grey70")
+        line.append(text=str(object=total_samples), style="bold cyan")
+        line.append(text="  -  ", style="grey70")
+        line.append(text="Cached", style="grey70")
+        line.append(text=": ", style="grey70")
+        line.append(text=str(object=cached_samples), style="bold magenta")
+        line.append(text="  -  ", style="grey70")
+        line.append(text="Completed", style="grey70")
+        line.append(text=": ", style="grey70")
+        line.append(text=str(object=completed_samples), style="bold green")
+        line.append(text="  -  ", style="grey70")
+        line.append(text="In Progress", style="grey70")
+        line.append(text=": ", style="grey70")
+        line.append(text=str(object=in_progress_samples), style="bold yellow")
+        return line
 
 
 def should_enable_live_display(*, mode: LiveDisplayMode) -> bool:
