@@ -96,3 +96,80 @@ async def test_batching_context_without_target(batcher: Batcher, reset_context: 
     async with context as active_target:
         assert active_batcher.get() is batcher
         assert active_target is None
+
+
+@pytest.mark.asyncio
+async def test_batching_context_starts_and_stops_live_display(
+    batcher: Batcher,
+    reset_context: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that async context starts and stops live display listeners."""
+
+    class DummyDisplay:
+        """Simple display stub."""
+
+        def __init__(self) -> None:
+            self.started = False
+            self.stopped = False
+
+        def start(self) -> None:
+            self.started = True
+
+        def stop(self) -> None:
+            self.stopped = True
+
+        def on_event(self, event: dict[str, t.Any]) -> None:
+            del event
+
+    dummy_display = DummyDisplay()
+    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+    context = BatchingContext(
+        batcher=batcher,
+        live_display="on",
+    )
+
+    with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
+        async with context:
+            assert dummy_display.started is True
+        assert dummy_display.stopped is True
+
+
+def test_batching_context_sync_stops_live_display_without_loop(
+    batcher: Batcher,
+    reset_context: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test sync context stops display when no event loop is running."""
+
+    class DummyDisplay:
+        """Simple display stub."""
+
+        def __init__(self) -> None:
+            self.stopped = False
+
+        def start(self) -> None:
+            return None
+
+        def stop(self) -> None:
+            self.stopped = True
+
+        def on_event(self, event: dict[str, t.Any]) -> None:
+            del event
+
+    dummy_display = DummyDisplay()
+    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+
+    context = BatchingContext(
+        batcher=batcher,
+        live_display="on",
+    )
+
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter(action="always")
+        with context:
+            pass
+
+    assert dummy_display.stopped is True

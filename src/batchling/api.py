@@ -8,6 +8,7 @@ from batchling.context import BatchingContext
 from batchling.core import Batcher
 from batchling.hooks import install_hooks
 from batchling.logging import setup_logging
+from batchling.rich_display import LiveDisplayMode
 
 
 def batchify(
@@ -16,6 +17,7 @@ def batchify(
     batch_poll_interval_seconds: float = 10.0,
     dry_run: bool = False,
     cache: bool = True,
+    live_display: LiveDisplayMode = "auto",
 ) -> BatchingContext:
     """
     Context manager used to activate batching for a scoped context.<br>
@@ -37,6 +39,9 @@ def batchify(
     cache : bool, optional
         If ``True``, enable persistent request cache lookups.<br>
         This parameter allows to skip the batch submission and go straight to the polling phase for requests that have already been sent.
+    live_display : {"auto", "on", "off"}, optional
+        Toggle the Rich live panel shown while the context is active.<br>
+        ``"auto"`` enables the panel only in interactive terminals.
 
     Returns
     -------
@@ -65,4 +70,5 @@ def batchify(
     # 3. Return BatchingContext with no yielded target.
     return BatchingContext(
         batcher=batcher,
+        live_display=live_display,
     )
