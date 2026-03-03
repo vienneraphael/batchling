@@ -5,6 +5,7 @@ from typer.testing import CliRunner
 
 import batchling.cli.main as cli_main
 from batchling.cli.main import app
+from batchling.exceptions import DryRunEarlyExit
 
 runner = CliRunner()
 
@@ -206,3 +207,35 @@ def test_run_script_invalid_script_path():
 
     assert result.exit_code == 1
     assert "Script not found" in result.output
+
+
+def test_cli_catches_dry_run_early_exit(tmp_path: Path, monkeypatch) -> None:
+    script_path = tmp_path / "script.py"
+    script_path.write_text("async def foo():\n    return None\n")
+
+    async def raise_dry_run_early_exit(**kwargs) -> None:
+        del kwargs
+        raise DryRunEarlyExit(
+            source="dry_run",
+            provider="openai",
+            endpoint="/v1/chat/completions",
+            model="model-a",
+            batch_id="dryrun-1",
+            custom_id="custom-1",
+        )
+
+    monkeypatch.setattr(
+        cli_main,
+        "run_script_with_batchify",
+        raise_dry_run_early_exit,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            f"{script_path.as_posix()}:foo",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0
