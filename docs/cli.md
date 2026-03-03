@@ -69,14 +69,15 @@ That's it! Just run that command and you save 50% off your workflow.
 The CLI also exposes the live Rich panel control:
 
 ```bash
-batchling generate_product_images.py:main --live-display auto
+batchling generate_product_images.py:main --live-display
 ```
 
-`--live-display` accepts:
+`--live-display` is a boolean flag pair:
 
-- `auto` (default): only in interactive terminals (`TTY`, non-`dumb`, non-`CI`)
-- `on`: always render the panel
-- `off`: never render the panel
+- `--live-display` (default): auto mode, Rich panel only in interactive terminals
+  (`TTY`, non-`dumb`, non-`CI`). If Rich auto-disables, progress is emitted as
+  `INFO` logs on polling events.
+- `--no-live-display`: disable both Rich panel and fallback progress logs.
 
 When enabled, the panel shows overall context progress:
 `completed_samples / total_samples`, completion percentage, and `Time Elapsed`

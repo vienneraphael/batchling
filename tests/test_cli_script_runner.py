@@ -61,7 +61,7 @@ def test_run_script_function_with_positional_and_keyword_args(tmp_path: Path, mo
     }
     assert captured_batchify_kwargs["dry_run"] is True
     assert captured_batchify_kwargs["cache"] is True
-    assert captured_batchify_kwargs["live_display"] == "auto"
+    assert captured_batchify_kwargs["live_display"] is True
 
 
 def test_run_script_with_cache_option(tmp_path: Path, monkeypatch):
@@ -93,10 +93,10 @@ def test_run_script_with_cache_option(tmp_path: Path, monkeypatch):
 
     assert result.exit_code == 0
     assert captured_batchify_kwargs["cache"] is False
-    assert captured_batchify_kwargs["live_display"] == "auto"
+    assert captured_batchify_kwargs["live_display"] is True
 
 
-def test_run_script_with_live_display_option(tmp_path: Path, monkeypatch):
+def test_run_script_with_no_live_display_option(tmp_path: Path, monkeypatch):
     script_path = tmp_path / "script.py"
     script_path.write_text(
         "\n".join(
@@ -119,13 +119,12 @@ def test_run_script_with_live_display_option(tmp_path: Path, monkeypatch):
         app,
         [
             f"{script_path.as_posix()}:foo",
-            "--live-display",
-            "off",
+            "--no-live-display",
         ],
     )
 
     assert result.exit_code == 0
-    assert captured_batchify_kwargs["live_display"] == "off"
+    assert captured_batchify_kwargs["live_display"] is False
 
 
 def test_batch_size_flag_scope_for_cli_and_target_function(tmp_path: Path, monkeypatch):

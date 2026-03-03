@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 import time
-import typing as t
 from dataclasses import dataclass
 
 from rich.console import Console, Group
@@ -16,8 +15,6 @@ from rich.table import Table
 from rich.text import Text
 
 from batchling.core import BatcherEvent
-
-LiveDisplayMode = t.Literal["auto", "on", "off"]
 
 
 @dataclass
@@ -425,23 +422,21 @@ class BatcherRichDisplay:
         return table
 
 
-def should_enable_live_display(*, mode: LiveDisplayMode) -> bool:
+def should_enable_live_display(*, enabled: bool) -> bool:
     """
     Resolve if the Rich live panel should be enabled.
 
     Parameters
     ----------
-    mode : LiveDisplayMode
-        Desired display mode.
+    enabled : bool
+        Requested live display toggle.
 
     Returns
     -------
     bool
         ``True`` when the live panel should run.
     """
-    if mode == "on":
-        return True
-    if mode == "off":
+    if not enabled:
         return False
 
     stderr_stream = sys.stderr

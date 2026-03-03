@@ -20,7 +20,7 @@ def test_should_enable_live_display_auto_in_interactive_terminal(
     monkeypatch.setenv("TERM", "xterm-256color")
     monkeypatch.delenv("CI", raising=False)
 
-    assert rich_display.should_enable_live_display(mode="auto") is True
+    assert rich_display.should_enable_live_display(enabled=True) is True
 
 
 def test_should_enable_live_display_auto_disabled_in_ci(monkeypatch) -> None:
@@ -34,7 +34,21 @@ def test_should_enable_live_display_auto_disabled_in_ci(monkeypatch) -> None:
     monkeypatch.setenv("TERM", "xterm-256color")
     monkeypatch.setenv("CI", "true")
 
-    assert rich_display.should_enable_live_display(mode="auto") is False
+    assert rich_display.should_enable_live_display(enabled=True) is False
+
+
+def test_should_enable_live_display_disabled_by_flag(monkeypatch) -> None:
+    """Test explicit disable always returns False."""
+
+    class DummyStderr:
+        def isatty(self) -> bool:
+            return True
+
+    monkeypatch.setattr(rich_display.sys, "stderr", DummyStderr())
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.delenv("CI", raising=False)
+
+    assert rich_display.should_enable_live_display(enabled=False) is False
 
 
 def test_batcher_rich_display_computes_context_progress() -> None:

@@ -81,18 +81,19 @@ That's it! Update three lines of code and you save 50% off your workflow.
 
 ## Live visibility panel
 
-You can enable a Rich live panel while the context is active:
+You can toggle live visibility behavior while the context is active:
 
 ```py
-async with batchify(live_display="on"):
+async with batchify(live_display=True):
     generated_images = await asyncio.gather(*tasks)
 ```
 
-`live_display` accepts:
+`live_display` accepts a boolean:
 
-- `auto` (default): only in interactive terminals (`TTY`, non-`dumb`, non-`CI`)
-- `on`: always render the panel
-- `off`: never render the panel
+- `True` (default): auto mode, Rich panel only in interactive terminals
+  (`TTY`, non-`dumb`, non-`CI`). If Rich auto-disables, progress is emitted as
+  `INFO` logs on polling events.
+- `False`: disable both Rich panel and fallback progress logs.
 
 When enabled, the panel shows context-level progress only:
 `completed_samples / total_samples`, completion percentage, and `Time Elapsed`

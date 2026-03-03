@@ -26,9 +26,12 @@ yields `None`. Import it from `batchling`.
 - **`cache` behavior**: when `cache=True` (default), intercepted requests are fingerprinted
   and looked up in a persistent request cache. Cache hits bypass queueing and resume polling
   from an existing provider batch when not in dry-run mode.
-- **`live_display` behavior**: `live_display` accepts `auto`, `on`, or `off`.
-  In `auto`, the Rich panel is enabled only when `stderr` is a TTY, terminal
-  is not `dumb`, and `CI` is not set.
+- **`live_display` behavior**: `live_display` is a boolean.
+  When `True` (default), Rich panel rendering runs in auto mode and is enabled
+  only when `stderr` is a TTY, terminal is not `dumb`, and `CI` is not set.
+  If auto mode disables Rich, context-level progress is logged at `INFO` on
+  polling events.
+  When `False`, live display and fallback progress logs are both disabled.
 - **Outputs**: `BatchingContext[None]` instance that yields `None`.
 - **Logging**: lifecycle milestones are emitted at `INFO`, problems at
   `WARNING`/`ERROR`, and high-volume diagnostics at `DEBUG`. Request payloads

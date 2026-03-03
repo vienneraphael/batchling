@@ -3,6 +3,7 @@ Tests for the BatchingContext class in batchling.context.
 """
 
 import asyncio
+import logging
 import typing as t
 import warnings
 from unittest.mock import AsyncMock, patch
@@ -127,7 +128,7 @@ async def test_batching_context_starts_and_stops_live_display(
     monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
     context = BatchingContext(
         batcher=batcher,
-        live_display="on",
+        live_display=True,
     )
 
     with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
@@ -167,7 +168,7 @@ def test_batching_context_sync_stops_live_display_without_loop(
 
     context = BatchingContext(
         batcher=batcher,
-        live_display="on",
+        live_display=True,
     )
 
     with warnings.catch_warnings(record=True):
@@ -177,3 +178,41 @@ def test_batching_context_sync_stops_live_display_without_loop(
 
     assert dummy_display.stopped is True
     assert context._self_live_display_heartbeat_task is None
+
+
+def test_batching_context_uses_polling_progress_fallback_when_auto_disabled(
+    batcher: Batcher,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test live-display fallback logs progress at poll time when Rich is disabled."""
+    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: False)
+    context = BatchingContext(
+        batcher=batcher,
+        live_display=True,
+    )
+
+    caplog.set_level(level=logging.INFO, logger="batchling.context")
+
+    context._start_live_display()
+    assert context._self_live_display is None
+    assert context._self_polling_progress_logger is not None
+    assert any("using polling progress INFO logs" in record.message for record in caplog.records)
+
+    batcher._emit_event(
+        event_type="batch_processing",
+        batch_id="batch-1",
+        request_count=4,
+        source="poll_start",
+    )
+    batcher._emit_event(
+        event_type="batch_polled",
+        batch_id="batch-1",
+        status="in_progress",
+        source="active_poll",
+    )
+
+    assert any("Live display fallback progress" in record.message for record in caplog.records)
+
+    context._stop_live_display()
+    assert context._self_polling_progress_logger is None

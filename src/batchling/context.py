@@ -3,16 +3,144 @@ Context manager returned by ``batchify``.
 """
 
 import asyncio
+import logging
 import typing as t
 import warnings
+from dataclasses import dataclass
 
-from batchling.core import Batcher
+from batchling.core import Batcher, BatcherEvent
 from batchling.hooks import active_batcher
+from batchling.logging import log_info
 from batchling.rich_display import (
     BatcherRichDisplay,
-    LiveDisplayMode,
     should_enable_live_display,
 )
+
+log = logging.getLogger(name=__name__)
+
+
+@dataclass
+class _ProgressLogBatchState:
+    """Aggregate state used by the polling progress logger fallback."""
+
+    size: int = 0
+    completed: bool = False
+    terminal: bool = False
+
+
+class _PollingProgressLogger:
+    """INFO logger fallback used when Rich live display auto-disables."""
+
+    def __init__(self) -> None:
+        self._state_by_batch_id: dict[str, _ProgressLogBatchState] = {}
+
+    @staticmethod
+    def _status_counts_as_completed(*, status: str) -> bool:
+        """
+        Determine whether a terminal status counts as completed samples.
+
+        Parameters
+        ----------
+        status : str
+            Terminal provider status.
+
+        Returns
+        -------
+        bool
+            ``True`` when terminal state should contribute to completed samples.
+        """
+        lowered_status = status.lower()
+        negative_markers = ("fail", "error", "cancel", "expired", "timeout")
+        if any(marker in lowered_status for marker in negative_markers):
+            return False
+        return True
+
+    def _compute_progress(self) -> tuple[int, int, float, int]:
+        """
+        Compute aggregate sample progress from tracked batch states.
+
+        Returns
+        -------
+        tuple[int, int, float, int]
+            ``(completed_samples, total_samples, percent, in_progress_samples)``.
+        """
+        total_samples = sum(state.size for state in self._state_by_batch_id.values())
+        completed_samples = sum(
+            state.size for state in self._state_by_batch_id.values() if state.completed
+        )
+        in_progress_samples = sum(
+            state.size for state in self._state_by_batch_id.values() if not state.terminal
+        )
+        if total_samples <= 0:
+            return 0, 0, 0.0, in_progress_samples
+        percent = (completed_samples / total_samples) * 100.0
+        return completed_samples, total_samples, percent, in_progress_samples
+
+    def _get_or_create_batch_state(self, *, batch_id: str) -> _ProgressLogBatchState:
+        """
+        Get or create progress state for one batch.
+
+        Parameters
+        ----------
+        batch_id : str
+            Provider batch identifier.
+
+        Returns
+        -------
+        _ProgressLogBatchState
+            Mutable batch state.
+        """
+        state = self._state_by_batch_id.get(batch_id)
+        if state is None:
+            state = _ProgressLogBatchState()
+            self._state_by_batch_id[batch_id] = state
+        return state
+
+    def on_event(self, event: BatcherEvent) -> None:
+        """
+        Consume one lifecycle event and log progress on poll events.
+
+        Parameters
+        ----------
+        event : BatcherEvent
+            Lifecycle event emitted by ``Batcher``.
+        """
+        event_type = str(object=event.get("event_type", "unknown"))
+        batch_id = event.get("batch_id")
+        if batch_id is not None:
+            state = self._get_or_create_batch_state(batch_id=str(object=batch_id))
+            if event_type == "batch_processing":
+                request_count = event.get("request_count")
+                if isinstance(request_count, int):
+                    state.size = max(state.size, request_count)
+                state.terminal = False
+            elif event_type == "cache_hit_routed" and str(object=event.get("source", "")) == (
+                "resumed_poll"
+            ):
+                state.size += 1
+                state.terminal = False
+            elif event_type == "batch_terminal":
+                status = str(object=event.get("status", "completed"))
+                state.completed = self._status_counts_as_completed(status=status)
+                state.terminal = True
+            elif event_type == "batch_failed":
+                state.completed = False
+                state.terminal = True
+
+        if event_type != "batch_polled":
+            return
+
+        completed_samples, total_samples, percent, in_progress_samples = self._compute_progress()
+        log_info(
+            logger=log,
+            event="Live display fallback progress",
+            batch_id=event.get("batch_id"),
+            status=event.get("status"),
+            completed_samples=completed_samples,
+            total_samples=total_samples,
+            percent=f"{percent:.1f}",
+            in_progress_samples=in_progress_samples,
+        )
 
 
 class BatchingContext:
@@ -23,15 +151,15 @@ class BatchingContext:
     ----------
     batcher : Batcher
         Batcher instance used for the scope of the context manager.
-    live_display : LiveDisplayMode, optional
-        Live display mode used when entering the context.
+    live_display : bool, optional
+        Whether to enable auto live display behavior for the context.
     """
 
     def __init__(
         self,
         *,
         batcher: "Batcher",
-        live_display: LiveDisplayMode = "auto",
+        live_display: bool = True,
     ) -> None:
         """
         Initialize the context manager.
@@ -40,14 +168,43 @@ class BatchingContext:
         ----------
         batcher : Batcher
             Batcher instance used for the scope of the context manager.
-        live_display : LiveDisplayMode, optional
-            Live display mode used when entering the context.
+        live_display : bool, optional
+            Whether to enable auto live display behavior for the context.
         """
         self._self_batcher = batcher
-        self._self_live_display_mode = live_display
+        self._self_live_display_enabled = live_display
         self._self_live_display: BatcherRichDisplay | None = None
         self._self_live_display_heartbeat_task: asyncio.Task[None] | None = None
+        self._self_polling_progress_logger: _PollingProgressLogger | None = None
         self._self_context_token: t.Any | None = None
+
+    def _start_polling_progress_logger(self) -> None:
+        """
+        Start the INFO polling progress fallback listener.
+
+        Notes
+        -----
+        Fallback listener errors are downgraded to warnings.
+        """
+        if self._self_polling_progress_logger is not None:
+            return
+        try:
+            listener = _PollingProgressLogger()
+            self._self_batcher._add_event_listener(listener=listener.on_event)
+            self._self_polling_progress_logger = listener
+            log_info(
+                logger=log,
+                event=(
+                    "Live display disabled by terminal auto-detection; "
+                    "using polling progress INFO logs"
+                ),
+            )
+        except Exception as error:
+            warnings.warn(
+                message=f"Failed to start batchling polling progress logs: {error}",
+                category=UserWarning,
+                stacklevel=2,
+            )
 
     def _start_live_display(self) -> None:
         """
@@ -57,9 +214,12 @@ class BatchingContext:
         -----
         Display errors are downgraded to warnings to avoid breaking batching.
         """
-        if self._self_live_display is not None:
+        if self._self_live_display is not None or self._self_polling_progress_logger is not None:
             return
-        if not should_enable_live_display(mode=self._self_live_display_mode):
+        if not self._self_live_display_enabled:
+            return
+        if not should_enable_live_display(enabled=self._self_live_display_enabled):
+            self._start_polling_progress_logger()
             return
         try:
             display = BatcherRichDisplay()
@@ -109,17 +269,22 @@ class BatchingContext:
         -----
         Display shutdown errors are downgraded to warnings.
         """
-        if self._self_live_display is None:
-            return
         display = self._self_live_display
+        fallback_listener = self._self_polling_progress_logger
+        if display is None and fallback_listener is None:
+            return
         self._self_live_display = None
+        self._self_polling_progress_logger = None
         heartbeat_task = self._self_live_display_heartbeat_task
         self._self_live_display_heartbeat_task = None
         if heartbeat_task is not None and not heartbeat_task.done():
             heartbeat_task.cancel()
         try:
-            self._self_batcher._remove_event_listener(listener=display.on_event)
-            display.stop()
+            if display is not None:
+                self._self_batcher._remove_event_listener(listener=display.on_event)
+                display.stop()
+            if fallback_listener is not None:
+                self._self_batcher._remove_event_listener(listener=fallback_listener.on_event)
         except Exception as error:
             warnings.warn(
                 message=f"Failed to stop batchling live display: {error}",

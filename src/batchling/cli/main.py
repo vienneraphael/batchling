@@ -7,7 +7,6 @@ from pathlib import Path
 import typer
 
 from batchling import batchify
-from batchling.rich_display import LiveDisplayMode
 
 # syncify = lambda f: wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
@@ -76,7 +75,7 @@ async def run_script_with_batchify(
     batch_poll_interval_seconds: float,
     dry_run: bool,
     cache: bool,
-    live_display: LiveDisplayMode,
+    live_display: bool,
 ) -> None:
     """
     Execute a Python script under a batchify context.
@@ -99,8 +98,8 @@ async def run_script_with_batchify(
         Dry run mode passed to ``batchify``.
     cache : bool
         Cache mode passed to ``batchify``.
-    live_display : {"auto", "on", "off"}
-        Live display mode passed to ``batchify``.
+    live_display : bool
+        Live display toggle passed to ``batchify``.
     """
     if not module_path.exists():
         typer.echo(f"Script not found: {module_path}")
@@ -161,14 +160,15 @@ def main(
         typer.Option("--cache/--no-cache", help="Enable persistent request caching"),
     ] = True,
     live_display: t.Annotated[
-        LiveDisplayMode,
+        bool,
         typer.Option(
+            "--live-display/--no-live-display",
             help=(
-                "Show the live Rich panel: auto (interactive terminals only), "
-                "on (always), off (never)"
-            )
+                "Enable auto live display. When disabled by terminal auto-detection, "
+                "fallback polling progress is logged at INFO."
+            ),
         ),
-    ] = "auto",
+    ] = True,
 ):
     """Run a script under ``batchify``."""
     try:

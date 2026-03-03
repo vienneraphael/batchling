@@ -17,8 +17,9 @@ a context variable.
 2. `__enter__`/`__aenter__` set the active batcher for the entire context block.
 3. `__exit__` resets the context and schedules `batcher.close()` if an event loop is
    running (otherwise it warns).
-4. If `live_display` is enabled, the context registers a lifecycle listener and starts
-   the Rich panel at enter-time.
+4. If `live_display=True`, the context attempts to start Rich panel rendering at
+   enter-time when terminal auto-detection passes (`TTY`, non-`dumb`, non-`CI`).
+   Otherwise it registers an `INFO` logging fallback that emits progress at poll-time.
 5. `__aexit__` resets the context and awaits `batcher.close()` to flush pending work.
 6. The live display listener is removed and the panel is stopped when context cleanup
    finishes.
