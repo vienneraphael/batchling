@@ -79,36 +79,6 @@ async def main():
 
 That's it! Update three lines of code and you save 50% off your workflow.
 
-## Live visibility panel
-
-You can toggle live visibility behavior while the context is active:
-
-```py
-async with batchify(live_display=True):
-    generated_images = await asyncio.gather(*tasks)
-```
-
-`live_display` accepts a boolean:
-
-- `True` (default): auto mode, Rich panel only in interactive terminals
-  (`TTY`, non-`dumb`, non-`CI`). If Rich auto-disables, progress is emitted as
-  `INFO` logs on polling events.
-- `False`: disable both Rich panel and fallback progress logs.
-
-When enabled, the panel shows context-level progress only:
-`completed_samples / total_samples`, completion percentage, and `Time Elapsed`
-since the first batch seen in the context.
-It also shows request counters and a queue summary table with one row per
-`(provider, endpoint, model)`, including `progress` as
-`completed/total (percentage)` where `completed` is terminal batches and
-`total` is `running + completed`.
-
-You can now run this script normally using python and start saving money:
-
-```bash
-python generate_product_images.py
-```
-
 ## Next Steps
 
 If you haven't yet, look at how you can:
