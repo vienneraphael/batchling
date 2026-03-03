@@ -31,6 +31,59 @@ ResumedBatchKey = tuple[str, str, str]
 CACHE_RETENTION_SECONDS = 30 * 24 * 60 * 60
 
 
+class BatcherEvent(t.TypedDict, total=False):
+    """
+    Lifecycle event emitted by ``Batcher`` for optional observers.
+
+    event_type : str
+        Event identifier.
+    timestamp : float
+        Event timestamp in UNIX seconds.
+    provider : str
+        Provider name.
+    endpoint : str
+        Request endpoint.
+    model : str
+        Request model.
+    queue_key : QueueKey
+        Queue identifier.
+    batch_id : str
+        Provider batch identifier.
+    status : str
+        Provider batch status.
+    request_count : int
+        Number of requests in the event scope.
+    pending_count : int
+        Current queue pending size.
+    custom_id : str
+        Custom request identifier.
+    source : str
+        Event source subsystem.
+    error : str
+        Error text.
+    missing_count : int
+        Number of missing results.
+    """
+
+    event_type: str
+    timestamp: float
+    provider: str
+    endpoint: str
+    model: str
+    queue_key: QueueKey
+    batch_id: str
+    status: str
+    request_count: int
+    pending_count: int
+    custom_id: str
+    source: str
+    error: str
+    missing_count: int
+
+
+BatcherEventListener = t.Callable[[BatcherEvent], None]
+
+
 @dataclass
 class _PendingRequest:
     # FIXME: _PendingRequest can use a generic type to match any request from:
@@ -135,6 +188,7 @@ class Batcher:
         self._resumed_poll_tasks: set[asyncio.Task[None]] = set()
         self._resumed_batches: dict[ResumedBatchKey, _ResumedBatch] = {}
         self._resumed_lock = asyncio.Lock()
+        self._event_listeners: set[BatcherEventListener] = set()
 
         self._cache_store: RequestCacheStore | None = None
         if self._cache_enabled:
@@ -162,6 +216,73 @@ class Batcher:
                 self._cache_store.path.as_posix() if self._cache_store is not None else None
             ),
         )
+
+    def _add_event_listener(
+        self,
+        *,
+        listener: BatcherEventListener,
+    ) -> None:
+        """
+        Register a listener receiving batch lifecycle events.
+
+        Parameters
+        ----------
+        listener : BatcherEventListener
+            Observer callback.
+        """
+        self._event_listeners.add(listener)
+
+    def _remove_event_listener(
+        self,
+        *,
+        listener: BatcherEventListener,
+    ) -> None:
+        """
+        Unregister a previously registered lifecycle listener.
+
+        Parameters
+        ----------
+        listener : BatcherEventListener
+            Observer callback.
+        """
+        self._event_listeners.discard(listener)
+
+    def _emit_event(
+        self,
+        *,
+        event_type: str,
+        **payload: t.Any,
+    ) -> None:
+        """
+        Emit a lifecycle event to all registered listeners.
+
+        Parameters
+        ----------
+        event_type : str
+            Event identifier.
+        **payload : typing.Any
+            Event payload.
+        """
+        if not self._event_listeners:
+            return
+        event = t.cast(
+            typ=BatcherEvent,
+            val={
+                "event_type": event_type,
+                "timestamp": time.time(),
+                **payload,
+            },
+        )
+        for listener in list(self._event_listeners):
+            try:
+                listener(event)
+            except Exception as error:
+                log_debug(
+                    logger=log,
+                    event="Batcher event listener failed",
+                    listener=repr(listener),
+                    error=str(object=error),
+                )
 
     @staticmethod
     def _format_queue_key(*, queue_key: QueueKey) -> str:
@@ -353,6 +474,16 @@ class Batcher:
             batch_id=cache_entry.batch_id,
             custom_id=cache_entry.custom_id,
         )
+        cache_source = "cache_dry_run" if self._dry_run else "resumed_poll"
+        self._emit_event(
+            event_type="cache_hit_routed",
+            provider=provider_name,
+            endpoint=endpoint,
+            model=model_name,
+            batch_id=cache_entry.batch_id,
+            custom_id=cache_entry.custom_id,
+            source=cache_source,
+        )
         if self._dry_run:
             dry_run_request = _PendingRequest(
                 custom_id=cache_entry.custom_id,
@@ -401,6 +532,15 @@ class Batcher:
             queue = self._pending_by_provider.setdefault(queue_key, [])
             queue.append(request)
             pending_count = len(queue)
+            self._emit_event(
+                event_type="request_queued",
+                provider=queue_key[0],
+                endpoint=queue_key[1],
+                model=queue_key[2],
+                queue_key=queue_key,
+                pending_count=pending_count,
+                custom_id=request.custom_id,
+            )
 
             if pending_count == 1:
                 self._window_tasks[queue_key] = asyncio.create_task(
@@ -610,7 +750,6 @@ class Batcher:
                     future=future,
                 )
             )
-
         if should_start_poller:
             task = asyncio.create_task(
                 coro=self._poll_cached_batch(resume_key=resume_key),
@@ -686,6 +825,15 @@ class Batcher:
                 queue_key=queue_name,
                 error=str(object=e),
             )
+            self._emit_event(
+                event_type="window_timer_error",
+                provider=provider_name,
+                endpoint=queue_endpoint,
+                model=model_name,
+                queue_key=queue_key,
+                error=str(object=e),
+                source="window_timer",
+            )
             await self._fail_pending_provider_requests(
                 queue_key=queue_key,
                 error=e,
@@ -720,6 +868,14 @@ class Batcher:
             queue_endpoint=queue_endpoint,
             model=model_name,
             queue_key=queue_name,
+            request_count=len(requests),
+        )
+        self._emit_event(
+            event_type="batch_submitting",
+            provider=provider_name,
+            endpoint=queue_endpoint,
+            model=model_name,
+            queue_key=queue_key,
             request_count=len(requests),
         )
         task = asyncio.create_task(
@@ -876,6 +1032,16 @@ class Batcher:
         try:
             if self._dry_run:
                 dry_run_batch_id = f"dryrun-{uuid.uuid4()}"
+                self._emit_event(
+                    event_type="batch_processing",
+                    provider=provider.name,
+                    endpoint=queue_endpoint,
+                    model=model_name,
+                    queue_key=queue_key,
+                    request_count=len(requests),
+                    batch_id=dry_run_batch_id,
+                    source="dry_run",
+                )
                 active_batch = _ActiveBatch(
                     batch_id=dry_run_batch_id,
                     output_file_id="",
@@ -900,6 +1066,17 @@ class Batcher:
                     batch_id=dry_run_batch_id,
                     request_count=len(requests),
                 )
+                self._emit_event(
+                    event_type="batch_terminal",
+                    provider=provider.name,
+                    endpoint=queue_endpoint,
+                    model=model_name,
+                    queue_key=queue_key,
+                    request_count=len(requests),
+                    batch_id=dry_run_batch_id,
+                    status="simulated",
+                    source="dry_run",
+                )
                 return
 
             log_info(
@@ -911,10 +1088,29 @@ class Batcher:
                 queue_key=queue_name,
                 request_count=len(requests),
             )
+            self._emit_event(
+                event_type="batch_processing",
+                provider=provider.name,
+                endpoint=queue_endpoint,
+                model=model_name,
+                queue_key=queue_key,
+                request_count=len(requests),
+                source="submit",
+            )
             batch_submission = await provider.process_batch(
                 requests=requests,
                 client_factory=self._client_factory,
                 queue_key=queue_key,
+            )
+            self._emit_event(
+                event_type="batch_processing",
+                provider=provider.name,
+                endpoint=queue_endpoint,
+                model=model_name,
+                queue_key=queue_key,
+                request_count=len(requests),
+                batch_id=batch_submission.batch_id,
+                source="poll_start",
             )
             self._write_cache_entries(
                 queue_key=queue_key,
@@ -946,6 +1142,15 @@ class Batcher:
                 queue_endpoint=queue_endpoint,
                 model=model_name,
                 queue_key=queue_name,
+                error=str(object=e),
+            )
+            self._emit_event(
+                event_type="batch_failed",
+                provider=provider_name,
+                endpoint=queue_endpoint,
+                model=model_name,
+                queue_key=queue_key,
+                request_count=len(requests),
                 error=str(object=e),
             )
             for req in requests:
@@ -1056,6 +1261,13 @@ class Batcher:
                 api_headers=api_headers,
                 batch_id=active_batch.batch_id,
             )
+            self._emit_event(
+                event_type="batch_polled",
+                provider=provider.name,
+                batch_id=active_batch.batch_id,
+                status=poll_snapshot.status,
+                source="active_poll",
+            )
             active_batch.output_file_id = poll_snapshot.output_file_id
             active_batch.error_file_id = poll_snapshot.error_file_id
 
@@ -1066,6 +1278,13 @@ class Batcher:
                     provider=provider.name,
                     batch_id=active_batch.batch_id,
                     status=poll_snapshot.status,
+                )
+                self._emit_event(
+                    event_type="batch_terminal",
+                    provider=provider.name,
+                    batch_id=active_batch.batch_id,
+                    status=poll_snapshot.status,
+                    source="active_poll",
                 )
                 await self._resolve_batch_results(
                     base_url=base_url,
@@ -1105,7 +1324,21 @@ class Batcher:
                     api_headers=resumed_batch.api_headers,
                     batch_id=batch_id,
                 )
+                self._emit_event(
+                    event_type="batch_polled",
+                    provider=provider.name,
+                    batch_id=batch_id,
+                    status=poll_snapshot.status,
+                    source="resumed_poll",
+                )
                 if poll_snapshot.status in provider.batch_terminal_states:
+                    self._emit_event(
+                        event_type="batch_terminal",
+                        provider=provider.name,
+                        batch_id=batch_id,
+                        status=poll_snapshot.status,
+                        source="resumed_poll",
+                    )
                     await self._resolve_cached_batch_results(
                         resume_key=resume_key,
                         output_file_id=poll_snapshot.output_file_id,
@@ -1117,6 +1350,13 @@ class Batcher:
         except asyncio.CancelledError:
             raise
         except Exception as error:
+            self._emit_event(
+                event_type="batch_failed",
+                provider=provider.name,
+                batch_id=batch_id,
+                error=str(object=error),
+                source="resumed_poll",
+            )
             await self._fail_resumed_batch_requests(
                 resume_key=resume_key,
                 error=error,
@@ -1199,6 +1439,12 @@ class Batcher:
                     pending.future.set_result(resolved_response)
 
         if missing_hashes:
+            self._emit_event(
+                event_type="missing_results",
+                batch_id=batch_id,
+                missing_count=len(missing_hashes),
+                source="resumed_results",
+            )
             _ = self._invalidate_cache_hashes(request_hashes=missing_hashes)
 
     async def _fail_resumed_batch_requests(
@@ -1405,6 +1651,12 @@ class Batcher:
             batch_id=active_batch.batch_id,
             missing_count=len(missing),
         )
+        self._emit_event(
+            event_type="missing_results",
+            batch_id=active_batch.batch_id,
+            missing_count=len(missing),
+            source="results",
+        )
         error = RuntimeError(f"Missing results for {len(missing)} request(s)")
         for custom_id in missing:
             pending = active_batch.requests.get(custom_id)
@@ -1446,6 +1698,15 @@ class Batcher:
                 model=model_name,
                 queue_key=queue_name,
                 request_count=len(requests),
+            )
+            self._emit_event(
+                event_type="final_flush_submitting",
+                provider=provider_name,
+                endpoint=queue_endpoint,
+                model=model_name,
+                queue_key=queue_key,
+                request_count=len(requests),
+                source="close",
             )
             await self._submit_requests(
                 queue_key=queue_key,
