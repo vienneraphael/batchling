@@ -9,7 +9,7 @@ yields `None`. Import it from `batchling`.
 - Install HTTP hooks once (idempotent).
 - Construct a `Batcher` with configuration such as `batch_size`,
   `batch_window_seconds`, `batch_poll_interval_seconds`, `dry_run`,
-  and `cache`.
+  `cache`, and `live_display`.
 - Configure `batchling` logging defaults with Python's stdlib `logging`
   (`WARNING` by default).
 - Return a `BatchingContext` to scope batching to a context manager.
@@ -26,6 +26,9 @@ yields `None`. Import it from `batchling`.
 - **`cache` behavior**: when `cache=True` (default), intercepted requests are fingerprinted
   and looked up in a persistent request cache. Cache hits bypass queueing and resume polling
   from an existing provider batch when not in dry-run mode.
+- **`live_display` behavior**: `live_display` accepts `auto`, `on`, or `off`.
+  In `auto`, the Rich panel is enabled only when `stderr` is a TTY, terminal
+  is not `dumb`, and `CI` is not set.
 - **Outputs**: `BatchingContext[None]` instance that yields `None`.
 - **Logging**: lifecycle milestones are emitted at `INFO`, problems at
   `WARNING`/`ERROR`, and high-volume diagnostics at `DEBUG`. Request payloads
@@ -43,7 +46,7 @@ Behavior:
 
 - CLI options map directly to `batchify` arguments:
   `batch_size`, `batch_window_seconds`, `batch_poll_interval_seconds`, `dry_run`,
-  and `cache`.
+  `cache`, and `live_display`.
 - Script target must use `module_path:function_name` syntax.
 - Forwarded callable arguments are mapped as:
   positional tokens are passed as positional arguments;

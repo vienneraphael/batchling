@@ -79,6 +79,21 @@ async def main():
 
 That's it! Update three lines of code and you save 50% off your workflow.
 
+## Live visibility panel
+
+You can enable a Rich live panel while the context is active:
+
+```py
+async with batchify(live_display="on"):
+    generated_images = await asyncio.gather(*tasks)
+```
+
+`live_display` accepts:
+
+- `auto` (default): only in interactive terminals (`TTY`, non-`dumb`, non-`CI`)
+- `on`: always render the panel
+- `off`: never render the panel
+
 You can now run this script normally using python and start saving money:
 
 ```bash

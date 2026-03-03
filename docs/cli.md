@@ -64,6 +64,20 @@ batchling generate_product_images.py:main
 
 That's it! Just run that command and you save 50% off your workflow.
 
+## Live visibility panel
+
+The CLI also exposes the live Rich panel control:
+
+```bash
+batchling generate_product_images.py:main --live-display auto
+```
+
+`--live-display` accepts:
+
+- `auto` (default): only in interactive terminals (`TTY`, non-`dumb`, non-`CI`)
+- `on`: always render the panel
+- `off`: never render the panel
+
 ## Next Steps
 
 If you haven't yet, look at how you can:

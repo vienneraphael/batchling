@@ -9,6 +9,7 @@ a context variable.
 - Activate the `active_batcher` context for the duration of a context block.
 - Yield `None` for scope-only lifecycle control.
 - Support sync and async context manager patterns for cleanup and context scoping.
+- Start and stop optional Rich live activity display while the context is active.
 
 ## Flow summary
 
@@ -16,7 +17,11 @@ a context variable.
 2. `__enter__`/`__aenter__` set the active batcher for the entire context block.
 3. `__exit__` resets the context and schedules `batcher.close()` if an event loop is
    running (otherwise it warns).
-4. `__aexit__` resets the context and awaits `batcher.close()` to flush pending work.
+4. If `live_display` is enabled, the context registers a lifecycle listener and starts
+   the Rich panel at enter-time.
+5. `__aexit__` resets the context and awaits `batcher.close()` to flush pending work.
+6. The live display listener is removed and the panel is stopped when context cleanup
+   finishes.
 
 ## Code reference
 
