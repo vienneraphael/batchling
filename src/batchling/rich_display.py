@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 import time
-from dataclasses import dataclass
 
 from rich.console import Console, Group
 from rich.live import Live
@@ -15,19 +14,7 @@ from rich.table import Table
 from rich.text import Text
 
 from batchling.core import BatcherEvent
-
-
-@dataclass
-class _BatchActivity:
-    """In-memory batch activity snapshot for progress aggregation."""
-
-    batch_id: str
-    provider: str = "-"
-    endpoint: str = "-"
-    model: str = "-"
-    size: int = 0
-    completed: bool = False
-    terminal: bool = False
+from batchling.progress_state import BatchProgressState
 
 
 class BatcherRichDisplay:
@@ -53,9 +40,7 @@ class BatcherRichDisplay:
     ) -> None:
         self._console = console or Console(stderr=True)
         self._refresh_per_second = refresh_per_second
-        self._batches: dict[str, _BatchActivity] = {}
-        self._cached_samples = 0
-        self._first_batch_created_at: float | None = None
+        self._progress_state = BatchProgressState(now_fn=time.time)
         self._live: Live | None = None
 
     def start(self) -> None:
@@ -86,39 +71,7 @@ class BatcherRichDisplay:
         event : BatcherEvent
             Lifecycle event emitted by ``Batcher``.
         """
-        event_type = str(object=event.get("event_type", "unknown"))
-        source = str(object=event.get("source", ""))
-        batch_id = event.get("batch_id")
-
-        if batch_id is not None and event_type == "batch_processing":
-            batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
-            request_count = event.get("request_count")
-            if isinstance(request_count, int):
-                batch.size = max(batch.size, request_count)
-            batch.terminal = False
-        elif batch_id is not None and event_type == "batch_polled":
-            batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
-            batch.terminal = False
-        elif batch_id is not None and event_type == "batch_terminal":
-            batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
-            status = str(object=event.get("status", "completed"))
-            batch.completed = self._status_counts_as_completed(status=status)
-            batch.terminal = True
-        elif batch_id is not None and event_type == "batch_failed":
-            batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
-            batch.completed = False
-            batch.terminal = True
-        elif batch_id is not None and event_type == "cache_hit_routed" and source == "resumed_poll":
-            batch = self._get_or_create_batch(batch_id=str(object=batch_id))
-            self._update_batch_identity(batch=batch, event=event)
-            batch.size += 1
-            self._cached_samples += 1
-            batch.terminal = False
-
+        self._progress_state.on_event(event=event)
         self.refresh()
 
     def refresh(self) -> None:
@@ -126,73 +79,6 @@ class BatcherRichDisplay:
         if self._live is None:
             return
         self._live.update(renderable=self._render(), refresh=True)
-
-    def _get_or_create_batch(self, *, batch_id: str) -> _BatchActivity:
-        """
-        Fetch or create batch display state.
-
-        Parameters
-        ----------
-        batch_id : str
-            Provider batch identifier.
-
-        Returns
-        -------
-        _BatchActivity
-            Batch display state.
-        """
-        batch = self._batches.get(batch_id)
-        if batch is None:
-            batch = _BatchActivity(
-                batch_id=batch_id,
-            )
-            self._batches[batch_id] = batch
-            if self._first_batch_created_at is None:
-                self._first_batch_created_at = time.time()
-        return batch
-
-    @staticmethod
-    def _update_batch_identity(*, batch: _BatchActivity, event: BatcherEvent) -> None:
-        """
-        Update batch metadata from lifecycle event payload.
-
-        Parameters
-        ----------
-        batch : _BatchActivity
-            Mutable batch row.
-        event : BatcherEvent
-            Lifecycle event payload.
-        """
-        provider = event.get("provider")
-        endpoint = event.get("endpoint")
-        model = event.get("model")
-        if provider is not None:
-            batch.provider = str(object=provider)
-        if endpoint is not None:
-            batch.endpoint = str(object=endpoint)
-        if model is not None:
-            batch.model = str(object=model)
-
-    @staticmethod
-    def _status_counts_as_completed(*, status: str) -> bool:
-        """
-        Determine whether a terminal status counts as completed samples.
-
-        Parameters
-        ----------
-        status : str
-            Terminal provider status.
-
-        Returns
-        -------
-        bool
-            ``True`` when terminal state should contribute to completed samples.
-        """
-        lowered_status = status.lower()
-        negative_markers = ("fail", "error", "cancel", "expired", "timeout")
-        if any(marker in lowered_status for marker in negative_markers):
-            return False
-        return True
 
     def _compute_progress(self) -> tuple[int, int, float]:
         """
@@ -203,12 +89,7 @@ class BatcherRichDisplay:
         tuple[int, int, float]
             ``(completed_samples, total_samples, percent)``.
         """
-        total_samples = sum(batch.size for batch in self._batches.values())
-        completed_samples = sum(batch.size for batch in self._batches.values() if batch.completed)
-        if total_samples <= 0:
-            return 0, 0, 0.0
-        percent = (completed_samples / total_samples) * 100
-        return completed_samples, total_samples, percent
+        return self._progress_state.compute_progress()
 
     def _compute_request_metrics(self) -> tuple[int, int, int, int]:
         """
@@ -219,12 +100,7 @@ class BatcherRichDisplay:
         tuple[int, int, int, int]
             ``(total_samples, cached_samples, completed_samples, in_progress_samples)``.
         """
-        total_samples = sum(batch.size for batch in self._batches.values())
-        completed_samples = sum(batch.size for batch in self._batches.values() if batch.completed)
-        in_progress_samples = sum(
-            batch.size for batch in self._batches.values() if not batch.terminal
-        )
-        return total_samples, self._cached_samples, completed_samples, in_progress_samples
+        return self._progress_state.compute_request_metrics()
 
     def _compute_elapsed_seconds(self) -> int:
         """
@@ -235,9 +111,7 @@ class BatcherRichDisplay:
         int
             Elapsed seconds.
         """
-        if self._first_batch_created_at is None:
-            return 0
-        return max(0, int(time.time() - self._first_batch_created_at))
+        return self._progress_state.compute_elapsed_seconds()
 
     @staticmethod
     def _format_elapsed(*, elapsed_seconds: int) -> str:
@@ -340,20 +214,7 @@ class BatcherRichDisplay:
         list[tuple[str, str, str, int, int]]
             Sorted rows as ``(provider, endpoint, model, running, completed)``.
         """
-        counts_by_queue: dict[tuple[str, str, str], list[int]] = {}
-        for batch in self._batches.values():
-            queue_key = (batch.provider, batch.endpoint, batch.model)
-            counters = counts_by_queue.setdefault(queue_key, [0, 0])
-            if batch.terminal:
-                counters[1] += 1
-            else:
-                counters[0] += 1
-
-        rows = [
-            (provider, endpoint, model, counters[0], counters[1])
-            for (provider, endpoint, model), counters in counts_by_queue.items()
-        ]
-        return sorted(rows, key=lambda row: (row[0], row[1], row[2]))
+        return self._progress_state.compute_queue_batch_counts()
 
     def _build_queue_summary_table(self) -> Table:
         """

@@ -6,11 +6,11 @@ import asyncio
 import logging
 import typing as t
 import warnings
-from dataclasses import dataclass
 
 from batchling.core import Batcher, BatcherEvent
 from batchling.hooks import active_batcher
 from batchling.logging import log_info
+from batchling.progress_state import BatchProgressState
 from batchling.rich_display import (
     BatcherRichDisplay,
     should_enable_live_display,
@@ -19,82 +19,11 @@ from batchling.rich_display import (
 log = logging.getLogger(name=__name__)
 
 
-@dataclass
-class _ProgressLogBatchState:
-    """Aggregate state used by the polling progress logger fallback."""
-
-    size: int = 0
-    completed: bool = False
-    terminal: bool = False
-
-
 class _PollingProgressLogger:
     """INFO logger fallback used when Rich live display auto-disables."""
 
     def __init__(self) -> None:
-        self._state_by_batch_id: dict[str, _ProgressLogBatchState] = {}
-
-    @staticmethod
-    def _status_counts_as_completed(*, status: str) -> bool:
-        """
-        Determine whether a terminal status counts as completed samples.
-
-        Parameters
-        ----------
-        status : str
-            Terminal provider status.
-
-        Returns
-        -------
-        bool
-            ``True`` when terminal state should contribute to completed samples.
-        """
-        lowered_status = status.lower()
-        negative_markers = ("fail", "error", "cancel", "expired", "timeout")
-        if any(marker in lowered_status for marker in negative_markers):
-            return False
-        return True
-
-    def _compute_progress(self) -> tuple[int, int, float, int]:
-        """
-        Compute aggregate sample progress from tracked batch states.
-
-        Returns
-        -------
-        tuple[int, int, float, int]
-            ``(completed_samples, total_samples, percent, in_progress_samples)``.
-        """
-        total_samples = sum(state.size for state in self._state_by_batch_id.values())
-        completed_samples = sum(
-            state.size for state in self._state_by_batch_id.values() if state.completed
-        )
-        in_progress_samples = sum(
-            state.size for state in self._state_by_batch_id.values() if not state.terminal
-        )
-        if total_samples <= 0:
-            return 0, 0, 0.0, in_progress_samples
-        percent = (completed_samples / total_samples) * 100.0
-        return completed_samples, total_samples, percent, in_progress_samples
-
-    def _get_or_create_batch_state(self, *, batch_id: str) -> _ProgressLogBatchState:
-        """
-        Get or create progress state for one batch.
-
-        Parameters
-        ----------
-        batch_id : str
-            Provider batch identifier.
-
-        Returns
-        -------
-        _ProgressLogBatchState
-            Mutable batch state.
-        """
-        state = self._state_by_batch_id.get(batch_id)
-        if state is None:
-            state = _ProgressLogBatchState()
-            self._state_by_batch_id[batch_id] = state
-        return state
+        self._progress_state = BatchProgressState()
 
     def on_event(self, event: BatcherEvent) -> None:
         """
@@ -105,32 +34,14 @@ class _PollingProgressLogger:
         event : BatcherEvent
             Lifecycle event emitted by ``Batcher``.
         """
-        event_type = str(object=event.get("event_type", "unknown"))
-        batch_id = event.get("batch_id")
-        if batch_id is not None:
-            state = self._get_or_create_batch_state(batch_id=str(object=batch_id))
-            if event_type == "batch_processing":
-                request_count = event.get("request_count")
-                if isinstance(request_count, int):
-                    state.size = max(state.size, request_count)
-                state.terminal = False
-            elif event_type == "cache_hit_routed" and str(object=event.get("source", "")) == (
-                "resumed_poll"
-            ):
-                state.size += 1
-                state.terminal = False
-            elif event_type == "batch_terminal":
-                status = str(object=event.get("status", "completed"))
-                state.completed = self._status_counts_as_completed(status=status)
-                state.terminal = True
-            elif event_type == "batch_failed":
-                state.completed = False
-                state.terminal = True
+        self._progress_state.on_event(event=event)
 
+        event_type = str(object=event.get("event_type", "unknown"))
         if event_type != "batch_polled":
             return
 
-        completed_samples, total_samples, percent, in_progress_samples = self._compute_progress()
+        completed_samples, total_samples, percent = self._progress_state.compute_progress()
+        _, _, _, in_progress_samples = self._progress_state.compute_request_metrics()
         log_info(
             logger=log,
             event="Live display fallback progress",
