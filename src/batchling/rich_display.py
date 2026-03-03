@@ -26,11 +26,8 @@ class _BatchActivity:
     endpoint: str = "-"
     model: str = "-"
     size: int = 0
-    latest_status: str = "submitted"
     completed: bool = False
     terminal: bool = False
-    created_at: float = 0.0
-    updated_at: float = 0.0
 
 
 class BatcherRichDisplay:
@@ -99,26 +96,20 @@ class BatcherRichDisplay:
             request_count = event.get("request_count")
             if isinstance(request_count, int):
                 batch.size = max(batch.size, request_count)
-            batch.latest_status = "simulated" if source == "dry_run" else "submitted"
             batch.terminal = False
         elif batch_id is not None and event_type == "batch_polled":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             self._update_batch_identity(batch=batch, event=event)
-            status = event.get("status")
-            if status is not None:
-                batch.latest_status = str(object=status)
             batch.terminal = False
         elif batch_id is not None and event_type == "batch_terminal":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             self._update_batch_identity(batch=batch, event=event)
             status = str(object=event.get("status", "completed"))
-            batch.latest_status = status
             batch.completed = self._status_counts_as_completed(status=status)
             batch.terminal = True
         elif batch_id is not None and event_type == "batch_failed":
             batch = self._get_or_create_batch(batch_id=str(object=batch_id))
             self._update_batch_identity(batch=batch, event=event)
-            batch.latest_status = "failed"
             batch.completed = False
             batch.terminal = True
         elif batch_id is not None and event_type == "cache_hit_routed" and source == "resumed_poll":
@@ -126,8 +117,6 @@ class BatcherRichDisplay:
             self._update_batch_identity(batch=batch, event=event)
             batch.size += 1
             self._cached_samples += 1
-            if batch.latest_status == "submitted":
-                batch.latest_status = "resumed"
             batch.terminal = False
 
         self.refresh()
@@ -152,17 +141,14 @@ class BatcherRichDisplay:
         _BatchActivity
             Batch display state.
         """
-        now = time.time()
         batch = self._batches.get(batch_id)
         if batch is None:
             batch = _BatchActivity(
                 batch_id=batch_id,
-                created_at=now,
             )
             self._batches[batch_id] = batch
             if self._first_batch_created_at is None:
-                self._first_batch_created_at = now
-        batch.updated_at = now
+                self._first_batch_created_at = time.time()
         return batch
 
     @staticmethod
@@ -277,12 +263,9 @@ class BatcherRichDisplay:
         """Build the current Rich panel renderable."""
         progress_bar = self._build_progress_bar()
         requests_line = self._build_requests_line()
-        pending_batches_line = self._build_pending_batches_line()
-        pending_batches_table = self._build_pending_batches_table()
+        queue_summary_table = self._build_queue_summary_table()
         return Panel(
-            renderable=Group(
-                progress_bar, requests_line, pending_batches_line, pending_batches_table
-            ),
+            renderable=Group(progress_bar, requests_line, queue_summary_table),
             title="batchling context progress",
             border_style="cyan",
         )
@@ -292,13 +275,14 @@ class BatcherRichDisplay:
         completed_samples, total_samples, _ = self._compute_progress()
         elapsed_seconds = self._compute_elapsed_seconds()
         elapsed_label = self._format_elapsed(elapsed_seconds=elapsed_seconds)
+        sample_width = max(1, len(str(object=total_samples)))
 
         progress = Progress(
             BarColumn(bar_width=None),
             TextColumn(
                 text_format=(
-                    "[bold green]{task.fields[completed_samples]}[/bold green]/"
-                    "[bold cyan]{task.fields[total_samples]}[/bold cyan] "
+                    f"[bold green]{{task.fields[completed_samples]:>{sample_width}}}[/bold green]/"
+                    f"[bold cyan]{{task.fields[total_samples]:>{sample_width}}}[/bold cyan] "
                     "([bold green]{task.percentage:.1f}%[/bold green])"
                 )
             ),
@@ -347,79 +331,116 @@ class BatcherRichDisplay:
         line.append(text=str(object=in_progress_samples), style="bold yellow")
         return line
 
-    def _get_pending_batches(self) -> list[_BatchActivity]:
+    def _compute_queue_batch_counts(self) -> list[tuple[str, str, str, int, int]]:
         """
-        Return pending (non-terminal) batches sorted by oldest first.
+        Aggregate queue-level running and terminal batch counts.
 
         Returns
         -------
-        list[_BatchActivity]
-            Sorted pending batches.
+        list[tuple[str, str, str, int, int]]
+            Sorted rows as ``(provider, endpoint, model, running, completed)``.
         """
-        pending_batches = [batch for batch in self._batches.values() if not batch.terminal]
-        return sorted(pending_batches, key=lambda batch: batch.created_at)
+        counts_by_queue: dict[tuple[str, str, str], list[int]] = {}
+        for batch in self._batches.values():
+            queue_key = (batch.provider, batch.endpoint, batch.model)
+            counters = counts_by_queue.setdefault(queue_key, [0, 0])
+            if batch.terminal:
+                counters[1] += 1
+            else:
+                counters[0] += 1
 
-    def _build_pending_batches_line(self) -> Text:
-        """
-        Build one-line pending batches summary shown above the table.
+        rows = [
+            (provider, endpoint, model, counters[0], counters[1])
+            for (provider, endpoint, model), counters in counts_by_queue.items()
+        ]
+        return sorted(rows, key=lambda row: (row[0], row[1], row[2]))
 
-        Returns
-        -------
-        Text
-            Styled summary line.
+    def _build_queue_summary_table(self) -> Table:
         """
-        pending_count = len(self._get_pending_batches())
-        line = Text()
-        line.append(text="Pending batches", style="bold white")
-        line.append(text=": ", style="white")
-        line.append(text=str(object=pending_count), style="bold yellow")
-        return line
-
-    def _build_pending_batches_table(self) -> Table:
-        """
-        Build pending-batches table with dataframe-style truncation.
+        Build queue-level table with per-queue progress summary.
 
         Returns
         -------
         Table
-            Pending batches table.
+            Queue summary table.
         """
-        pending_batches = self._get_pending_batches()
-        table = Table(expand=True)
-        table.add_column(header="batch_id", style="bold")
-        table.add_column(header="provider")
-        table.add_column(header="endpoint")
-        table.add_column(header="model")
-        table.add_column(header="status")
+        queue_rows = self._compute_queue_batch_counts()
+        table = Table(expand=False)
+        table.add_column(
+            header="provider",
+            style="bold blue",
+            width=12,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="endpoint",
+            width=34,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="model",
+            style="bold magenta",
+            width=28,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
+        table.add_column(
+            header="progress",
+            justify="right",
+            width=16,
+            no_wrap=True,
+            overflow="ellipsis",
+        )
 
-        if not pending_batches:
-            table.add_row("-", "-", "-", "-", "-")
+        if not queue_rows:
+            table.add_row("-", "-", "-", self._format_queue_progress(running=0, completed=0))
             return table
 
-        display_batches: list[_BatchActivity | None]
-        if len(pending_batches) <= 5:
-            display_batches = [*pending_batches]
-        else:
-            display_batches = [
-                pending_batches[0],
-                pending_batches[1],
-                None,
-                pending_batches[-2],
-                pending_batches[-1],
-            ]
-
-        for batch in display_batches:
-            if batch is None:
-                table.add_row("...", "...", "...", "...", "...")
-                continue
+        for provider, endpoint, model, running, completed in queue_rows:
             table.add_row(
-                batch.batch_id,
-                batch.provider,
-                batch.endpoint,
-                batch.model,
-                batch.latest_status,
+                provider,
+                endpoint,
+                model,
+                self._format_queue_progress(
+                    running=running,
+                    completed=completed,
+                ),
             )
         return table
+
+    @staticmethod
+    def _format_queue_progress(*, running: int, completed: int) -> Text:
+        """
+        Format one queue progress cell as ``completed/total (percent)``.
+
+        Parameters
+        ----------
+        running : int
+            Number of non-terminal batches.
+        completed : int
+            Number of terminal batches.
+
+        Returns
+        -------
+        Text
+            Formatted queue progress.
+        """
+        total = running + completed
+        if total <= 0:
+            percent = 0.0
+        else:
+            percent = (completed / total) * 100.0
+        count_width = max(1, len(str(object=total)))
+        progress = Text()
+        progress.append(text=f"{completed:>{count_width}}", style="bold green")
+        progress.append(text="/", style="white")
+        progress.append(text=f"{total:>{count_width}}", style="bold cyan")
+        progress.append(text=" (", style="white")
+        progress.append(text=f"{percent:.1f}%", style="bold green")
+        progress.append(text=")", style="white")
+        return progress
 
 
 def should_enable_live_display(*, enabled: bool) -> bool:

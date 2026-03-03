@@ -3,6 +3,7 @@
 import io
 
 from rich.console import Console
+from rich.text import Text
 
 import batchling.rich_display as rich_display
 
@@ -273,81 +274,97 @@ def test_batcher_rich_display_request_metrics_line() -> None:
     assert in_progress_samples == 2
 
 
-def test_batcher_rich_display_pending_batches_table_truncates_with_ellipsis() -> None:
-    """Test pending table shows top2/ellipsis/last2 for more than five rows."""
+def test_batcher_rich_display_queue_table_progress_column() -> None:
+    """Test queue table progress column derives from completed/total counts."""
     display = rich_display.BatcherRichDisplay(
         console=Console(file=io.StringIO(), force_terminal=False),
     )
 
-    for batch_index in range(1, 7):
-        processing_event: rich_display.BatcherEvent = {
-            "event_type": "batch_processing",
-            "timestamp": float(batch_index),
-            "provider": "openai",
-            "endpoint": f"/v1/endpoint/{batch_index}",
-            "model": f"model-{batch_index}",
-            "queue_key": ("openai", f"/v1/endpoint/{batch_index}", f"model-{batch_index}"),
-            "batch_id": f"batch-{batch_index}",
-            "request_count": batch_index,
-            "source": "poll_start",
-        }
-        display.on_event(processing_event)
-
-    table = display._build_pending_batches_table()
-    batch_id_cells = table.columns[0]._cells
-
-    assert len(batch_id_cells) == 5
-    assert batch_id_cells[0] == "batch-1"
-    assert batch_id_cells[1] == "batch-2"
-    assert batch_id_cells[2] == "..."
-    assert batch_id_cells[3] == "batch-5"
-    assert batch_id_cells[4] == "batch-6"
-
-
-def test_batcher_rich_display_pending_batches_excludes_terminal() -> None:
-    """Test pending table includes only non-terminal batches."""
-    display = rich_display.BatcherRichDisplay(
-        console=Console(file=io.StringIO(), force_terminal=False),
-    )
-
-    pending_event: rich_display.BatcherEvent = {
+    queue_event_batch_1: rich_display.BatcherEvent = {
         "event_type": "batch_processing",
         "timestamp": 1.0,
         "provider": "openai",
-        "endpoint": "/v1/pending",
-        "model": "model-pending",
-        "queue_key": ("openai", "/v1/pending", "model-pending"),
-        "batch_id": "batch-pending",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-1",
         "request_count": 1,
         "source": "poll_start",
     }
-    completed_event: rich_display.BatcherEvent = {
+    queue_event_batch_2: rich_display.BatcherEvent = {
         "event_type": "batch_processing",
         "timestamp": 2.0,
         "provider": "openai",
-        "endpoint": "/v1/completed",
-        "model": "model-completed",
-        "queue_key": ("openai", "/v1/completed", "model-completed"),
-        "batch_id": "batch-completed",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-2",
         "request_count": 1,
         "source": "poll_start",
     }
-    terminal_event: rich_display.BatcherEvent = {
+    terminal_event_batch_2: rich_display.BatcherEvent = {
         "event_type": "batch_terminal",
         "timestamp": 3.0,
         "provider": "openai",
-        "batch_id": "batch-completed",
+        "batch_id": "batch-2",
         "status": "completed",
         "source": "active_poll",
     }
+    other_queue_event: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 4.0,
+        "provider": "groq",
+        "endpoint": "/openai/v1/chat/completions",
+        "model": "llama-3.1-8b-instant",
+        "queue_key": ("groq", "/openai/v1/chat/completions", "llama-3.1-8b-instant"),
+        "batch_id": "batch-3",
+        "request_count": 1,
+        "source": "poll_start",
+    }
 
-    display.on_event(pending_event)
-    display.on_event(completed_event)
-    display.on_event(terminal_event)
+    display.on_event(queue_event_batch_1)
+    display.on_event(queue_event_batch_2)
+    display.on_event(terminal_event_batch_2)
+    display.on_event(other_queue_event)
 
-    pending_batches = display._get_pending_batches()
-    assert len(pending_batches) == 1
-    assert pending_batches[0].batch_id == "batch-pending"
+    queue_rows = display._compute_queue_batch_counts()
+    assert queue_rows == [
+        ("groq", "/openai/v1/chat/completions", "llama-3.1-8b-instant", 1, 0),
+        ("openai", "/v1/chat/completions", "model-a", 1, 1),
+    ]
 
-    pending_line = display._build_pending_batches_line()
-    assert "Pending batches: 1" in pending_line.plain
+    table = display._build_queue_summary_table()
+    assert table.columns[0].width == 12
+    assert table.columns[1].width == 34
+    assert table.columns[2].width == 28
+    assert table.columns[3].width == 16
+    assert table.columns[0]._cells == ["groq", "openai"]
+    progress_cells = table.columns[3]._cells
+    assert isinstance(progress_cells[0], Text)
+    assert isinstance(progress_cells[1], Text)
+    assert progress_cells[0].plain == "0/1 (0.0%)"
+    assert progress_cells[1].plain == "1/2 (50.0%)"
+
+
+def test_batcher_rich_display_queue_table_empty_state() -> None:
+    """Test queue table renders default row when no batches are tracked."""
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    table = display._build_queue_summary_table()
+    assert table.columns[0]._cells == ["-"]
+    assert table.columns[1]._cells == ["-"]
+    assert table.columns[2]._cells == ["-"]
+    progress_cells = table.columns[3]._cells
+    assert isinstance(progress_cells[0], Text)
+    assert progress_cells[0].plain == "0/0 (0.0%)"
+
+
+def test_batcher_rich_display_queue_progress_pads_to_total_width() -> None:
+    """Test queue progress keeps parenthesis anchor stable for large totals."""
+    progress_text = rich_display.BatcherRichDisplay._format_queue_progress(
+        running=99,
+        completed=1,
+    )
+    assert progress_text.plain == "  1/100 (1.0%)"
