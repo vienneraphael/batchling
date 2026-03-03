@@ -133,7 +133,10 @@ async def test_batching_context_starts_and_stops_live_display(
     with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
         async with context:
             assert dummy_display.started is True
+            assert context._self_live_display_heartbeat_task is not None
+            assert not context._self_live_display_heartbeat_task.done()
         assert dummy_display.stopped is True
+        assert context._self_live_display_heartbeat_task is None
 
 
 def test_batching_context_sync_stops_live_display_without_loop(
@@ -173,3 +176,4 @@ def test_batching_context_sync_stops_live_display_without_loop(
             pass
 
     assert dummy_display.stopped is True
+    assert context._self_live_display_heartbeat_task is None

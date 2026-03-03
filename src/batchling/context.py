@@ -46,6 +46,7 @@ class BatchingContext:
         self._self_batcher = batcher
         self._self_live_display_mode = live_display
         self._self_live_display: BatcherRichDisplay | None = None
+        self._self_live_display_heartbeat_task: asyncio.Task[None] | None = None
         self._self_context_token: t.Any | None = None
 
     def _start_live_display(self) -> None:
@@ -65,12 +66,40 @@ class BatchingContext:
             self._self_batcher._add_event_listener(listener=display.on_event)
             display.start()
             self._self_live_display = display
+            self._start_live_display_heartbeat()
         except Exception as error:
             warnings.warn(
                 message=f"Failed to start batchling live display: {error}",
                 category=UserWarning,
                 stacklevel=2,
             )
+
+    async def _run_live_display_heartbeat(self) -> None:
+        """
+        Periodically refresh the live display while the context is active.
+        """
+        try:
+            while self._self_live_display is not None:
+                self._self_live_display.refresh()
+                await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            raise
+
+    def _start_live_display_heartbeat(self) -> None:
+        """
+        Start the 1-second live display heartbeat when an event loop exists.
+        """
+        if self._self_live_display is None:
+            return
+        if self._self_live_display_heartbeat_task is not None:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        self._self_live_display_heartbeat_task = loop.create_task(
+            coro=self._run_live_display_heartbeat()
+        )
 
     def _stop_live_display(self) -> None:
         """
@@ -84,6 +113,10 @@ class BatchingContext:
             return
         display = self._self_live_display
         self._self_live_display = None
+        heartbeat_task = self._self_live_display_heartbeat_task
+        self._self_live_display_heartbeat_task = None
+        if heartbeat_task is not None and not heartbeat_task.done():
+            heartbeat_task.cancel()
         try:
             self._self_batcher._remove_event_listener(listener=display.on_event)
             display.stop()

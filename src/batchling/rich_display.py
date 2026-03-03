@@ -114,8 +114,13 @@ class BatcherRichDisplay:
             if batch.latest_status == "submitted":
                 batch.latest_status = "resumed"
 
-        if self._live is not None:
-            self._live.update(renderable=self._render(), refresh=True)
+        self.refresh()
+
+    def refresh(self) -> None:
+        """Force one live-panel refresh when running."""
+        if self._live is None:
+            return
+        self._live.update(renderable=self._render(), refresh=True)
 
     def _get_or_create_batch(self, *, batch_id: str) -> _BatchActivity:
         """
