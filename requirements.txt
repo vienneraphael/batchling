@@ -645,6 +645,7 @@ requests-toolbelt==1.0.0
 respx==0.22.0
 rich==14.2.0
     # via
+    #   batchling
     #   cyclopts
     #   fastmcp
     #   instructor

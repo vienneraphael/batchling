@@ -16,6 +16,7 @@ def batchify(
     batch_poll_interval_seconds: float = 10.0,
     dry_run: bool = False,
     cache: bool = True,
+    live_display: bool = True,
 ) -> BatchingContext:
     """
     Context manager used to activate batching for a scoped context.<br>
@@ -37,6 +38,11 @@ def batchify(
     cache : bool, optional
         If ``True``, enable persistent request cache lookups.<br>
         This parameter allows to skip the batch submission and go straight to the polling phase for requests that have already been sent.
+    live_display : bool, optional
+        Enable live display behavior while the context is active.<br>
+        When ``True``, Rich panel rendering is attempted with terminal auto-detection.
+        If terminal auto-detection disables Rich (non-TTY, ``TERM=dumb``, or ``CI``),
+        progress is logged at ``INFO`` on polling events.
 
     Returns
     -------
@@ -65,4 +71,5 @@ def batchify(
     # 3. Return BatchingContext with no yielded target.
     return BatchingContext(
         batcher=batcher,
+        live_display=live_display,
     )

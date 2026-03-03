@@ -64,6 +64,29 @@ batchling generate_product_images.py:main
 
 That's it! Just run that command and you save 50% off your workflow.
 
+## Live visibility panel
+
+The CLI also exposes the live Rich panel control:
+
+```bash
+batchling generate_product_images.py:main --live-display
+```
+
+`--live-display` is a boolean flag pair:
+
+- `--live-display` (default): auto mode, Rich panel only in interactive terminals
+  (`TTY`, non-`dumb`, non-`CI`). If Rich auto-disables, progress is emitted as
+  `INFO` logs on polling events.
+- `--no-live-display`: disable both Rich panel and fallback progress logs.
+
+When enabled, the panel shows overall context progress:
+`completed_samples / total_samples`, completion percentage, and `Time Elapsed`
+since the first batch seen in the context.
+It also shows request counters and a queue summary table with one row per
+`(provider, endpoint, model)`, including `progress` as
+`completed/total (percentage)` where `completed` is terminal batches and
+`total` is `running + completed`.
+
 ## Next Steps
 
 If you haven't yet, look at how you can:

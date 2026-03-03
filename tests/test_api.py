@@ -61,6 +61,24 @@ async def test_batchify_configures_cache_flag(reset_hooks, reset_context):
 
 
 @pytest.mark.asyncio
+async def test_batchify_forwards_live_display_flag(reset_hooks, reset_context):
+    """Test that batchify forwards live display flag to BatchingContext."""
+    wrapped = batchify(
+        live_display=False,
+    )
+
+    assert wrapped._self_live_display_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_batchify_live_display_defaults_to_true(reset_hooks, reset_context):
+    """Test that live display defaults to enabled."""
+    wrapped = batchify()
+
+    assert wrapped._self_live_display_enabled is True
+
+
+@pytest.mark.asyncio
 async def test_batchify_returns_context_manager(reset_hooks, reset_context):
     """Test that batchify returns a BatchingContext."""
     wrapped = batchify(batch_size=10)

@@ -75,7 +75,8 @@ async def run_script_with_batchify(
     batch_poll_interval_seconds: float,
     dry_run: bool,
     cache: bool,
-):
+    live_display: bool,
+) -> None:
     """
     Execute a Python script under a batchify context.
 
@@ -97,6 +98,8 @@ async def run_script_with_batchify(
         Dry run mode passed to ``batchify``.
     cache : bool
         Cache mode passed to ``batchify``.
+    live_display : bool
+        Live display toggle passed to ``batchify``.
     """
     if not module_path.exists():
         typer.echo(f"Script not found: {module_path}")
@@ -112,6 +115,7 @@ async def run_script_with_batchify(
         batch_poll_interval_seconds=batch_poll_interval_seconds,
         dry_run=dry_run,
         cache=cache,
+        live_display=live_display,
     ):
         ns = runpy.run_path(path_name=script_path_as_posix, run_name="batchling.runtime")
         func = ns.get(func_name)
@@ -155,6 +159,16 @@ def main(
         bool,
         typer.Option("--cache/--no-cache", help="Enable persistent request caching"),
     ] = True,
+    live_display: t.Annotated[
+        bool,
+        typer.Option(
+            "--live-display/--no-live-display",
+            help=(
+                "Enable auto live display. When disabled by terminal auto-detection, "
+                "fallback polling progress is logged at INFO."
+            ),
+        ),
+    ] = True,
 ):
     """Run a script under ``batchify``."""
     try:
@@ -173,5 +187,6 @@ def main(
             batch_poll_interval_seconds=batch_poll_interval_seconds,
             dry_run=dry_run,
             cache=cache,
+            live_display=live_display,
         )
     )

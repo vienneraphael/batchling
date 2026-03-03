@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from batchling.cache import CacheEntry
-from batchling.core import Batcher, _ActiveBatch, _PendingRequest
+from batchling.core import Batcher, BatcherEvent, _ActiveBatch, _PendingRequest
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
 from batchling.providers.gemini import GeminiProvider
@@ -1948,3 +1948,142 @@ async def test_dry_run_cache_hit_is_read_only(mock_openai_api_transport: httpx.M
     assert dry_run_entry is not None
     assert dry_run_entry.created_at == original_created_at
     await dry_run_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_submit_emits_lifecycle_events(batcher: Batcher, provider: OpenAIProvider) -> None:
+    """Test submit emits queue, submit, poll, and terminal lifecycle events."""
+    events: list[BatcherEvent] = []
+    batcher._add_event_listener(listener=events.append)
+
+    _ = await batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+
+    event_types = {str(event["event_type"]) for event in events}
+    assert "request_queued" in event_types
+    assert "batch_submitting" in event_types
+    assert "batch_processing" in event_types
+    assert "batch_polled" in event_types
+    assert "batch_terminal" in event_types
+
+
+@pytest.mark.asyncio
+async def test_dry_run_emits_terminal_without_poll(provider: OpenAIProvider) -> None:
+    """Test dry-run emits terminal lifecycle without provider polling events."""
+    dry_run_batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=1.0,
+        dry_run=True,
+        cache=False,
+    )
+    events: list[BatcherEvent] = []
+    dry_run_batcher._add_event_listener(listener=events.append)
+
+    _ = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+
+    event_types = {str(event["event_type"]) for event in events}
+    assert "request_queued" in event_types
+    assert "batch_submitting" in event_types
+    assert "batch_terminal" in event_types
+    assert "batch_polled" not in event_types
+
+    await dry_run_batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_emits_cache_hit_routed(
+    mock_openai_api_transport: httpx.MockTransport,
+) -> None:
+    """Test cache-hit routing emits dedicated lifecycle event."""
+    writer_batcher = Batcher(
+        batch_size=2,
+        batch_window_seconds=0.1,
+        cache=True,
+    )
+    writer_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    writer_batcher._poll_interval_seconds = 0.01
+    provider = OpenAIProvider()
+
+    _ = await writer_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    await writer_batcher.close()
+
+    dry_run_batcher = Batcher(
+        batch_size=2,
+        batch_window_seconds=0.1,
+        cache=True,
+        dry_run=True,
+    )
+    events: list[BatcherEvent] = []
+    dry_run_batcher._add_event_listener(listener=events.append)
+
+    _ = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=OpenAIProvider(),
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+
+    assert any(
+        event["event_type"] == "cache_hit_routed" and event.get("source") == "cache_dry_run"
+        for event in events
+    )
+    await dry_run_batcher.close()
+
+
+def test_fail_missing_results_emits_lifecycle_event() -> None:
+    """Test missing output mapping emits missing-results lifecycle event."""
+    batcher = Batcher(
+        batch_size=2,
+        batch_window_seconds=1.0,
+        cache=False,
+    )
+    loop = asyncio.new_event_loop()
+    future: asyncio.Future[t.Any] = loop.create_future()
+    request = _PendingRequest(
+        custom_id="custom-1",
+        queue_key=("openai", "/v1/chat/completions", "model-a"),
+        params={},
+        provider=OpenAIProvider(),
+        future=future,
+        request_hash="hash-1",
+    )
+    active_batch = _ActiveBatch(
+        batch_id="batch-1",
+        output_file_id="file-1",
+        error_file_id="",
+        requests={"custom-1": request},
+    )
+
+    events: list[BatcherEvent] = []
+    batcher._add_event_listener(listener=events.append)
+
+    batcher._fail_missing_results(active_batch=active_batch, seen=set())
+
+    assert any(event["event_type"] == "missing_results" for event in events)
+    loop.close()

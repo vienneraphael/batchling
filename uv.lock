@@ -267,6 +267,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "httpx" },
+    { name = "rich" },
     { name = "typer" },
 ]
 
@@ -304,6 +305,7 @@ dev = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.3" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "rich", specifier = ">=14.2.0" },
     { name = "typer", specifier = ">=0.20.0" },
 ]
 
