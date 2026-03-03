@@ -185,13 +185,16 @@ class BatcherRichDisplay:
 
     def _build_progress_bar(self) -> Progress:
         """Build aggregate context progress as a Rich progress bar."""
-        completed_samples, total_samples, percent = self._compute_progress()
+        completed_samples, total_samples, _ = self._compute_progress()
 
         progress = Progress(
-            TextColumn(text_format="[bold]Progress[/bold]"),
-            BarColumn(),
-            TextColumn(text_format="{task.fields[completed_samples]}/{task.fields[total_samples]}"),
-            TextColumn(text_format=f"{percent:.1f}%"),
+            BarColumn(bar_width=None),
+            TextColumn(
+                text_format=(
+                    "{task.fields[completed_samples]}/"
+                    "{task.fields[total_samples]} ({task.percentage:.1f}%)"
+                )
+            ),
             expand=True,
         )
         display_total = max(total_samples, 1)
