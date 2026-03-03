@@ -37,64 +37,74 @@ def test_should_enable_live_display_auto_disabled_in_ci(monkeypatch) -> None:
     assert rich_display.should_enable_live_display(mode="auto") is False
 
 
-def test_batcher_rich_display_consumes_events() -> None:
-    """Test Rich display event handling and rendering lifecycle."""
+def test_batcher_rich_display_shows_sent_batches() -> None:
+    """Test sent-batch table tracks batch metadata and latest status."""
     display = rich_display.BatcherRichDisplay(
         console=Console(file=io.StringIO(), force_terminal=False),
     )
 
     display.start()
-    display.on_event(
-        {
-            "event_type": "request_queued",
-            "timestamp": 1.0,
-            "provider": "openai",
-            "endpoint": "/v1/chat/completions",
-            "model": "model-a",
-            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
-            "pending_count": 1,
-        }
-    )
-    display.on_event(
-        {
-            "event_type": "batch_submitting",
-            "timestamp": 2.0,
-            "provider": "openai",
-            "endpoint": "/v1/chat/completions",
-            "model": "model-a",
-            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
-            "request_count": 1,
-        }
-    )
-    display.on_event(
-        {
-            "event_type": "batch_processing",
-            "timestamp": 3.0,
-            "provider": "openai",
-            "endpoint": "/v1/chat/completions",
-            "model": "model-a",
-            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
-            "batch_id": "batch-1",
-            "source": "poll_start",
-        }
-    )
-    display.on_event(
-        {
-            "event_type": "batch_terminal",
-            "timestamp": 4.0,
-            "provider": "openai",
-            "endpoint": "/v1/chat/completions",
-            "model": "model-a",
-            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
-            "batch_id": "batch-1",
-            "status": "completed",
-        }
-    )
+    processing_event: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 1.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-1",
+        "request_count": 3,
+        "source": "poll_start",
+    }
+    polled_event: rich_display.BatcherEvent = {
+        "event_type": "batch_polled",
+        "timestamp": 2.0,
+        "provider": "openai",
+        "batch_id": "batch-1",
+        "status": "running",
+        "source": "active_poll",
+    }
+    terminal_event: rich_display.BatcherEvent = {
+        "event_type": "batch_terminal",
+        "timestamp": 3.0,
+        "provider": "openai",
+        "batch_id": "batch-1",
+        "status": "completed",
+        "source": "active_poll",
+    }
+
+    display.on_event(processing_event)
+    display.on_event(polled_event)
+    display.on_event(terminal_event)
     display.stop()
 
-    queue_activity = display._queues[("openai", "/v1/chat/completions", "model-a")]
-    assert queue_activity.pending_count == 0
-    assert queue_activity.active_batches == 0
-    assert queue_activity.submitted_batches == 1
-    assert queue_activity.last_status == "completed"
-    assert queue_activity.last_batch_id == "batch-1"
+    batch = display._batches["batch-1"]
+    assert batch.provider == "openai"
+    assert batch.endpoint == "/v1/chat/completions"
+    assert batch.model == "model-a"
+    assert batch.size == 3
+    assert batch.latest_status == "completed"
+
+
+def test_batcher_rich_display_tracks_resumed_batch_size() -> None:
+    """Test resumed cache-hit routing increments displayed batch size."""
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    cache_event: rich_display.BatcherEvent = {
+        "event_type": "cache_hit_routed",
+        "timestamp": 1.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "batch_id": "batch-cached-1",
+        "source": "resumed_poll",
+        "custom_id": "custom-1",
+    }
+
+    display.on_event(cache_event)
+    display.on_event(cache_event)
+
+    batch = display._batches["batch-cached-1"]
+    assert batch.size == 2
+    assert batch.latest_status == "resumed"

@@ -94,6 +94,9 @@ async with batchify(live_display="on"):
 - `on`: always render the panel
 - `off`: never render the panel
 
+When enabled, the panel focuses on sent batches and shows one row per batch:
+`batch_id`, `provider`, `endpoint`, `model`, `size`, and latest status.
+
 You can now run this script normally using python and start saving money:
 
 ```bash
