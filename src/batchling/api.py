@@ -34,7 +34,8 @@ def batchify(
     dry_run : bool, optional
         If ``True``, intercept and batch requests without sending provider batches.<br>
         Use it to debug or before sending big jobs.<br>
-        Batched requests resolve to synthetic responses.
+        Intercepted requests raise ``DryRunEarlyExit`` instead of returning
+        provider responses.
     cache : bool, optional
         If ``True``, enable persistent request cache lookups.<br>
         This parameter allows to skip the batch submission and go straight to the polling phase for requests that have already been sent.
