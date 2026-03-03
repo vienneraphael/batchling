@@ -79,7 +79,8 @@ batchling generate_product_images.py:main --live-display auto
 - `off`: never render the panel
 
 When enabled, the panel shows overall context progress:
-`completed_samples / total_samples` and completion percentage.
+`completed_samples / total_samples`, completion percentage, and `Time Elapsed`
+since the first batch seen in the context.
 
 ## Next Steps
 

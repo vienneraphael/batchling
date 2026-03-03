@@ -126,3 +126,63 @@ def test_batcher_rich_display_tracks_resumed_batch_progress() -> None:
     assert completed_samples == 2
     assert total_samples == 2
     assert percent == 100.0
+
+
+def test_batcher_rich_display_elapsed_uses_first_batch_time(monkeypatch) -> None:
+    """Test elapsed timer starts from first batch seen in the context."""
+    current_time = {"value": 100.0}
+
+    def fake_time() -> float:
+        return current_time["value"]
+
+    monkeypatch.setattr(rich_display.time, "time", fake_time)
+
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    first_batch_event: rich_display.BatcherEvent = {
+        "event_type": "batch_processing",
+        "timestamp": 100.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+        "batch_id": "batch-1",
+        "request_count": 1,
+        "source": "poll_start",
+    }
+    display.on_event(first_batch_event)
+
+    current_time["value"] = 127.0
+    assert display._compute_elapsed_seconds() == 27
+    assert display._format_elapsed(elapsed_seconds=27) == "00:00:27"
+
+
+def test_batcher_rich_display_elapsed_starts_with_cache_batch(monkeypatch) -> None:
+    """Test elapsed timer also starts when the first batch comes from cache routing."""
+    current_time = {"value": 200.0}
+
+    def fake_time() -> float:
+        return current_time["value"]
+
+    monkeypatch.setattr(rich_display.time, "time", fake_time)
+
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    cache_event: rich_display.BatcherEvent = {
+        "event_type": "cache_hit_routed",
+        "timestamp": 200.0,
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "model-a",
+        "batch_id": "batch-cached-1",
+        "source": "resumed_poll",
+        "custom_id": "custom-1",
+    }
+    display.on_event(cache_event)
+
+    current_time["value"] = 206.0
+    assert display._compute_elapsed_seconds() == 6

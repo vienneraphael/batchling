@@ -53,6 +53,7 @@ class BatcherRichDisplay:
         self._console = console or Console(stderr=True)
         self._refresh_per_second = refresh_per_second
         self._batches: dict[str, _BatchActivity] = {}
+        self._first_batch_created_at: float | None = None
         self._live: Live | None = None
 
     def start(self) -> None:
@@ -130,11 +131,14 @@ class BatcherRichDisplay:
         _BatchActivity
             Batch display state.
         """
+        now = time.time()
         batch = self._batches.get(batch_id)
         if batch is None:
             batch = _BatchActivity(batch_id=batch_id)
             self._batches[batch_id] = batch
-        batch.updated_at = time.time()
+            if self._first_batch_created_at is None:
+                self._first_batch_created_at = now
+        batch.updated_at = now
         return batch
 
     @staticmethod
@@ -174,6 +178,39 @@ class BatcherRichDisplay:
         percent = (completed_samples / total_samples) * 100
         return completed_samples, total_samples, percent
 
+    def _compute_elapsed_seconds(self) -> int:
+        """
+        Compute elapsed seconds since first batch creation in this context.
+
+        Returns
+        -------
+        int
+            Elapsed seconds.
+        """
+        if self._first_batch_created_at is None:
+            return 0
+        return max(0, int(time.time() - self._first_batch_created_at))
+
+    @staticmethod
+    def _format_elapsed(*, elapsed_seconds: int) -> str:
+        """
+        Format elapsed seconds as ``HH:MM:SS``.
+
+        Parameters
+        ----------
+        elapsed_seconds : int
+            Elapsed seconds.
+
+        Returns
+        -------
+        str
+            Formatted duration.
+        """
+        hours = elapsed_seconds // 3600
+        minutes = (elapsed_seconds % 3600) // 60
+        seconds = elapsed_seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
     def _render(self) -> Panel:
         """Build the current Rich panel renderable."""
         progress_bar = self._build_progress_bar()
@@ -186,6 +223,8 @@ class BatcherRichDisplay:
     def _build_progress_bar(self) -> Progress:
         """Build aggregate context progress as a Rich progress bar."""
         completed_samples, total_samples, _ = self._compute_progress()
+        elapsed_seconds = self._compute_elapsed_seconds()
+        elapsed_label = self._format_elapsed(elapsed_seconds=elapsed_seconds)
 
         progress = Progress(
             BarColumn(bar_width=None),
@@ -195,6 +234,7 @@ class BatcherRichDisplay:
                     "{task.fields[total_samples]} ({task.percentage:.1f}%)"
                 )
             ),
+            TextColumn(text_format=f"Time Elapsed: {elapsed_label}"),
             expand=True,
         )
         display_total = max(total_samples, 1)

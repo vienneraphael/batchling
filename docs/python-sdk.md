@@ -95,7 +95,8 @@ async with batchify(live_display="on"):
 - `off`: never render the panel
 
 When enabled, the panel shows context-level progress only:
-`completed_samples / total_samples` and completion percentage.
+`completed_samples / total_samples`, completion percentage, and `Time Elapsed`
+since the first batch seen in the context.
 
 You can now run this script normally using python and start saving money:
 
