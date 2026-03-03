@@ -220,6 +220,48 @@ def test_batching_context_uses_polling_progress_fallback_when_auto_disabled(
     assert context._self_polling_progress_logger is None
 
 
+def test_batching_context_skips_live_display_in_dry_run(
+    reset_context: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test dry-run mode does not start live display listeners."""
+
+    class DummyDisplay:
+        """Simple display stub."""
+
+        def __init__(self) -> None:
+            self.started = False
+
+        def start(self) -> None:
+            self.started = True
+
+        def stop(self) -> None:
+            return None
+
+        def on_event(self, event: dict[str, t.Any]) -> None:
+            del event
+
+    dummy_display = DummyDisplay()
+    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=1.0,
+        dry_run=True,
+        cache=False,
+    )
+    context = BatchingContext(
+        batcher=batcher,
+        live_display=True,
+    )
+
+    context._start_live_display()
+    assert dummy_display.started is False
+    assert context._self_live_display is None
+    assert context._self_polling_progress_logger is None
+
+
 @pytest.mark.asyncio
 async def test_batching_context_prints_dry_run_report_when_live_display_disabled(
     reset_context: None,

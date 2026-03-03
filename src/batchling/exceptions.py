@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-class DryRunEarlyExit(RuntimeError):
+class DryRunEarlyExit(BaseException):
     """
     Raised when dry-run mode exits before returning a provider response.
 

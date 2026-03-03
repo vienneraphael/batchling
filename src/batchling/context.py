@@ -205,6 +205,8 @@ class BatchingContext:
         """
         if self._self_live_display is not None or self._self_polling_progress_logger is not None:
             return
+        if self._self_batcher._dry_run:
+            return
         if not self._self_live_display_enabled:
             return
         if not should_enable_live_display(enabled=self._self_live_display_enabled):

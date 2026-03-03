@@ -358,14 +358,14 @@ class DryRunSummaryDisplay:
             Styled totals text.
         """
         line = Text()
-        line.append(text="Would Batch", style="grey70")
+        line.append(text="Batchable Requests", style="grey70")
         line.append(text=": ", style="grey70")
         line.append(
             text=str(object=self._summary_state.would_batch_requests_total),
             style="bold cyan",
         )
         line.append(text="  -  ", style="grey70")
-        line.append(text="Would Cache", style="grey70")
+        line.append(text="Cache Hit Requests", style="grey70")
         line.append(text=": ", style="grey70")
         line.append(
             text=str(object=self._summary_state.would_cache_requests_total),

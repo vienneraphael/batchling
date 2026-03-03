@@ -441,7 +441,7 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     )
 
     totals_line = display._build_totals_line()
-    assert totals_line.plain == "Would Batch: 3  -  Would Cache: 1"
+    assert totals_line.plain == "Batchable Requests: 3  -  Cache Hit Requests: 1"
 
     queue_table = display._build_queue_summary_table()
     assert queue_table.columns[0]._cells == ["groq", "openai"]
