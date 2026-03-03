@@ -47,7 +47,7 @@ class BatcherRichDisplay:
     def __init__(
         self,
         *,
-        refresh_per_second: float = 8.0,
+        refresh_per_second: float = 1.0,
         console: Console | None = None,
     ) -> None:
         self._console = console or Console(stderr=True)
