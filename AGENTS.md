@@ -43,6 +43,11 @@ Always follow good practices for atomic commits.
 - [HTTP hooks: request interception](docs/architecture/hooks.md)
 - [Async Context Manager: `BatchingContext`](docs/architecture/context.md)
 - [Provider adapters: URL matching + response decoding](docs/architecture/providers.md)
+- [Request cache store: persistent request-to-batch mappings](docs/architecture/cache.md)
+- [Logging helpers: normalized + redacted log messages](docs/architecture/logging.md)
+- [Progress state: shared lifecycle aggregation](docs/architecture/progress_state.md)
+- [Rich display: live panel + dry-run summary rendering](docs/architecture/rich_display.md)
+- [Exceptions: dry-run control-flow signaling](docs/architecture/exceptions.md)
 
 ## End-to-end flow (high level)
 
