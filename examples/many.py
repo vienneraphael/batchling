@@ -348,12 +348,9 @@ async def main() -> None:
         return
 
     tasks = [spec.request_runner(prompt=question) for spec in enabled_specs]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    results = await asyncio.gather(*tasks)
 
     for spec, result in zip(enabled_specs, results, strict=True):
-        if isinstance(result, BaseException):
-            print(f"{spec.provider} error:\n{type(result).__name__}: {result}\n")
-            continue
         model_name, answer_text = result
         print(f"{spec.provider} ({model_name}) answer:\n{answer_text}\n")
 

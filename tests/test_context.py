@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from batchling.context import BatchingContext
-from batchling.core import Batcher
+from batchling.core import Batcher, _DryRunAbortSignal
 from batchling.exceptions import DryRunEarlyExit
 from batchling.hooks import active_batcher
 from batchling.providers.openai import OpenAIProvider
@@ -295,15 +295,80 @@ async def test_batching_context_prints_dry_run_report_when_live_display_disabled
         live_display=False,
     )
 
-    with pytest.raises(DryRunEarlyExit):
-        async with context:
-            _ = await batcher.submit(
-                client_type="httpx",
-                method="POST",
-                url="api.openai.com",
-                endpoint="/v1/chat/completions",
-                provider=OpenAIProvider(),
-                body=b'{"model":"model-a","messages":[]}',
-            )
+    async with context:
+        result = await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=OpenAIProvider(),
+            body=b'{"model":"model-a","messages":[]}',
+        )
+
+    assert isinstance(result, _DryRunAbortSignal)
 
     assert dry_run_display.print_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_batching_context_suppresses_dry_run_early_exit(
+    batcher: Batcher,
+    reset_context: None,
+) -> None:
+    """Test async context suppresses DryRunEarlyExit for clean user output."""
+    context = BatchingContext(batcher=batcher)
+
+    did_raise = False
+    try:
+        async with context:
+            raise DryRunEarlyExit(
+                source="dry_run",
+                provider="openai",
+                endpoint="/v1/chat/completions",
+                model="model-a",
+                batch_id="dryrun-test",
+                custom_id="custom-1",
+            )
+    except DryRunEarlyExit:
+        did_raise = True
+
+    assert did_raise is False
+
+
+@pytest.mark.asyncio
+async def test_batching_context_does_not_suppress_non_dry_run_exceptions(
+    batcher: Batcher,
+    reset_context: None,
+) -> None:
+    """Test async context does not suppress runtime exceptions."""
+    context = BatchingContext(batcher=batcher)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        async with context:
+            raise RuntimeError("boom")
+
+
+def test_batching_context_sync_suppresses_dry_run_early_exit(
+    batcher: Batcher,
+    reset_context: None,
+) -> None:
+    """Test sync context suppresses DryRunEarlyExit."""
+    context = BatchingContext(batcher=batcher)
+
+    did_raise = False
+    with warnings.catch_warnings():
+        warnings.simplefilter(action="ignore")
+        try:
+            with context:
+                raise DryRunEarlyExit(
+                    source="dry_run",
+                    provider="openai",
+                    endpoint="/v1/chat/completions",
+                    model="model-a",
+                    batch_id="dryrun-test",
+                    custom_id="custom-1",
+                )
+        except DryRunEarlyExit:
+            did_raise = True
+
+    assert did_raise is False

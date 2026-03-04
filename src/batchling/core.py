@@ -19,7 +19,6 @@ from urllib.parse import urlparse
 import httpx
 
 from batchling.cache import CacheEntry, RequestCacheStore
-from batchling.exceptions import DryRunEarlyExit
 from batchling.logging import log_debug, log_error, log_info, log_warning
 from batchling.providers import BaseProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec
@@ -127,6 +126,18 @@ class _ResumedBatch:
     base_url: str
     api_headers: dict[str, str]
     requests_by_custom_id: dict[str, list[_ResumedPendingRequest]]
+
+
+@dataclass(frozen=True)
+class _DryRunAbortSignal:
+    """Internal dry-run abort signal resolved by ``Batcher`` futures."""
+
+    source: str
+    provider: str
+    endpoint: str
+    model: str
+    batch_id: str
+    custom_id: str
 
 
 class Batcher:
@@ -494,8 +505,8 @@ class Batcher:
                 future=future,
                 request_hash=request_hash,
             )
-            future.set_exception(
-                DryRunEarlyExit(
+            future.set_result(
+                _DryRunAbortSignal(
                     source="cache_dry_run",
                     provider=dry_run_request.provider.name,
                     endpoint=dry_run_request.queue_key[1],
@@ -645,8 +656,6 @@ class Batcher:
             try:
                 return await future
             except asyncio.CancelledError:
-                raise
-            except DryRunEarlyExit:
                 raise
             except Exception as error:
                 log_warning(
@@ -1058,8 +1067,8 @@ class Batcher:
                 self._active_batches.append(active_batch)
                 for req in requests:
                     if not req.future.done():
-                        req.future.set_exception(
-                            DryRunEarlyExit(
+                        req.future.set_result(
+                            _DryRunAbortSignal(
                                 source="dry_run",
                                 provider=req.provider.name,
                                 endpoint=req.queue_key[1],

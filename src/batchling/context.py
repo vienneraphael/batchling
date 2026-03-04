@@ -8,6 +8,7 @@ import typing as t
 import warnings
 
 from batchling.core import Batcher, BatcherEvent
+from batchling.exceptions import DryRunEarlyExit
 from batchling.hooks import active_batcher
 from batchling.logging import log_info
 from batchling.progress_state import BatchProgressState
@@ -302,7 +303,7 @@ class BatchingContext:
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: t.Any,
-    ) -> None:
+    ) -> bool:
         """
         Exit the synchronous context manager and reset the batcher.
 
@@ -314,7 +315,13 @@ class BatchingContext:
             Exception value, if any.
         exc_tb : typing.Any
             Exception traceback, if any.
+
+        Returns
+        -------
+        bool
+            ``True`` to suppress ``DryRunEarlyExit``, otherwise ``False``.
         """
+        should_suppress = isinstance(exc_val, DryRunEarlyExit)
         if self._self_context_token is not None:
             active_batcher.reset(self._self_context_token)
             self._self_context_token = None
@@ -333,6 +340,7 @@ class BatchingContext:
                 stacklevel=2,
             )
             self._finalize_context_displays()
+        return should_suppress
 
     def _on_sync_close_done(self, close_task: asyncio.Task[None]) -> None:
         """
@@ -374,7 +382,7 @@ class BatchingContext:
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: t.Any,
-    ) -> None:
+    ) -> bool:
         """
         Exit the async context manager, reset the batcher, and flush pending work.
 
@@ -386,7 +394,13 @@ class BatchingContext:
             Exception value, if any.
         exc_tb : typing.Any
             Exception traceback, if any.
+
+        Returns
+        -------
+        bool
+            ``True`` to suppress ``DryRunEarlyExit``, otherwise ``False``.
         """
+        should_suppress = isinstance(exc_val, DryRunEarlyExit)
         if self._self_context_token is not None:
             active_batcher.reset(self._self_context_token)
             self._self_context_token = None
@@ -394,3 +408,4 @@ class BatchingContext:
             await self._self_batcher.close()
         finally:
             self._finalize_context_displays()
+        return should_suppress

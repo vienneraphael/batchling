@@ -10,8 +10,13 @@ import httpx
 import pytest
 
 from batchling.cache import CacheEntry
-from batchling.core import Batcher, BatcherEvent, _ActiveBatch, _PendingRequest
-from batchling.exceptions import DryRunEarlyExit
+from batchling.core import (
+    Batcher,
+    BatcherEvent,
+    _ActiveBatch,
+    _DryRunAbortSignal,
+    _PendingRequest,
+)
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
 from batchling.providers.gemini import GeminiProvider
@@ -119,6 +124,28 @@ def _pending_count_for_provider(batcher: Batcher, provider_name: str) -> int:
         for queue_key, queue in batcher._pending_by_provider.items()
         if queue_key[0] == provider_name
     )
+
+
+def _assert_dry_run_abort_signal(*, result: t.Any, source: str | None = None) -> _DryRunAbortSignal:
+    """
+    Assert that one direct ``Batcher.submit`` result is a dry-run abort signal.
+
+    Parameters
+    ----------
+    result : typing.Any
+        Result returned by ``Batcher.submit``.
+    source : str | None, optional
+        Expected dry-run source.
+
+    Returns
+    -------
+    _DryRunAbortSignal
+        Typed dry-run signal for follow-up assertions.
+    """
+    assert isinstance(result, _DryRunAbortSignal)
+    if source is not None:
+        assert result.source == source
+    return result
 
 
 def _queue_key(
@@ -817,8 +844,8 @@ async def test_submit_after_close(batcher: Batcher, provider: OpenAIProvider):
 
 
 @pytest.mark.asyncio
-async def test_dry_run_submit_raises_early_exit(provider: OpenAIProvider):
-    """Test dry-run submit raises early exit without provider I/O."""
+async def test_dry_run_submit_returns_abort_signal(provider: OpenAIProvider):
+    """Test dry-run submit returns abort signal without provider I/O."""
     dry_run_batcher = Batcher(
         batch_size=1,
         batch_window_seconds=0.5,
@@ -826,21 +853,19 @@ async def test_dry_run_submit_raises_early_exit(provider: OpenAIProvider):
         cache=False,
     )
 
-    with pytest.raises(DryRunEarlyExit) as error:
-        _ = await dry_run_batcher.submit(
-            client_type="httpx",
-            method="GET",
-            url="api.openai.com",
-            endpoint="/v1/chat/completions",
-            provider=provider,
-            body=b'{"model":"model-a","messages":[]}',
-            headers={"Authorization": "Bearer token"},
-        )
-
-    assert error.value.source == "dry_run"
-    assert error.value.provider == "openai"
-    assert error.value.endpoint == "/v1/chat/completions"
-    assert error.value.model == "model-a"
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="GET",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        body=b'{"model":"model-a","messages":[]}',
+        headers={"Authorization": "Bearer token"},
+    )
+    signal = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    assert signal.provider == "openai"
+    assert signal.endpoint == "/v1/chat/completions"
+    assert signal.model == "model-a"
     assert _pending_count(batcher=dry_run_batcher) == 0
     assert len(dry_run_batcher._active_batches) == 1
 
@@ -870,16 +895,16 @@ async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProv
         failing_process_batch,
     )
 
-    with pytest.raises(DryRunEarlyExit):
-        _ = await dry_run_batcher.submit(
-            client_type="httpx",
-            method="GET",
-            url="api.openai.com",
-            endpoint="/v1/chat/completions",
-            provider=provider,
-            body=b'{"model":"model-a","messages":[]}',
-            headers={"Authorization": "Bearer token"},
-        )
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="GET",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        body=b'{"model":"model-a","messages":[]}',
+        headers={"Authorization": "Bearer token"},
+    )
+    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
 
     assert call_count == 0
 
@@ -924,10 +949,9 @@ async def test_dry_run_still_batches_by_size(provider: OpenAIProvider):
             body=b'{"model":"model-a","messages":[]}',
             headers={"Authorization": "Bearer token"},
         ),
-        return_exceptions=True,
     )
 
-    assert all(isinstance(result, DryRunEarlyExit) for result in results)
+    assert all(isinstance(result, _DryRunAbortSignal) for result in results)
     assert len(dry_run_batcher._active_batches) == 1
     assert _pending_count(batcher=dry_run_batcher) == 0
 
@@ -960,8 +984,8 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
     assert not dry_run_batcher._batch_tasks
     assert not dry_run_batcher._resumed_poll_tasks
 
-    with pytest.raises(DryRunEarlyExit):
-        _ = await task
+    result = await task
+    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
     assert len(dry_run_batcher._active_batches) == 1
 
 
@@ -988,11 +1012,10 @@ async def test_homogeneous_provider_same_model_uses_same_queue():
             provider=provider,
             body=b'{"model":"gpt-4o-mini","messages":[]}',
         ),
-        return_exceptions=True,
     )
 
     assert len(batcher._active_batches) == 1
-    assert all(isinstance(result, DryRunEarlyExit) for result in results)
+    assert all(isinstance(result, _DryRunAbortSignal) for result in results)
     assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
     await batcher.close()
 
@@ -1022,8 +1045,8 @@ async def test_homogeneous_provider_pending_request_stores_queue_key():
     assert queue[0].queue_key == _queue_key(provider_name=provider.name, model_name="model-a")
 
     await batcher.close()
-    with pytest.raises(DryRunEarlyExit):
-        _ = await task
+    result = await task
+    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
 
 
 @pytest.mark.asyncio
@@ -1054,8 +1077,8 @@ async def test_strict_queue_key_stores_provider_endpoint_model():
     assert queue[0].queue_key == queue_key
 
     await batcher.close()
-    with pytest.raises(DryRunEarlyExit):
-        _ = await task
+    result = await task
+    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
 
 
 def test_gemini_queue_key_extracts_model_from_endpoint() -> None:
@@ -1391,10 +1414,9 @@ async def test_homogeneous_provider_different_models_use_distinct_queues():
             provider=provider,
             body=b'{"model":"model-b","messages":[]}',
         ),
-        return_exceptions=True,
     )
 
-    assert all(isinstance(result, DryRunEarlyExit) for result in results)
+    assert all(isinstance(result, _DryRunAbortSignal) for result in results)
     assert len(batcher._active_batches) == 2
     assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
     await batcher.close()
@@ -1455,8 +1477,8 @@ async def test_strict_queue_key_mixed_models_use_distinct_queues():
     assert _queue_key(provider_name=provider.name, model_name="model-b") in batcher._window_tasks
 
     await batcher.close()
-    results = await asyncio.gather(task_1, task_2, return_exceptions=True)
-    assert all(isinstance(result, DryRunEarlyExit) for result in results)
+    results = await asyncio.gather(task_1, task_2)
+    assert all(isinstance(result, _DryRunAbortSignal) for result in results)
 
 
 @pytest.mark.asyncio
@@ -1506,8 +1528,8 @@ async def test_strict_queue_key_different_endpoints_use_distinct_queues():
     )
 
     await batcher.close()
-    results = await asyncio.gather(task_1, task_2, return_exceptions=True)
-    assert all(isinstance(result, DryRunEarlyExit) for result in results)
+    results = await asyncio.gather(task_1, task_2)
+    assert all(isinstance(result, _DryRunAbortSignal) for result in results)
 
 
 @pytest.mark.asyncio
@@ -1549,8 +1571,8 @@ async def test_close_flushes_all_model_scoped_queues_for_homogeneous_provider():
     )
 
     await batcher.close()
-    results = await asyncio.gather(task_1, task_2, return_exceptions=True)
-    assert all(isinstance(result, DryRunEarlyExit) for result in results)
+    results = await asyncio.gather(task_1, task_2)
+    assert all(isinstance(result, _DryRunAbortSignal) for result in results)
 
     assert _pending_count_for_provider(batcher=batcher, provider_name=provider.name) == 0
     assert len(batcher._active_batches) == 2
@@ -1930,21 +1952,20 @@ async def test_dry_run_cache_hit_is_read_only(mock_openai_api_transport: httpx.M
 
     dry_run_batcher = Batcher(batch_size=2, batch_window_seconds=0.1, cache=True, dry_run=True)
     dry_run_provider = OpenAIProvider()
-    with pytest.raises(DryRunEarlyExit) as dry_run_error:
-        _ = await dry_run_batcher.submit(
-            client_type="httpx",
-            method="POST",
-            url="api.openai.com",
-            endpoint="/v1/chat/completions",
-            provider=dry_run_provider,
-            headers={"Authorization": "Bearer token"},
-            body=b'{"model":"model-a","messages":[]}',
-        )
-    assert dry_run_error.value.source == "cache_dry_run"
-    assert dry_run_error.value.batch_id == original_entry.batch_id
-    assert dry_run_error.value.provider == "openai"
-    assert dry_run_error.value.endpoint == "/v1/chat/completions"
-    assert dry_run_error.value.model == "model-a"
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=dry_run_provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    signal = _assert_dry_run_abort_signal(result=result, source="cache_dry_run")
+    assert signal.batch_id == original_entry.batch_id
+    assert signal.provider == "openai"
+    assert signal.endpoint == "/v1/chat/completions"
+    assert signal.model == "model-a"
     assert dry_run_batcher._cache_store is not None
     dry_run_entry = dry_run_batcher._cache_store.get_by_hash(request_hash=request_hash)
     assert dry_run_entry is not None
@@ -1988,16 +2009,16 @@ async def test_dry_run_emits_terminal_without_poll(provider: OpenAIProvider) -> 
     events: list[BatcherEvent] = []
     dry_run_batcher._add_event_listener(listener=events.append)
 
-    with pytest.raises(DryRunEarlyExit):
-        _ = await dry_run_batcher.submit(
-            client_type="httpx",
-            method="POST",
-            url="api.openai.com",
-            endpoint="/v1/chat/completions",
-            provider=provider,
-            headers={"Authorization": "Bearer token"},
-            body=b'{"model":"model-a","messages":[]}',
-        )
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
 
     event_types = {str(event["event_type"]) for event in events}
     assert "request_queued" in event_types
@@ -2042,16 +2063,16 @@ async def test_cache_hit_emits_cache_hit_routed(
     events: list[BatcherEvent] = []
     dry_run_batcher._add_event_listener(listener=events.append)
 
-    with pytest.raises(DryRunEarlyExit):
-        _ = await dry_run_batcher.submit(
-            client_type="httpx",
-            method="POST",
-            url="api.openai.com",
-            endpoint="/v1/chat/completions",
-            provider=OpenAIProvider(),
-            headers={"Authorization": "Bearer token"},
-            body=b'{"model":"model-a","messages":[]}',
-        )
+    result = await dry_run_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.openai.com",
+        endpoint="/v1/chat/completions",
+        provider=OpenAIProvider(),
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"model-a","messages":[]}',
+    )
+    _ = _assert_dry_run_abort_signal(result=result, source="cache_dry_run")
 
     assert any(
         event["event_type"] == "cache_hit_routed" and event.get("source") == "cache_dry_run"

@@ -34,9 +34,11 @@ resolves futures back to callers.
 7. `close()` flushes remaining requests and cancels timers.
 
 In `dry_run` mode, step 3 and provider polling are bypassed: `_process_batch()` still
-creates `_ActiveBatch` for tracking, then resolves each request by raising
-`DryRunEarlyExit`.
+creates `_ActiveBatch` for tracking, then resolves each request with an internal
+dry-run abort signal.
 Cache lookups remain enabled in dry-run mode for hit accounting, but cache writes are disabled.
+The public `DryRunEarlyExit` is raised at hook boundaries when intercepted requests
+return, which keeps exception-driven flow isolated to scope edges instead of core execution.
 `close()` also waits for in-flight background submission/poll tasks so teardown
 reporting has stable totals.
 
