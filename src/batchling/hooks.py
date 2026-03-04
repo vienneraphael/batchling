@@ -18,7 +18,8 @@ from aiohttp.client_reqrep import RequestInfo
 from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
-from batchling.core import Batcher
+from batchling.core import Batcher, _DryRunAbortSignal
+from batchling.exceptions import DryRunEarlyExit
 from batchling.logging import log_debug
 from batchling.providers import get_provider_for_batch_request
 from batchling.providers.base import BaseProvider
@@ -322,6 +323,27 @@ def _maybe_route_to_batcher(
     )
 
 
+def _raise_if_dry_run_abort_signal(*, response: t.Any) -> None:
+    """
+    Raise ``DryRunEarlyExit`` when the batcher returns a dry-run abort signal.
+
+    Parameters
+    ----------
+    response : typing.Any
+        Value returned by ``Batcher.submit``.
+    """
+    if not isinstance(response, _DryRunAbortSignal):
+        return
+    raise DryRunEarlyExit(
+        source=response.source,
+        provider=response.provider,
+        endpoint=response.endpoint,
+        model=response.model,
+        batch_id=response.batch_id,
+        custom_id=response.custom_id,
+    )
+
+
 async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) -> httpx.Response:
     """
     Intercept ``httpx.AsyncClient.send`` to route requests into the batcher.
@@ -357,6 +379,7 @@ async def _httpx_async_send_hook(self, request: httpx.Request, **kwargs: t.Any) 
     if routed is not None:
         batcher, provider, submit_kwargs = routed
         response = await batcher.submit(provider=provider, **submit_kwargs)
+        _raise_if_dry_run_abort_signal(response=response)
         if isinstance(response, httpx.Response):
             return _ensure_response_request(
                 response=response,
@@ -402,6 +425,7 @@ async def _aiohttp_async_request_hook(
     if routed is not None:
         batcher, provider, submit_kwargs = routed
         response = await batcher.submit(provider=provider, **submit_kwargs)
+        _raise_if_dry_run_abort_signal(response=response)
         if isinstance(response, httpx.Response):
             return _BatchedAiohttpResponse.from_httpx_response(
                 response=response,

@@ -9,6 +9,7 @@ import pytest
 
 import batchling.hooks as hooks_module
 from batchling.core import Batcher
+from batchling.exceptions import DryRunEarlyExit
 from batchling.hooks import active_batcher, install_hooks
 from tests.mocks.batching import make_openai_batch_transport
 
@@ -227,3 +228,59 @@ async def test_hook_falls_back_for_non_batchable_openai_endpoint(reset_hooks, re
 
     assert response.status_code == 204
     assert mocked_original.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_hook_raises_dry_run_early_exit_for_httpx(reset_hooks, reset_context):
+    """Ensure httpx hook raises DryRunEarlyExit when dry-run batcher signals abort."""
+    install_hooks()
+
+    mocked_original = AsyncMock(return_value=httpx.Response(status_code=204))
+    hooks_module._original_httpx_async_send = mocked_original
+
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, dry_run=True, cache=False)
+    token = active_batcher.set(batcher)
+    try:
+        async with httpx.AsyncClient() as client:
+            with pytest.raises(DryRunEarlyExit) as error:
+                _ = await client.post(
+                    url="https://api.openai.com/v1/chat/completions",
+                    json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+                )
+    finally:
+        active_batcher.reset(token)
+        await batcher.close()
+
+    assert error.value.source == "dry_run"
+    assert error.value.provider == "openai"
+    assert error.value.endpoint == "/v1/chat/completions"
+    assert error.value.model == "gpt-4o-mini"
+    mocked_original.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_hook_raises_dry_run_early_exit_for_aiohttp(reset_hooks, reset_context):
+    """Ensure aiohttp hook raises DryRunEarlyExit when dry-run batcher signals abort."""
+    install_hooks()
+
+    mocked_original = AsyncMock(return_value=_AiohttpDummyResponse(status=204))
+    hooks_module._original_aiohttp_request = mocked_original
+
+    batcher = Batcher(batch_size=1, batch_window_seconds=1.0, dry_run=True, cache=False)
+    token = active_batcher.set(batcher)
+    try:
+        async with aiohttp.ClientSession() as session:
+            with pytest.raises(DryRunEarlyExit) as error:
+                _ = await session.post(
+                    url="https://api.openai.com/v1/chat/completions",
+                    json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+                )
+    finally:
+        active_batcher.reset(token)
+        await batcher.close()
+
+    assert error.value.source == "dry_run"
+    assert error.value.provider == "openai"
+    assert error.value.endpoint == "/v1/chat/completions"
+    assert error.value.model == "gpt-4o-mini"
+    assert mocked_original.await_count == 0
