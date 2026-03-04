@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.text import Text
 
 import batchling.rich_display as rich_display
+from batchling.lifecycle_events import BatcherEventSource, BatcherEventType
 
 
 def test_should_enable_live_display_auto_in_interactive_terminal(
@@ -59,7 +60,7 @@ def test_batcher_rich_display_computes_context_progress() -> None:
     )
 
     processing_event: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 1.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -67,18 +68,18 @@ def test_batcher_rich_display_computes_context_progress() -> None:
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-1",
         "request_count": 3,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     terminal_event: rich_display.BatcherEvent = {
-        "event_type": "batch_terminal",
+        "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 2.0,
         "provider": "openai",
         "batch_id": "batch-1",
         "status": "completed",
-        "source": "active_poll",
+        "source": BatcherEventSource.ACTIVE_POLL,
     }
     failed_batch_event: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 3.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -86,15 +87,15 @@ def test_batcher_rich_display_computes_context_progress() -> None:
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-2",
         "request_count": 2,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     failed_terminal_event: rich_display.BatcherEvent = {
-        "event_type": "batch_terminal",
+        "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 4.0,
         "provider": "openai",
         "batch_id": "batch-2",
         "status": "failed",
-        "source": "active_poll",
+        "source": BatcherEventSource.ACTIVE_POLL,
     }
 
     display.on_event(processing_event)
@@ -115,22 +116,22 @@ def test_batcher_rich_display_tracks_resumed_batch_progress() -> None:
     )
 
     cache_event: rich_display.BatcherEvent = {
-        "event_type": "cache_hit_routed",
+        "event_type": BatcherEventType.CACHE_HIT_ROUTED,
         "timestamp": 1.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
         "model": "model-a",
         "batch_id": "batch-cached-1",
-        "source": "resumed_poll",
+        "source": BatcherEventSource.RESUMED_POLL,
         "custom_id": "custom-1",
     }
     terminal_event: rich_display.BatcherEvent = {
-        "event_type": "batch_terminal",
+        "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 2.0,
         "provider": "openai",
         "batch_id": "batch-cached-1",
         "status": "completed",
-        "source": "resumed_poll",
+        "source": BatcherEventSource.RESUMED_POLL,
     }
 
     display.on_event(cache_event)
@@ -157,7 +158,7 @@ def test_batcher_rich_display_elapsed_uses_first_batch_time(monkeypatch) -> None
     )
 
     first_batch_event: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 100.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -165,7 +166,7 @@ def test_batcher_rich_display_elapsed_uses_first_batch_time(monkeypatch) -> None
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-1",
         "request_count": 1,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     display.on_event(first_batch_event)
 
@@ -188,13 +189,13 @@ def test_batcher_rich_display_elapsed_starts_with_cache_batch(monkeypatch) -> No
     )
 
     cache_event: rich_display.BatcherEvent = {
-        "event_type": "cache_hit_routed",
+        "event_type": BatcherEventType.CACHE_HIT_ROUTED,
         "timestamp": 200.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
         "model": "model-a",
         "batch_id": "batch-cached-1",
-        "source": "resumed_poll",
+        "source": BatcherEventSource.RESUMED_POLL,
         "custom_id": "custom-1",
     }
     display.on_event(cache_event)
@@ -210,7 +211,7 @@ def test_batcher_rich_display_request_metrics_line() -> None:
     )
 
     processing_event_batch_1: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 1.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -218,18 +219,18 @@ def test_batcher_rich_display_request_metrics_line() -> None:
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-1",
         "request_count": 3,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     terminal_event_batch_1: rich_display.BatcherEvent = {
-        "event_type": "batch_terminal",
+        "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 2.0,
         "provider": "openai",
         "batch_id": "batch-1",
         "status": "completed",
-        "source": "active_poll",
+        "source": BatcherEventSource.ACTIVE_POLL,
     }
     processing_event_batch_2: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 3.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -237,25 +238,25 @@ def test_batcher_rich_display_request_metrics_line() -> None:
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-2",
         "request_count": 2,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     cache_event_batch_3: rich_display.BatcherEvent = {
-        "event_type": "cache_hit_routed",
+        "event_type": BatcherEventType.CACHE_HIT_ROUTED,
         "timestamp": 4.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
         "model": "model-a",
         "batch_id": "batch-3",
-        "source": "resumed_poll",
+        "source": BatcherEventSource.RESUMED_POLL,
         "custom_id": "custom-1",
     }
     terminal_event_batch_3: rich_display.BatcherEvent = {
-        "event_type": "batch_terminal",
+        "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 5.0,
         "provider": "openai",
         "batch_id": "batch-3",
         "status": "completed",
-        "source": "resumed_poll",
+        "source": BatcherEventSource.RESUMED_POLL,
     }
 
     display.on_event(processing_event_batch_1)
@@ -281,7 +282,7 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
     )
 
     queue_event_batch_1: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 1.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -289,10 +290,10 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-1",
         "request_count": 1,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     queue_event_batch_2: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 2.0,
         "provider": "openai",
         "endpoint": "/v1/chat/completions",
@@ -300,18 +301,18 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
         "queue_key": ("openai", "/v1/chat/completions", "model-a"),
         "batch_id": "batch-2",
         "request_count": 1,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
     terminal_event_batch_2: rich_display.BatcherEvent = {
-        "event_type": "batch_terminal",
+        "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 3.0,
         "provider": "openai",
         "batch_id": "batch-2",
         "status": "completed",
-        "source": "active_poll",
+        "source": BatcherEventSource.ACTIVE_POLL,
     }
     other_queue_event: rich_display.BatcherEvent = {
-        "event_type": "batch_processing",
+        "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 4.0,
         "provider": "groq",
         "endpoint": "/openai/v1/chat/completions",
@@ -319,7 +320,7 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
         "queue_key": ("groq", "/openai/v1/chat/completions", "llama-3.1-8b-instant"),
         "batch_id": "batch-3",
         "request_count": 1,
-        "source": "poll_start",
+        "source": BatcherEventSource.POLL_START,
     }
 
     display.on_event(queue_event_batch_1)
@@ -378,7 +379,7 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
 
     display.on_event(
         {
-            "event_type": "request_queued",
+            "event_type": BatcherEventType.REQUEST_QUEUED,
             "provider": "openai",
             "endpoint": "/v1/chat/completions",
             "model": "model-a",
@@ -388,7 +389,7 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     )
     display.on_event(
         {
-            "event_type": "request_queued",
+            "event_type": BatcherEventType.REQUEST_QUEUED,
             "provider": "openai",
             "endpoint": "/v1/chat/completions",
             "model": "model-a",
@@ -398,7 +399,7 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     )
     display.on_event(
         {
-            "event_type": "request_queued",
+            "event_type": BatcherEventType.REQUEST_QUEUED,
             "provider": "groq",
             "endpoint": "/openai/v1/chat/completions",
             "model": "llama-3.1-8b-instant",
@@ -408,8 +409,8 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     )
     display.on_event(
         {
-            "event_type": "batch_processing",
-            "source": "dry_run",
+            "event_type": BatcherEventType.BATCH_PROCESSING,
+            "source": BatcherEventSource.DRY_RUN,
             "provider": "openai",
             "endpoint": "/v1/chat/completions",
             "model": "model-a",
@@ -419,8 +420,8 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     )
     display.on_event(
         {
-            "event_type": "batch_processing",
-            "source": "dry_run",
+            "event_type": BatcherEventType.BATCH_PROCESSING,
+            "source": BatcherEventSource.DRY_RUN,
             "provider": "groq",
             "endpoint": "/openai/v1/chat/completions",
             "model": "llama-3.1-8b-instant",
@@ -430,8 +431,8 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     )
     display.on_event(
         {
-            "event_type": "cache_hit_routed",
-            "source": "cache_dry_run",
+            "event_type": BatcherEventType.CACHE_HIT_ROUTED,
+            "source": BatcherEventSource.CACHE_DRY_RUN,
             "provider": "openai",
             "endpoint": "/v1/chat/completions",
             "model": "model-a",

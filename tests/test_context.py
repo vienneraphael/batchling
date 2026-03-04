@@ -14,6 +14,7 @@ from batchling.context import BatchingContext
 from batchling.core import Batcher, _DryRunAbortSignal
 from batchling.exceptions import DryRunEarlyExit
 from batchling.hooks import active_batcher
+from batchling.lifecycle_events import BatcherEventSource, BatcherEventType
 from batchling.providers.openai import OpenAIProvider
 
 
@@ -202,16 +203,16 @@ def test_batching_context_uses_polling_progress_fallback_when_auto_disabled(
     assert any("using polling progress INFO logs" in record.message for record in caplog.records)
 
     batcher._emit_event(
-        event_type="batch_processing",
+        event_type=BatcherEventType.BATCH_PROCESSING,
         batch_id="batch-1",
         request_count=4,
-        source="poll_start",
+        source=BatcherEventSource.POLL_START,
     )
     batcher._emit_event(
-        event_type="batch_polled",
+        event_type=BatcherEventType.BATCH_POLLED,
         batch_id="batch-1",
         status="in_progress",
-        source="active_poll",
+        source=BatcherEventSource.ACTIVE_POLL,
     )
 
     assert any("Live display fallback progress" in record.message for record in caplog.records)
@@ -322,7 +323,7 @@ async def test_batching_context_suppresses_dry_run_early_exit(
     try:
         async with context:
             raise DryRunEarlyExit(
-                source="dry_run",
+                source=BatcherEventSource.DRY_RUN,
                 provider="openai",
                 endpoint="/v1/chat/completions",
                 model="model-a",
@@ -361,7 +362,7 @@ def test_batching_context_sync_suppresses_dry_run_early_exit(
         try:
             with context:
                 raise DryRunEarlyExit(
-                    source="dry_run",
+                    source=BatcherEventSource.DRY_RUN,
                     provider="openai",
                     endpoint="/v1/chat/completions",
                     model="model-a",

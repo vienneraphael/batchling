@@ -42,6 +42,16 @@ return, which keeps exception-driven flow isolated to scope edges instead of cor
 `close()` also waits for in-flight background submission/poll tasks so teardown
 reporting has stable totals.
 
+## Lifecycle event contract
+
+- Lifecycle event constants and payload typing live in
+  `src/batchling/lifecycle_events.py`.
+- `Batcher` emits listener-facing dict payloads through centralized helper methods in
+  `src/batchling/core.py` (one helper per lifecycle event family).
+- Consumers should branch on `BatcherEventType` / `BatcherEventSource` (via
+  `parse_event_type()` / `parse_event_source()`) instead of raw string literals to avoid
+  cross-module drift.
+
 ## Extension notes
 
 - Add new provider adapters by implementing `process_batch()` in the provider class.

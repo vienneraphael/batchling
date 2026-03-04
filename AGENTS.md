@@ -39,6 +39,7 @@ Always follow good practices for atomic commits.
 
 - [API surface: `batchify` adapter](docs/architecture/api.md)
 - [Batching engine: `Batcher` lifecycle](docs/architecture/core.md)
+- [Lifecycle event contract: typed constants + payload parsing](docs/architecture/lifecycle_events.md)
 - [HTTP hooks: request interception](docs/architecture/hooks.md)
 - [Async Context Manager: `BatchingContext`](docs/architecture/context.md)
 - [Provider adapters: URL matching + response decoding](docs/architecture/providers.md)

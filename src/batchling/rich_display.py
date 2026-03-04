@@ -13,7 +13,7 @@ from rich.progress import BarColumn, Progress, TextColumn
 from rich.table import Table
 from rich.text import Text
 
-from batchling.core import BatcherEvent
+from batchling.lifecycle_events import BatcherEvent
 from batchling.progress_state import BatchProgressState, DryRunSummaryState
 
 

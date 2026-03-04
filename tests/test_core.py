@@ -12,10 +12,15 @@ import pytest
 from batchling.cache import CacheEntry
 from batchling.core import (
     Batcher,
-    BatcherEvent,
     _ActiveBatch,
     _DryRunAbortSignal,
     _PendingRequest,
+)
+from batchling.lifecycle_events import (
+    BatcherEvent,
+    BatcherEventSource,
+    BatcherEventType,
+    parse_event_type,
 )
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
@@ -126,7 +131,11 @@ def _pending_count_for_provider(batcher: Batcher, provider_name: str) -> int:
     )
 
 
-def _assert_dry_run_abort_signal(*, result: t.Any, source: str | None = None) -> _DryRunAbortSignal:
+def _assert_dry_run_abort_signal(
+    *,
+    result: t.Any,
+    source: BatcherEventSource | str | None = None,
+) -> _DryRunAbortSignal:
     """
     Assert that one direct ``Batcher.submit`` result is a dry-run abort signal.
 
@@ -134,7 +143,7 @@ def _assert_dry_run_abort_signal(*, result: t.Any, source: str | None = None) ->
     ----------
     result : typing.Any
         Result returned by ``Batcher.submit``.
-    source : str | None, optional
+    source : BatcherEventSource | str | None, optional
         Expected dry-run source.
 
     Returns
@@ -862,7 +871,7 @@ async def test_dry_run_submit_returns_abort_signal(provider: OpenAIProvider):
         body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
-    signal = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    signal = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.DRY_RUN)
     assert signal.provider == "openai"
     assert signal.endpoint == "/v1/chat/completions"
     assert signal.model == "model-a"
@@ -904,7 +913,7 @@ async def test_dry_run_does_not_call_provider_process_batch(provider: OpenAIProv
         body=b'{"model":"model-a","messages":[]}',
         headers={"Authorization": "Bearer token"},
     )
-    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    _ = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.DRY_RUN)
 
     assert call_count == 0
 
@@ -985,7 +994,7 @@ async def test_dry_run_close_flushes_pending_requests(provider: OpenAIProvider):
     assert not dry_run_batcher._resumed_poll_tasks
 
     result = await task
-    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    _ = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.DRY_RUN)
     assert len(dry_run_batcher._active_batches) == 1
 
 
@@ -1046,7 +1055,7 @@ async def test_homogeneous_provider_pending_request_stores_queue_key():
 
     await batcher.close()
     result = await task
-    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    _ = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.DRY_RUN)
 
 
 @pytest.mark.asyncio
@@ -1078,7 +1087,7 @@ async def test_strict_queue_key_stores_provider_endpoint_model():
 
     await batcher.close()
     result = await task
-    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    _ = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.DRY_RUN)
 
 
 def test_gemini_queue_key_extracts_model_from_endpoint() -> None:
@@ -1961,7 +1970,7 @@ async def test_dry_run_cache_hit_is_read_only(mock_openai_api_transport: httpx.M
         headers={"Authorization": "Bearer token"},
         body=b'{"model":"model-a","messages":[]}',
     )
-    signal = _assert_dry_run_abort_signal(result=result, source="cache_dry_run")
+    signal = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.CACHE_DRY_RUN)
     assert signal.batch_id == original_entry.batch_id
     assert signal.provider == "openai"
     assert signal.endpoint == "/v1/chat/completions"
@@ -1989,12 +1998,12 @@ async def test_submit_emits_lifecycle_events(batcher: Batcher, provider: OpenAIP
         body=b'{"model":"model-a","messages":[]}',
     )
 
-    event_types = {str(event["event_type"]) for event in events}
-    assert "request_queued" in event_types
-    assert "batch_submitting" in event_types
-    assert "batch_processing" in event_types
-    assert "batch_polled" in event_types
-    assert "batch_terminal" in event_types
+    event_types = {parse_event_type(event=event) for event in events}
+    assert BatcherEventType.REQUEST_QUEUED in event_types
+    assert BatcherEventType.BATCH_SUBMITTING in event_types
+    assert BatcherEventType.BATCH_PROCESSING in event_types
+    assert BatcherEventType.BATCH_POLLED in event_types
+    assert BatcherEventType.BATCH_TERMINAL in event_types
 
 
 @pytest.mark.asyncio
@@ -2018,13 +2027,13 @@ async def test_dry_run_emits_terminal_without_poll(provider: OpenAIProvider) -> 
         headers={"Authorization": "Bearer token"},
         body=b'{"model":"model-a","messages":[]}',
     )
-    _ = _assert_dry_run_abort_signal(result=result, source="dry_run")
+    _ = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.DRY_RUN)
 
-    event_types = {str(event["event_type"]) for event in events}
-    assert "request_queued" in event_types
-    assert "batch_submitting" in event_types
-    assert "batch_terminal" in event_types
-    assert "batch_polled" not in event_types
+    event_types = {parse_event_type(event=event) for event in events}
+    assert BatcherEventType.REQUEST_QUEUED in event_types
+    assert BatcherEventType.BATCH_SUBMITTING in event_types
+    assert BatcherEventType.BATCH_TERMINAL in event_types
+    assert BatcherEventType.BATCH_POLLED not in event_types
 
     await dry_run_batcher.close()
 
@@ -2072,10 +2081,11 @@ async def test_cache_hit_emits_cache_hit_routed(
         headers={"Authorization": "Bearer token"},
         body=b'{"model":"model-a","messages":[]}',
     )
-    _ = _assert_dry_run_abort_signal(result=result, source="cache_dry_run")
+    _ = _assert_dry_run_abort_signal(result=result, source=BatcherEventSource.CACHE_DRY_RUN)
 
     assert any(
-        event["event_type"] == "cache_hit_routed" and event.get("source") == "cache_dry_run"
+        parse_event_type(event=event) is BatcherEventType.CACHE_HIT_ROUTED
+        and event.get("source") == BatcherEventSource.CACHE_DRY_RUN
         for event in events
     )
     await dry_run_batcher.close()
@@ -2110,5 +2120,7 @@ def test_fail_missing_results_emits_lifecycle_event() -> None:
 
     batcher._fail_missing_results(active_batch=active_batch, seen=set())
 
-    assert any(event["event_type"] == "missing_results" for event in events)
+    assert any(
+        parse_event_type(event=event) is BatcherEventType.MISSING_RESULTS for event in events
+    )
     loop.close()

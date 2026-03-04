@@ -7,9 +7,10 @@ import logging
 import typing as t
 import warnings
 
-from batchling.core import Batcher, BatcherEvent
+from batchling.core import Batcher
 from batchling.exceptions import DryRunEarlyExit
 from batchling.hooks import active_batcher
+from batchling.lifecycle_events import BatcherEvent, BatcherEventType, parse_event_type
 from batchling.logging import log_info
 from batchling.progress_state import BatchProgressState
 from batchling.rich_display import (
@@ -38,8 +39,8 @@ class _PollingProgressLogger:
         """
         self._progress_state.on_event(event=event)
 
-        event_type = str(object=event.get("event_type", "unknown"))
-        if event_type != "batch_polled":
+        event_type = parse_event_type(event=event)
+        if event_type is not BatcherEventType.BATCH_POLLED:
             return
 
         completed_samples, total_samples, percent = self._progress_state.compute_progress()

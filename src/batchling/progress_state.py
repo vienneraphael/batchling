@@ -6,7 +6,13 @@ import time
 import typing as t
 from dataclasses import dataclass
 
-from batchling.core import BatcherEvent
+from batchling.lifecycle_events import (
+    BatcherEvent,
+    BatcherEventSource,
+    BatcherEventType,
+    parse_event_source,
+    parse_event_type,
+)
 
 
 @dataclass
@@ -59,8 +65,8 @@ class BatchProgressState:
         event : BatcherEvent
             Lifecycle event emitted by ``Batcher``.
         """
-        event_type = str(object=event.get("event_type", "unknown"))
-        source = str(object=event.get("source", ""))
+        event_type = parse_event_type(event=event)
+        source = parse_event_source(event=event)
         batch_id = event.get("batch_id")
 
         if batch_id is None:
@@ -69,29 +75,32 @@ class BatchProgressState:
         batch = self._get_or_create_batch(batch_id=str(object=batch_id))
         self._update_batch_identity(batch=batch, event=event)
 
-        if event_type == "batch_processing":
+        if event_type is BatcherEventType.BATCH_PROCESSING:
             request_count = event.get("request_count")
             if isinstance(request_count, int):
                 batch.size = max(batch.size, request_count)
             batch.terminal = False
             return
 
-        if event_type == "batch_polled":
+        if event_type is BatcherEventType.BATCH_POLLED:
             batch.terminal = False
             return
 
-        if event_type == "batch_terminal":
+        if event_type is BatcherEventType.BATCH_TERMINAL:
             status = str(object=event.get("status", "completed"))
             batch.completed = self._status_counts_as_completed(status=status)
             batch.terminal = True
             return
 
-        if event_type == "batch_failed":
+        if event_type is BatcherEventType.BATCH_FAILED:
             batch.completed = False
             batch.terminal = True
             return
 
-        if event_type == "cache_hit_routed" and source == "resumed_poll":
+        if (
+            event_type is BatcherEventType.CACHE_HIT_ROUTED
+            and source is BatcherEventSource.RESUMED_POLL
+        ):
             batch.size += 1
             self._cached_samples += 1
             batch.terminal = False
@@ -255,10 +264,10 @@ class DryRunSummaryState:
         event : BatcherEvent
             Lifecycle event emitted by ``Batcher``.
         """
-        event_type = str(object=event.get("event_type", "unknown"))
-        source = str(object=event.get("source", ""))
+        event_type = parse_event_type(event=event)
+        source = parse_event_source(event=event)
 
-        if event_type == "request_queued":
+        if event_type is BatcherEventType.REQUEST_QUEUED:
             queue_key = self._extract_queue_key(event=event)
             if queue_key is None:
                 return
@@ -267,7 +276,7 @@ class DryRunSummaryState:
             queue_summary.expected_requests += 1
             return
 
-        if event_type == "batch_processing" and source == "dry_run":
+        if event_type is BatcherEventType.BATCH_PROCESSING and source is BatcherEventSource.DRY_RUN:
             queue_key = self._extract_queue_key(event=event)
             if queue_key is None:
                 return
@@ -275,7 +284,10 @@ class DryRunSummaryState:
             queue_summary.expected_batches += 1
             return
 
-        if event_type == "cache_hit_routed" and source == "cache_dry_run":
+        if (
+            event_type is BatcherEventType.CACHE_HIT_ROUTED
+            and source is BatcherEventSource.CACHE_DRY_RUN
+        ):
             self._would_cache_requests_total += 1
 
     @property
