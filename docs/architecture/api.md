@@ -21,9 +21,10 @@ yields `None`. Import it from `batchling`.
   strict queue key `(provider, endpoint, model)`.
 - **`dry_run` behavior**: when `dry_run=True`, requests are still intercepted, queued,
   and grouped using normal window/size triggers, but provider batch submission and polling
-  are skipped. Intercepted requests raise `DryRunEarlyExit` on return instead of
-  producing synthetic provider responses. A static dry-run summary report is emitted
-  at context teardown.
+  are skipped. Core resolves an internal dry-run abort signal, and hook boundaries
+  convert that signal into `DryRunEarlyExit` when requests return through intercepted
+  clients. Context teardown suppresses that dry-run exit for clean SDK output (no traceback)
+  while still emitting the static dry-run summary report.
 - **`cache` behavior**: when `cache=True` (default), intercepted requests are fingerprinted
   and looked up in a persistent request cache. Cache hits bypass queueing and resume polling
   from an existing provider batch when not in dry-run mode.

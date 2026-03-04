@@ -37,6 +37,10 @@ to partial totals if requests are awaited one by one. To let batchling see the
 full request set before exit, schedule requests together and await them with
 `asyncio.gather`.
 
+For SDK usage, this abort is handled at the `batchify` scope boundary so the
+dry-run summary is shown without a traceback. There is no separate dry-run mode
+parameter beyond `dry_run=True` / `--dry-run`.
+
 ## Activating dry run
 
 Dry run is activated by setting up a flag in the CLI or SDK:
