@@ -42,6 +42,7 @@ Always follow good practices for atomic commits.
 - [Lifecycle event contract: typed constants + payload parsing](docs/architecture/lifecycle_events.md)
 - [HTTP hooks: request interception](docs/architecture/hooks.md)
 - [Async Context Manager: `BatchingContext`](docs/architecture/context.md)
+- [Display/report lifecycle controller: `context_display.py`](docs/architecture/context_display.md)
 - [Provider adapters: URL matching + response decoding](docs/architecture/providers.md)
 - [Request cache store: persistent request-to-batch mappings](docs/architecture/cache.md)
 - [Logging helpers: normalized + redacted log messages](docs/architecture/logging.md)

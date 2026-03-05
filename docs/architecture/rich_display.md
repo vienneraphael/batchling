@@ -45,7 +45,7 @@ This display is used at dry-run teardown, not as a live-updating panel.
 - `TERM` is not empty/`dumb`
 - `CI` is not set
 
-When this returns `False`, `BatchingContext` switches to INFO poll-progress
+When this returns `False`, `context_display.py` switches to INFO poll-progress
 logging fallback instead of Rich live rendering.
 
 ## Code reference
@@ -53,3 +53,4 @@ logging fallback instead of Rich live rendering.
 - `src/batchling/rich_display.py`
 - `src/batchling/progress_state.py`
 - `src/batchling/context.py`
+- `src/batchling/context_display.py`

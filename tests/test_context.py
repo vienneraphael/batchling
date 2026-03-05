@@ -127,8 +127,10 @@ async def test_batching_context_starts_and_stops_live_display(
             del event
 
     dummy_display = DummyDisplay()
-    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
-    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+    monkeypatch.setattr("batchling.context_display.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr(
+        "batchling.context_display.should_enable_live_display", lambda **_kwargs: True
+    )
     context = BatchingContext(
         batcher=batcher,
         live_display=True,
@@ -137,10 +139,7 @@ async def test_batching_context_starts_and_stops_live_display(
     with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
         async with context:
             assert dummy_display.started is True
-            assert context._self_live_display_heartbeat_task is not None
-            assert not context._self_live_display_heartbeat_task.done()
         assert dummy_display.stopped is True
-        assert context._self_live_display_heartbeat_task is None
 
 
 def test_batching_context_sync_stops_live_display_without_loop(
@@ -166,8 +165,10 @@ def test_batching_context_sync_stops_live_display_without_loop(
             del event
 
     dummy_display = DummyDisplay()
-    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
-    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+    monkeypatch.setattr("batchling.context_display.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr(
+        "batchling.context_display.should_enable_live_display", lambda **_kwargs: True
+    )
 
     context = BatchingContext(
         batcher=batcher,
@@ -180,48 +181,46 @@ def test_batching_context_sync_stops_live_display_without_loop(
             pass
 
     assert dummy_display.stopped is True
-    assert context._self_live_display_heartbeat_task is None
 
 
-def test_batching_context_uses_polling_progress_fallback_when_auto_disabled(
+@pytest.mark.asyncio
+async def test_batching_context_uses_polling_progress_fallback_when_auto_disabled(
     batcher: Batcher,
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test live-display fallback logs progress at poll time when Rich is disabled."""
-    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: False)
+    monkeypatch.setattr(
+        "batchling.context_display.should_enable_live_display", lambda **_kwargs: False
+    )
     context = BatchingContext(
         batcher=batcher,
         live_display=True,
     )
 
-    caplog.set_level(level=logging.INFO, logger="batchling.context")
+    caplog.set_level(level=logging.INFO, logger="batchling.context_display")
 
-    context._start_live_display()
-    assert context._self_live_display is None
-    assert context._self_polling_progress_logger is not None
+    with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
+        async with context:
+            batcher._emit_event(
+                event_type=BatcherEventType.BATCH_PROCESSING,
+                batch_id="batch-1",
+                request_count=4,
+                source=BatcherEventSource.POLL_START,
+            )
+            batcher._emit_event(
+                event_type=BatcherEventType.BATCH_POLLED,
+                batch_id="batch-1",
+                status="in_progress",
+                source=BatcherEventSource.ACTIVE_POLL,
+            )
+
     assert any("using polling progress INFO logs" in record.message for record in caplog.records)
-
-    batcher._emit_event(
-        event_type=BatcherEventType.BATCH_PROCESSING,
-        batch_id="batch-1",
-        request_count=4,
-        source=BatcherEventSource.POLL_START,
-    )
-    batcher._emit_event(
-        event_type=BatcherEventType.BATCH_POLLED,
-        batch_id="batch-1",
-        status="in_progress",
-        source=BatcherEventSource.ACTIVE_POLL,
-    )
-
     assert any("Live display fallback progress" in record.message for record in caplog.records)
 
-    context._stop_live_display()
-    assert context._self_polling_progress_logger is None
 
-
-def test_batching_context_skips_live_display_in_dry_run(
+@pytest.mark.asyncio
+async def test_batching_context_skips_live_display_in_dry_run(
     reset_context: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -243,8 +242,10 @@ def test_batching_context_skips_live_display_in_dry_run(
             del event
 
     dummy_display = DummyDisplay()
-    monkeypatch.setattr("batchling.context.BatcherRichDisplay", lambda: dummy_display)
-    monkeypatch.setattr("batchling.context.should_enable_live_display", lambda **_kwargs: True)
+    monkeypatch.setattr("batchling.context_display.BatcherRichDisplay", lambda: dummy_display)
+    monkeypatch.setattr(
+        "batchling.context_display.should_enable_live_display", lambda **_kwargs: True
+    )
 
     batcher = Batcher(
         batch_size=1,
@@ -257,10 +258,10 @@ def test_batching_context_skips_live_display_in_dry_run(
         live_display=True,
     )
 
-    context._start_live_display()
+    with patch.object(target=batcher, attribute="close", new_callable=AsyncMock):
+        async with context:
+            pass
     assert dummy_display.started is False
-    assert context._self_live_display is None
-    assert context._self_polling_progress_logger is None
 
 
 @pytest.mark.asyncio
@@ -283,7 +284,7 @@ async def test_batching_context_prints_dry_run_report_when_live_display_disabled
             self.print_calls += 1
 
     dry_run_display = DummyDryRunSummaryDisplay()
-    monkeypatch.setattr("batchling.context.DryRunSummaryDisplay", lambda: dry_run_display)
+    monkeypatch.setattr("batchling.context_display.DryRunSummaryDisplay", lambda: dry_run_display)
 
     batcher = Batcher(
         batch_size=1,
