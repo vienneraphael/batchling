@@ -563,6 +563,45 @@ async def test_close_cancels_window_timer(fast_batcher: Batcher, provider: OpenA
 
 
 @pytest.mark.asyncio
+async def test_close_drains_tracked_task_sets() -> None:
+    """Test close() drains tracked submission and resumed poll task sets."""
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, cache=False)
+    release_tasks = asyncio.Event()
+    batch_task_started = asyncio.Event()
+    resumed_task_started = asyncio.Event()
+
+    async def pending_task(*, started_event: asyncio.Event) -> None:
+        started_event.set()
+        await release_tasks.wait()
+
+    batch_task = asyncio.create_task(
+        coro=pending_task(started_event=batch_task_started),
+        name="test_close_batch_task",
+    )
+    resumed_task = asyncio.create_task(
+        coro=pending_task(started_event=resumed_task_started),
+        name="test_close_resumed_task",
+    )
+    batcher._batch_tasks.add(batch_task)
+    batcher._resumed_poll_tasks.add(resumed_task)
+    batch_task.add_done_callback(batcher._on_submission_task_done)
+    resumed_task.add_done_callback(batcher._on_resumed_poll_task_done)
+
+    await batch_task_started.wait()
+    await resumed_task_started.wait()
+
+    close_task = asyncio.create_task(coro=batcher.close(), name="test_close_drain")
+    await asyncio.sleep(delay=0.01)
+    assert not close_task.done()
+
+    release_tasks.set()
+    await close_task
+
+    assert not batcher._batch_tasks
+    assert not batcher._resumed_poll_tasks
+
+
+@pytest.mark.asyncio
 async def test_batch_submission_error_handling(
     batcher: Batcher, provider: OpenAIProvider, monkeypatch
 ):

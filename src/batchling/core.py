@@ -1146,6 +1146,25 @@ class Batcher:
         except asyncio.CancelledError:
             pass
 
+    async def _drain_task_set(
+        self,
+        *,
+        tasks: set[asyncio.Task[None]],
+    ) -> None:
+        """
+        Wait for all pending tasks in a tracked task set to complete.
+
+        Parameters
+        ----------
+        tasks : set[asyncio.Task[None]]
+            Task set tracked by the batcher.
+        """
+        while True:
+            pending_tasks = [task for task in tasks if not task.done()]
+            if not pending_tasks:
+                break
+            _ = await asyncio.gather(*pending_tasks, return_exceptions=True)
+
     async def _window_timer(self, *, queue_key: QueueKey) -> None:
         """
         Trigger provider batch submission after the window elapses.
@@ -2001,14 +2020,5 @@ class Batcher:
 
         # Wait for in-flight batch submission and resumed poll tasks so close()
         # leaves the batcher in a stable state for summary/report consumers.
-        while True:
-            pending_batch_tasks = [task for task in self._batch_tasks if not task.done()]
-            if not pending_batch_tasks:
-                break
-            _ = await asyncio.gather(*pending_batch_tasks, return_exceptions=True)
-
-        while True:
-            pending_resumed_tasks = [task for task in self._resumed_poll_tasks if not task.done()]
-            if not pending_resumed_tasks:
-                break
-            _ = await asyncio.gather(*pending_resumed_tasks, return_exceptions=True)
+        await self._drain_task_set(tasks=self._batch_tasks)
+        await self._drain_task_set(tasks=self._resumed_poll_tasks)
