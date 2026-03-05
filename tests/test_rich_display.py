@@ -450,6 +450,27 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     assert queue_table.columns[4]._cells == ["1", "1"]
 
 
+def test_dry_run_summary_display_queue_table_layout() -> None:
+    """Test dry-run queue table keeps the shared queue column contract."""
+    display = rich_display.DryRunSummaryDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    queue_table = display._build_queue_summary_table()
+    assert [column.header for column in queue_table.columns] == [
+        "provider",
+        "endpoint",
+        "model",
+        "expected requests",
+        "expected batches",
+    ]
+    assert queue_table.columns[0].width == 12
+    assert queue_table.columns[1].width == 34
+    assert queue_table.columns[2].width == 28
+    assert queue_table.columns[3].width == 17
+    assert queue_table.columns[4].width == 16
+
+
 def test_dry_run_summary_display_renders_empty_state() -> None:
     """Test dry-run summary table defaults to zero row without events."""
     display = rich_display.DryRunSummaryDisplay(

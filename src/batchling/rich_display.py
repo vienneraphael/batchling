@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import sys
 import time
+import typing as t
+from dataclasses import dataclass
 
 from rich.console import Console, Group
 from rich.live import Live
@@ -15,6 +17,101 @@ from rich.text import Text
 
 from batchling.lifecycle_events import BatcherEvent
 from batchling.progress_state import BatchProgressState, DryRunSummaryState
+
+QueueCell: t.TypeAlias = str | Text
+QueueRow: t.TypeAlias = tuple[QueueCell, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _QueueTableColumnSpec:
+    """
+    Store one queue-table column definition.
+
+    Parameters
+    ----------
+    header : str
+        Column header label.
+    style : str | None, optional
+        Rich style applied to cell text.
+    justify : str | None, optional
+        Rich cell alignment.
+    width : int | None, optional
+        Fixed column width.
+    no_wrap : bool, optional
+        Whether values should avoid line wrapping.
+    overflow : str, optional
+        Rich overflow strategy when content exceeds width.
+    """
+
+    header: str
+    style: str | None = None
+    justify: str | None = None
+    width: int | None = None
+    no_wrap: bool = True
+    overflow: str = "ellipsis"
+
+
+_QUEUE_BASE_COLUMNS: tuple[_QueueTableColumnSpec, ...] = (
+    _QueueTableColumnSpec(header="provider", style="bold blue", width=12),
+    _QueueTableColumnSpec(header="endpoint", width=34),
+    _QueueTableColumnSpec(header="model", style="bold magenta", width=28),
+)
+_LIVE_QUEUE_COLUMNS: tuple[_QueueTableColumnSpec, ...] = (
+    *_QUEUE_BASE_COLUMNS,
+    _QueueTableColumnSpec(header="progress", justify="right", width=16),
+)
+_DRY_RUN_QUEUE_COLUMNS: tuple[_QueueTableColumnSpec, ...] = (
+    *_QUEUE_BASE_COLUMNS,
+    _QueueTableColumnSpec(header="expected requests", justify="right", width=17),
+    _QueueTableColumnSpec(header="expected batches", justify="right", width=16),
+)
+
+
+def _build_queue_table(
+    *,
+    columns: tuple[_QueueTableColumnSpec, ...],
+    rows: list[QueueRow],
+    empty_row: QueueRow,
+) -> Table:
+    """
+    Build one queue summary table from shared column and row primitives.
+
+    Parameters
+    ----------
+    columns : tuple[_QueueTableColumnSpec, ...]
+        Ordered queue-table columns.
+    rows : list[QueueRow]
+        Formatted queue rows.
+    empty_row : QueueRow
+        Fallback row rendered when ``rows`` is empty.
+
+    Returns
+    -------
+    Table
+        Rich table renderable with queue summary rows.
+    """
+    table = Table(expand=False)
+    for column in columns:
+        column_kwargs: dict[str, t.Any] = {
+            "header": column.header,
+            "no_wrap": column.no_wrap,
+            "overflow": column.overflow,
+        }
+        if column.style is not None:
+            column_kwargs["style"] = column.style
+        if column.justify is not None:
+            column_kwargs["justify"] = column.justify
+        if column.width is not None:
+            column_kwargs["width"] = column.width
+        table.add_column(**column_kwargs)
+
+    if not rows:
+        table.add_row(*empty_row)
+        return table
+
+    for row in rows:
+        table.add_row(*row)
+    return table
 
 
 class BatcherRichDisplay:
@@ -226,50 +323,77 @@ class BatcherRichDisplay:
             Queue summary table.
         """
         queue_rows = self._compute_queue_batch_counts()
-        table = Table(expand=False)
-        table.add_column(
-            header="provider",
-            style="bold blue",
-            width=12,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="endpoint",
-            width=34,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="model",
-            style="bold magenta",
-            width=28,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="progress",
-            justify="right",
-            width=16,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-
-        if not queue_rows:
-            table.add_row("-", "-", "-", self._format_queue_progress(running=0, completed=0))
-            return table
-
-        for provider, endpoint, model, running, completed in queue_rows:
-            table.add_row(
-                provider,
-                endpoint,
-                model,
-                self._format_queue_progress(
-                    running=running,
-                    completed=completed,
-                ),
+        rows = [
+            self._format_queue_summary_row(
+                provider=provider,
+                endpoint=endpoint,
+                model=model,
+                running=running,
+                completed=completed,
             )
-        return table
+            for provider, endpoint, model, running, completed in queue_rows
+        ]
+        return _build_queue_table(
+            columns=_LIVE_QUEUE_COLUMNS,
+            rows=rows,
+            empty_row=self._build_empty_queue_summary_row(),
+        )
+
+    def _build_empty_queue_summary_row(self) -> QueueRow:
+        """
+        Build the fallback live queue-summary row.
+
+        Returns
+        -------
+        QueueRow
+            Empty-state queue row.
+        """
+        return (
+            "-",
+            "-",
+            "-",
+            self._format_queue_progress(running=0, completed=0),
+        )
+
+    def _format_queue_summary_row(
+        self,
+        *,
+        provider: str,
+        endpoint: str,
+        model: str,
+        running: int,
+        completed: int,
+    ) -> QueueRow:
+        """
+        Format one live queue-summary row.
+
+        Parameters
+        ----------
+        provider : str
+            Queue provider identifier.
+        endpoint : str
+            Queue endpoint path.
+        model : str
+            Queue model identifier.
+        running : int
+            Number of non-terminal batches.
+        completed : int
+            Number of terminal batches.
+
+        Returns
+        -------
+        QueueRow
+            Formatted queue row.
+        """
+        return (
+            provider,
+            endpoint,
+            model,
+            self._format_queue_progress(
+                running=running,
+                completed=completed,
+            ),
+        )
 
     @staticmethod
     def _format_queue_progress(*, running: int, completed: int) -> Text:
@@ -383,55 +507,71 @@ class DryRunSummaryDisplay:
             Queue estimate table.
         """
         queue_rows = self._summary_state.compute_queue_rows()
-        table = Table(expand=False)
-        table.add_column(
-            header="provider",
-            style="bold blue",
-            width=12,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="endpoint",
-            width=34,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="model",
-            style="bold magenta",
-            width=28,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="expected requests",
-            justify="right",
-            width=17,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-        table.add_column(
-            header="expected batches",
-            justify="right",
-            width=16,
-            no_wrap=True,
-            overflow="ellipsis",
-        )
-
-        if not queue_rows:
-            table.add_row("-", "-", "-", "0", "0")
-            return table
-
-        for provider, endpoint, model, expected_requests, expected_batches in queue_rows:
-            table.add_row(
-                provider,
-                endpoint,
-                model,
-                str(object=expected_requests),
-                str(object=expected_batches),
+        rows = [
+            self._format_queue_summary_row(
+                provider=provider,
+                endpoint=endpoint,
+                model=model,
+                expected_requests=expected_requests,
+                expected_batches=expected_batches,
             )
-        return table
+            for provider, endpoint, model, expected_requests, expected_batches in queue_rows
+        ]
+        return _build_queue_table(
+            columns=_DRY_RUN_QUEUE_COLUMNS,
+            rows=rows,
+            empty_row=self._build_empty_queue_summary_row(),
+        )
+
+    @staticmethod
+    def _build_empty_queue_summary_row() -> QueueRow:
+        """
+        Build the fallback dry-run queue-summary row.
+
+        Returns
+        -------
+        QueueRow
+            Empty-state queue row.
+        """
+        return ("-", "-", "-", "0", "0")
+
+    @staticmethod
+    def _format_queue_summary_row(
+        *,
+        provider: str,
+        endpoint: str,
+        model: str,
+        expected_requests: int,
+        expected_batches: int,
+    ) -> QueueRow:
+        """
+        Format one dry-run queue-summary row.
+
+        Parameters
+        ----------
+        provider : str
+            Queue provider identifier.
+        endpoint : str
+            Queue endpoint path.
+        model : str
+            Queue model identifier.
+        expected_requests : int
+            Predicted number of queued requests.
+        expected_batches : int
+            Predicted number of batches.
+
+        Returns
+        -------
+        QueueRow
+            Formatted queue row.
+        """
+        return (
+            provider,
+            endpoint,
+            model,
+            str(object=expected_requests),
+            str(object=expected_batches),
+        )
 
 
 def should_enable_live_display(*, enabled: bool) -> bool:
