@@ -4,11 +4,6 @@ To use `batchling`, you only need to learn to use one function exposed through t
 
 The `batchify` function is meant to be used as a context manager wrapping portions of your code containing GenAI calls that you want to batch.
 
-By default, `batchify()` submits provider batches with `completion_window="24h"`.
-If you need a shorter completion target for a compatible provider, pass
-`completion_window="1h"`. At the moment, Doubleword supports `1h`; other
-providers raise an exception instead of silently falling back to `24h`.
-
 ## Example
 
 Suppose you work in e-commerce and you have a cutting-edge business which uses GenAI to generate product visuals whenever you receive new products from your vendors.

@@ -36,7 +36,7 @@ def batchify(
         Poll active batches for results every this many seconds.
     completion_window : {"24h", "1h"}, optional
         Provider batch completion window requested for submitted batches.<br>
-        ``"24h"`` remains the default for backwards compatibility.<br>
+        ``"24h"`` is the default and only value accepted by most providers.<br>
         ``"1h"`` is currently only supported by compatible providers such as Doubleword.
     dry_run : bool, optional
         If ``True``, intercept and batch requests without sending provider batches.<br>
