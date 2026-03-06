@@ -6,6 +6,11 @@ It can be used either through the [Python SDK](./python-sdk.md){ data-preview } 
 
 It comes with a bunch of parameters that you can customize to alter how batching is performed:
 
+By default, provider batches use a `24h` completion window. You can request `1h`
+through `batchify(completion_window="1h")` or the CLI when the active provider
+supports it. Doubleword currently supports both `24h` and `1h`; other providers
+raise an exception if `1h` is requested.
+
 ::: batchling.api.batchify
     options:
       separate_signature: true

@@ -4,6 +4,11 @@ batchling comes with a CLI included that further facilitates batching an existin
 
 The CLI pushes the abstraction even more, to a point where you don't even need to modify your code to start batching.
 
+By default, the CLI uses `completion_window=24h`. You can request `1h` with
+`--completion-window 1h` when the routed provider supports it. Doubleword
+currently supports `1h`; other providers raise an exception instead of silently
+falling back to `24h`.
+
 ## Example
 
 Suppose you work in e-commerce and you have a cutting-edge business which uses GenAI to generate product visuals whenever you receive new products from your vendors.

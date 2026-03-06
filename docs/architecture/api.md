@@ -8,8 +8,8 @@ yields `None`. Import it from `batchling`.
 
 - Install HTTP hooks once (idempotent).
 - Construct a `Batcher` with configuration such as `batch_size`,
-  `batch_window_seconds`, `batch_poll_interval_seconds`, `dry_run`,
-  `cache`, and `live_display`.
+  `batch_window_seconds`, `batch_poll_interval_seconds`, `completion_window`,
+  `dry_run`, `cache`, and `live_display`.
 - Configure `batchling` logging defaults with Python's stdlib `logging`
   (`WARNING` by default).
 - Return a `BatchingContext` to scope batching to a context manager.
@@ -25,6 +25,10 @@ yields `None`. Import it from `batchling`.
   convert that signal into `DryRunEarlyExit` when requests return through intercepted
   clients. Context teardown suppresses that dry-run exit for clean SDK output (no traceback)
   while still emitting the static dry-run summary report.
+- **`completion_window` behavior**: `completion_window` defaults to `"24h"`.
+  When set to `"1h"`, core validates the resolved provider on each intercepted request
+  and raises `ValueError` before queueing unsupported providers. Doubleword currently
+  supports both `"24h"` and `"1h"`; other providers remain limited to `"24h"`.
 - **`cache` behavior**: when `cache=True` (default), intercepted requests are fingerprinted
   and looked up in a persistent request cache. Cache hits bypass queueing and resume polling
   from an existing provider batch when not in dry-run mode.
@@ -50,8 +54,8 @@ batchling path/to/my_script.py:foo arg1 --name alice --count=3 --dry-run
 Behavior:
 
 - CLI options map directly to `batchify` arguments:
-  `batch_size`, `batch_window_seconds`, `batch_poll_interval_seconds`, `dry_run`,
-  `cache`, and `live_display`.
+  `batch_size`, `batch_window_seconds`, `batch_poll_interval_seconds`,
+  `completion_window`, `dry_run`, `cache`, and `live_display`.
 - Script target must use `module_path:function_name` syntax.
 - Forwarded callable arguments are mapped as:
   positional tokens are passed as positional arguments;
