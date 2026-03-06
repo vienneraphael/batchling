@@ -117,6 +117,7 @@ class Batcher:
         batch_size: int = 50,
         batch_window_seconds: float = 2.0,
         batch_poll_interval_seconds: float = 10.0,
+        completion_window: t.Literal["24h", "1h"] = "24h",
         dry_run: bool = False,
         cache: bool = True,
     ):
@@ -131,6 +132,8 @@ class Batcher:
             Submit a provider batch after this many seconds, even if size not reached.
         batch_poll_interval_seconds : float
             Poll active batches every this many seconds.
+        completion_window : {"24h", "1h"}
+            Requested provider batch completion window.
         dry_run : bool
             If ``True``, simulate provider batch resolution without provider I/O.
         cache : bool
@@ -138,6 +141,7 @@ class Batcher:
         """
         self._batch_size = batch_size
         self._batch_window_seconds = batch_window_seconds
+        self._completion_window = completion_window
         self._dry_run = dry_run
         self._cache_enabled = cache
         self._cache_write_enabled = cache and not dry_run
@@ -178,6 +182,7 @@ class Batcher:
             batch_size=batch_size,
             batch_window_seconds=batch_window_seconds,
             batch_poll_interval_seconds=batch_poll_interval_seconds,
+            completion_window=completion_window,
             dry_run=dry_run,
             cache_enabled=self._cache_enabled,
             cache_write_enabled=self._cache_write_enabled,
@@ -1028,6 +1033,18 @@ class Batcher:
             **kwargs,
         }
         try:
+            provider.validate_completion_window(completion_window=self._completion_window)
+        except ValueError as error:
+            log_error(
+                logger=log,
+                event="Unsupported completion window for provider",
+                provider=provider_name,
+                completion_window=self._completion_window,
+                error=str(object=error),
+            )
+            future.set_exception(error)
+            return await future
+        try:
             queue_key = self._build_queue_key(provider=provider, endpoint=endpoint, body=body)
             request_hash = self._build_request_hash(queue_key=queue_key, host=host, body=body)
         except (ValueError, json.JSONDecodeError) as error:
@@ -1522,6 +1539,7 @@ class Batcher:
                 requests=requests,
                 client_factory=self._client_factory,
                 queue_key=queue_key,
+                completion_window=self._completion_window,
             )
             self._emit_batch_processing_with_batch_id_event(
                 queue_key=queue_key,

@@ -11,6 +11,7 @@ class DoublewordProvider(OpenAIProvider):
 
     name = "doubleword"
     hostname = "api.doubleword.ai"
+    supported_completion_windows = ("1h", "24h")
     batchable_endpoints = (
         "/v1/chat/completions",
         "/v1/responses",

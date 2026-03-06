@@ -74,6 +74,7 @@ async def run_script_with_batchify(
     batch_size: int,
     batch_window_seconds: float,
     batch_poll_interval_seconds: float,
+    completion_window: t.Literal["24h", "1h"],
     dry_run: bool,
     cache: bool,
     live_display: bool,
@@ -95,6 +96,8 @@ async def run_script_with_batchify(
         Batch window passed to ``batchify``.
     batch_poll_interval_seconds : float
         Polling interval passed to ``batchify``.
+    completion_window : {"24h", "1h"}
+        Completion window passed to ``batchify``.
     dry_run : bool
         Dry run mode passed to ``batchify``.
     cache : bool
@@ -114,6 +117,7 @@ async def run_script_with_batchify(
         batch_size=batch_size,
         batch_window_seconds=batch_window_seconds,
         batch_poll_interval_seconds=batch_poll_interval_seconds,
+        completion_window=completion_window,
         dry_run=dry_run,
         cache=cache,
         live_display=live_display,
@@ -152,6 +156,10 @@ def main(
         float,
         typer.Option(help="Poll active provider batches every this many seconds"),
     ] = 10.0,
+    completion_window: t.Annotated[
+        t.Literal["24h", "1h"],
+        typer.Option(help="Requested provider batch completion window"),
+    ] = "24h",
     dry_run: t.Annotated[
         bool,
         typer.Option(help="Intercept and batch requests without sending provider batches"),
@@ -187,6 +195,7 @@ def main(
                 batch_size=batch_size,
                 batch_window_seconds=batch_window_seconds,
                 batch_poll_interval_seconds=batch_poll_interval_seconds,
+                completion_window=completion_window,
                 dry_run=dry_run,
                 cache=cache,
                 live_display=live_display,

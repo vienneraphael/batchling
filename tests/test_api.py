@@ -31,7 +31,19 @@ async def test_batchify_creates_batcher(reset_hooks, reset_context):
     assert isinstance(wrapped._self_batcher, Batcher)
     assert wrapped._self_batcher._batch_size == 5
     assert wrapped._self_batcher._batch_window_seconds == 1.0
+    assert wrapped._self_batcher._completion_window == "24h"
     assert wrapped._self_batcher._cache_enabled is True
+
+
+@pytest.mark.asyncio
+async def test_batchify_forwards_completion_window(reset_hooks, reset_context):
+    """Test that batchify forwards completion window to Batcher."""
+    wrapped = batchify(
+        completion_window="1h",
+    )
+
+    assert isinstance(wrapped._self_batcher, Batcher)
+    assert wrapped._self_batcher._completion_window == "1h"
 
 
 @pytest.mark.asyncio

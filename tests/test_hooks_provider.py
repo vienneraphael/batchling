@@ -259,6 +259,38 @@ async def test_hook_raises_dry_run_early_exit_for_httpx(reset_hooks, reset_conte
 
 
 @pytest.mark.asyncio
+async def test_hook_rejects_unsupported_completion_window_for_httpx(reset_hooks, reset_context):
+    """Ensure httpx hook raises when provider does not support the completion window."""
+    install_hooks()
+
+    mocked_original = AsyncMock(return_value=httpx.Response(status_code=204))
+    hooks_module._original_httpx_async_send = mocked_original
+
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=1.0,
+        completion_window="1h",
+        cache=False,
+    )
+    token = active_batcher.set(batcher)
+    try:
+        async with httpx.AsyncClient() as client:
+            with pytest.raises(
+                expected_exception=ValueError,
+                match=r"Provider 'openai' does not support completion_window='1h'",
+            ):
+                _ = await client.post(
+                    url="https://api.openai.com/v1/chat/completions",
+                    json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+                )
+    finally:
+        active_batcher.reset(token)
+        await batcher.close()
+
+    mocked_original.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_hook_raises_dry_run_early_exit_for_aiohttp(reset_hooks, reset_context):
     """Ensure aiohttp hook raises DryRunEarlyExit when dry-run batcher signals abort."""
     install_hooks()

@@ -63,6 +63,7 @@ def test_run_script_function_with_positional_and_keyword_args(tmp_path: Path, mo
     assert captured_batchify_kwargs["dry_run"] is True
     assert captured_batchify_kwargs["cache"] is True
     assert captured_batchify_kwargs["live_display"] is True
+    assert captured_batchify_kwargs["completion_window"] == "24h"
 
 
 def test_run_script_with_cache_option(tmp_path: Path, monkeypatch):
@@ -126,6 +127,38 @@ def test_run_script_with_no_live_display_option(tmp_path: Path, monkeypatch):
 
     assert result.exit_code == 0
     assert captured_batchify_kwargs["live_display"] is False
+
+
+def test_run_script_with_completion_window_option(tmp_path: Path, monkeypatch):
+    script_path = tmp_path / "script.py"
+    script_path.write_text(
+        "\n".join(
+            [
+                "async def foo(*args, **kwargs):",
+                "    return None",
+            ]
+        )
+        + "\n"
+    )
+    captured_batchify_kwargs: dict = {}
+
+    def fake_batchify(**kwargs):
+        captured_batchify_kwargs.update(kwargs)
+        return DummyAsyncBatchifyContext()
+
+    monkeypatch.setattr(cli_main, "batchify", fake_batchify)
+
+    result = runner.invoke(
+        app,
+        [
+            f"{script_path.as_posix()}:foo",
+            "--completion-window",
+            "1h",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured_batchify_kwargs["completion_window"] == "1h"
 
 
 def test_batch_size_flag_scope_for_cli_and_target_function(tmp_path: Path, monkeypatch):

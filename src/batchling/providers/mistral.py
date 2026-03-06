@@ -144,6 +144,7 @@ class MistralProvider(BaseProvider):
         file_id: str,
         endpoint: str,
         queue_key: tuple[str, str, str],
+        completion_window: str,
     ) -> dict[str, t.Any]:
         """
         Build a batch payload for the provider.
@@ -153,6 +154,6 @@ class MistralProvider(BaseProvider):
             "model": model_name,
             "input_files": [file_id],
             "endpoint": endpoint,
-            "timeout_hours": 24,
+            "timeout_hours": int(completion_window.rstrip("h")),
             "metadata": {"description": "batchling runtime batch"},
         }

@@ -398,11 +398,13 @@ class GeminiProvider(BaseProvider):
         file_id: str,
         endpoint: str,
         queue_key: tuple[str, str, str],
+        completion_window: str,
     ) -> dict[str, t.Any]:
         """
         Build a batch payload for the provider.
         """
         del queue_key
+        del completion_window
         return {
             "batch": {
                 "display_name": "batchling",

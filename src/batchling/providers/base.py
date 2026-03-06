@@ -166,6 +166,30 @@ class BaseProvider(ABC):
     custom_id_field_name: str = "custom_id"
     output_file_field_name: str
     error_file_field_name: str
+    supported_completion_windows: tuple[str, ...] = ("24h",)
+
+    def validate_completion_window(self, *, completion_window: str) -> None:
+        """
+        Validate whether the provider supports a completion window.
+
+        Parameters
+        ----------
+        completion_window : str
+            Requested provider batch completion window.
+
+        Raises
+        ------
+        ValueError
+            Raised when the completion window is unsupported for this provider.
+        """
+        if completion_window in self.supported_completion_windows:
+            return
+
+        supported_windows = ", ".join(sorted(self.supported_completion_windows))
+        raise ValueError(
+            f"Provider {self.name!r} does not support completion_window={completion_window!r}; "
+            f"supported values: {supported_windows}"
+        )
 
     def _normalize_base_url(self, *, url: str) -> str:
         """
@@ -745,6 +769,7 @@ class BaseProvider(ABC):
         file_id: str,
         endpoint: str,
         queue_key: tuple[str, str, str],
+        completion_window: str,
     ) -> dict[str, t.Any]:
         """
         Build a batch payload for the provider.
@@ -753,7 +778,7 @@ class BaseProvider(ABC):
         return {
             "input_file_id": file_id,
             "endpoint": endpoint,
-            "completion_window": "24h",
+            "completion_window": completion_window,
             "metadata": {"description": "batchling runtime batch"},
         }
 
@@ -761,10 +786,12 @@ class BaseProvider(ABC):
         self,
         *,
         jsonl_lines: list[dict[str, t.Any]],
+        completion_window: str,
     ) -> dict[str, t.Any]:
         """
         Build an inline batch payload for the provider.
         """
+        del completion_window
         return {
             "requests": jsonl_lines,
         }
@@ -803,6 +830,7 @@ class BaseProvider(ABC):
         file_id: str,
         endpoint: str,
         queue_key: tuple[str, str, str],
+        completion_window: str,
         client_factory: t.Callable[[], httpx.AsyncClient],
     ) -> str:
         """
@@ -820,6 +848,8 @@ class BaseProvider(ABC):
             Endpoint path included in the batch job.
         queue_key : tuple[str, str, str]
             Queue key associated with the current batch.
+        completion_window : str
+            Requested provider batch completion window.
         client_factory : typing.Callable[[], httpx.AsyncClient]
             Async client factory for provider API calls.
 
@@ -833,6 +863,7 @@ class BaseProvider(ABC):
             file_id=file_id,
             endpoint=endpoint,
             queue_key=queue_key,
+            completion_window=completion_window,
         )
         log_debug(
             logger=log,
@@ -855,6 +886,7 @@ class BaseProvider(ABC):
         api_headers: dict[str, str],
         jsonl_lines: list[dict[str, t.Any]],
         queue_key: tuple[str, str, str],
+        completion_window: str,
         client_factory: t.Callable[[], httpx.AsyncClient],
     ) -> str:
         """
@@ -868,6 +900,8 @@ class BaseProvider(ABC):
             API headers.
         jsonl_lines : list[dict[str, typing.Any]]
             JSONL line payloads.
+        completion_window : str
+            Requested provider batch completion window.
         client_factory : typing.Callable[[], httpx.AsyncClient]
             Async client factory for provider API calls.
 
@@ -877,7 +911,10 @@ class BaseProvider(ABC):
             batch ID.
         """
         submit_path = self.build_batch_submit_path(queue_key=queue_key)
-        payload = await self.build_inline_batch_payload(jsonl_lines=jsonl_lines)
+        payload = await self.build_inline_batch_payload(
+            jsonl_lines=jsonl_lines,
+            completion_window=completion_window,
+        )
         log_debug(
             logger=log,
             event="Sending inline batch request",
@@ -898,6 +935,7 @@ class BaseProvider(ABC):
         requests: t.Sequence[PendingRequestLike],
         client_factory: t.Callable[[], httpx.AsyncClient],
         queue_key: tuple[str, str, str],
+        completion_window: str,
     ) -> BatchSubmission:
         """
         Upload a JSONL file and create an OpenAI batch job.
@@ -910,6 +948,8 @@ class BaseProvider(ABC):
             Async client factory for provider API calls.
         queue_key : tuple[str, str, str]
             Queue key associated with the current batch.
+        completion_window : str
+            Requested provider batch completion window.
 
         Returns
         -------
@@ -961,6 +1001,7 @@ class BaseProvider(ABC):
                 file_id=file_id,
                 endpoint=endpoint,
                 queue_key=queue_key,
+                completion_window=completion_window,
                 client_factory=client_factory,
             )
         else:
@@ -969,6 +1010,7 @@ class BaseProvider(ABC):
                 api_headers=api_headers,
                 jsonl_lines=jsonl_lines,
                 queue_key=queue_key,
+                completion_window=completion_window,
                 client_factory=client_factory,
             )
         return BatchSubmission(

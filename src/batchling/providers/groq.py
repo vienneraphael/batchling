@@ -143,6 +143,7 @@ class GroqProvider(OpenAIProvider):
         file_id: str,
         endpoint: str,
         queue_key: tuple[str, str, str],
+        completion_window: str,
     ) -> dict[str, t.Any]:
         """
         Build Groq batch payload using canonical endpoint paths.
@@ -165,4 +166,5 @@ class GroqProvider(OpenAIProvider):
             file_id=file_id,
             endpoint=self._strip_openai_prefix(path=endpoint),
             queue_key=queue_key,
+            completion_window=completion_window,
         )

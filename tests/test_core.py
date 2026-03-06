@@ -24,6 +24,7 @@ from batchling.lifecycle_events import (
 )
 from batchling.providers.anthropic import AnthropicProvider
 from batchling.providers.base import PollSnapshot, ProviderRequestSpec, ResumeContext
+from batchling.providers.doubleword import DoublewordProvider
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
@@ -196,6 +197,7 @@ async def test_batcher_initialization():
     assert batcher._batch_size == 10
     assert batcher._batch_window_seconds == 2.0
     assert batcher._poll_interval_seconds == 5.0
+    assert batcher._completion_window == "24h"
     assert _pending_count(batcher=batcher) == 0
     assert len(batcher._active_batches) == 0
     assert batcher._window_tasks == {}
@@ -1662,7 +1664,7 @@ async def test_submit_requests_passes_queue_key_to_process_batch():
         future=loop.create_future(),
         request_hash="hash-request-id",
     )
-    captured: dict[str, QueueKey] = {}
+    captured: dict[str, t.Any] = {}
     called_event = asyncio.Event()
 
     async def fake_process_batch(*, queue_key: QueueKey, requests: list[_PendingRequest]) -> None:
@@ -1701,23 +1703,26 @@ async def test_process_batch_calls_provider_with_queue_key():
         future=loop.create_future(),
         request_hash="hash-request-1",
     )
-    captured: dict[str, QueueKey] = {}
+    captured: dict[str, t.Any] = {}
 
     async def fake_process_batch(
         *,
         requests,
         client_factory,
         queue_key: QueueKey,
+        completion_window: str,
     ):
         del requests
         del client_factory
         captured["queue_key"] = queue_key
+        captured["completion_window"] = completion_window
         raise RuntimeError("provider call captured")
 
     provider.process_batch = fake_process_batch  # type: ignore[method-assign]
     await batcher._process_batch(queue_key=queue_key, requests=[request])
 
     assert captured["queue_key"] == queue_key
+    assert captured["completion_window"] == "24h"
     with pytest.raises(RuntimeError, match="provider call captured"):
         await request.future
 
@@ -1730,10 +1735,40 @@ async def test_mistral_build_file_based_batch_payload_uses_queue_key_model():
         file_id="file-123",
         endpoint="/v1/chat/completions",
         queue_key=_queue_key(provider_name=provider.name, model_name="mistral-small-latest"),
+        completion_window="24h",
     )
     assert payload["input_files"] == ["file-123"]
     assert payload["endpoint"] == "/v1/chat/completions"
     assert payload["model"] == "mistral-small-latest"
+    assert payload["timeout_hours"] == 24
+
+
+@pytest.mark.asyncio
+async def test_mistral_build_file_based_batch_payload_uses_completion_window():
+    """Test Mistral payload maps completion window to timeout hours."""
+    provider = MistralProvider()
+    payload = await provider.build_file_based_batch_payload(
+        file_id="file-123",
+        endpoint="/v1/chat/completions",
+        queue_key=_queue_key(provider_name=provider.name, model_name="mistral-small-latest"),
+        completion_window="1h",
+    )
+
+    assert payload["timeout_hours"] == 1
+
+
+@pytest.mark.asyncio
+async def test_openai_build_file_based_batch_payload_uses_completion_window():
+    """Test OpenAI-compatible payload forwards completion window."""
+    provider = DoublewordProvider()
+    payload = await provider.build_file_based_batch_payload(
+        file_id="file-123",
+        endpoint="/v1/responses",
+        queue_key=_queue_key(provider_name=provider.name, endpoint="/v1/responses"),
+        completion_window="1h",
+    )
+
+    assert payload["completion_window"] == "1h"
 
 
 @pytest.mark.asyncio
@@ -1765,13 +1800,14 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
         raise AssertionError("inline providers should not upload files")
 
     async def fake_create_inline_batch_job(
-        *, base_url, api_headers, jsonl_lines, queue_key, client_factory
+        *, base_url, api_headers, jsonl_lines, queue_key, completion_window, client_factory
     ):
         del client_factory
         calls["queue_key"] = queue_key
         calls["base_url"] = base_url
         calls["api_headers"] = api_headers
         calls["inline_lines"] = jsonl_lines
+        calls["completion_window"] = completion_window
         return "msgbatch-123"
 
     monkeypatch.setattr(target=provider, name="_upload_batch_file", value=fail_upload)
@@ -1785,6 +1821,7 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
         requests=[request],
         client_factory=lambda: httpx.AsyncClient(),
         queue_key=queue_key,
+        completion_window="24h",
     )
 
     assert not calls["uploaded"]
@@ -1793,7 +1830,81 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
     assert calls["api_headers"]["x-batchling-internal"] == "1"
     assert calls["inline_lines"][0]["params"]["model"] == "claude"
     assert calls["queue_key"] == queue_key
+    assert calls["completion_window"] == "24h"
     assert submission.batch_id == "msgbatch-123"
+
+
+@pytest.mark.asyncio
+async def test_submit_rejects_unsupported_completion_window_before_queueing():
+    """Test unsupported completion windows fail before queueing a request."""
+    provider = OpenAIProvider()
+    batcher = Batcher(
+        batch_size=2,
+        batch_window_seconds=10.0,
+        completion_window="1h",
+        cache=False,
+    )
+
+    with pytest.raises(
+        expected_exception=ValueError,
+        match=r"Provider 'openai' does not support completion_window='1h'",
+    ):
+        await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=provider,
+            headers={"Authorization": "Bearer token"},
+            body=b'{"model":"model-a","messages":[]}',
+        )
+
+    assert _pending_count(batcher=batcher) == 0
+    assert len(batcher._active_batches) == 0
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_submit_allows_doubleword_completion_window_but_rejects_openai(
+    mock_openai_api_transport: httpx.MockTransport,
+):
+    """Test mixed providers allow Doubleword 1h and reject unsupported providers."""
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=0.1,
+        completion_window="1h",
+        cache=False,
+    )
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_openai_api_transport)
+    batcher._poll_interval_seconds = 0.01
+
+    doubleword_result = await batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="api.doubleword.ai",
+        endpoint="/v1/responses",
+        provider=DoublewordProvider(),
+        headers={"Authorization": "Bearer token"},
+        body=b'{"model":"openai/gpt-oss-20b","input":"hi"}',
+    )
+
+    assert doubleword_result.status_code == 200
+
+    with pytest.raises(
+        expected_exception=ValueError,
+        match=r"Provider 'openai' does not support completion_window='1h'",
+    ):
+        await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="api.openai.com",
+            endpoint="/v1/chat/completions",
+            provider=OpenAIProvider(),
+            headers={"Authorization": "Bearer token"},
+            body=b'{"model":"gpt-4o-mini","messages":[]}',
+        )
+
+    await batcher.close()
 
 
 @pytest.mark.asyncio
@@ -1921,13 +2032,14 @@ async def test_cache_fingerprint_uses_queue_model(
     call_count = 0
     original_process_batch = second_provider.process_batch
 
-    async def wrapped_process_batch(*, requests, client_factory, queue_key):
+    async def wrapped_process_batch(*, requests, client_factory, queue_key, completion_window):
         nonlocal call_count
         call_count += 1
         return await original_process_batch(
             requests=requests,
             client_factory=client_factory,
             queue_key=queue_key,
+            completion_window=completion_window,
         )
 
     monkeypatch.setattr(
