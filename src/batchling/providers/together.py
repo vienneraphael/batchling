@@ -1,3 +1,4 @@
+import math
 import typing as t
 from enum import StrEnum
 
@@ -55,11 +56,44 @@ class TogetherProvider(BaseProvider):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Parse Together poll payload into normalized snapshot.
         """
-        return await super().parse_poll_response(payload=payload)
+        return await super().parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
+
+    def get_progress_from_poll(
+        self,
+        *,
+        payload: dict[str, t.Any],
+        requests_count: int,
+    ) -> tuple[int, float]:
+        """
+        Extract Together poll progress from percentage payloads.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Together poll payload.
+        requests_count : int
+            Total request count for this batch.
+
+        Returns
+        -------
+        tuple[int, float]
+            Completed requests and completion percent.
+        """
+        raw_percent = self._coerce_float(value=payload.get("progress", 0.0))
+        clamped_percent = min(100.0, max(0.0, raw_percent))
+        if requests_count > 0:
+            completed = int(math.floor((clamped_percent * requests_count) / 100.0))
+            percent = (completed / requests_count) * 100.0
+            return completed, percent
+        return 0, 0.0
 
     def build_results_request_spec(
         self,

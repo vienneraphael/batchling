@@ -60,11 +60,43 @@ class MistralProvider(BaseProvider):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Parse Mistral poll payload into normalized snapshot.
         """
-        return await super().parse_poll_response(payload=payload)
+        return await super().parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
+
+    def get_progress_from_poll(
+        self,
+        *,
+        payload: dict[str, t.Any],
+        requests_count: int,
+    ) -> tuple[int, float]:
+        """
+        Extract Mistral poll progress from ``completed_requests``.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Mistral poll payload.
+        requests_count : int
+            Total request count for this batch.
+
+        Returns
+        -------
+        tuple[int, float]
+            Completed requests and completion percent.
+        """
+        completed = max(0, self._coerce_int(value=payload.get("completed_requests", 0)))
+        if requests_count > 0:
+            percent = (completed / requests_count) * 100.0
+        else:
+            percent = 0.0
+        return completed, percent
 
     def build_results_request_spec(
         self,

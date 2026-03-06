@@ -31,12 +31,21 @@ The parent directory is created automatically.
 - `host`
 - `batch_id`
 - `custom_id`
+- `request_count`
 - `created_at`
 
 SQLite schema (`request_cache`):
 
 - primary key: `request_hash`
 - secondary index: `idx_request_cache_created_at` on `created_at`
+- `request_count INTEGER NOT NULL DEFAULT 0`
+
+Schema initialization keeps a permanent migration path:
+
+- detect missing `request_count` via `PRAGMA table_info(request_cache)`
+- `ALTER TABLE request_cache ADD COLUMN request_count ...`
+- backfill `request_count` by grouped row count over
+  `(provider, host, batch_id)`
 
 ## Store operations
 

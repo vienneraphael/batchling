@@ -80,11 +80,17 @@ class PollSnapshot:
         Output file identifier when available.
     error_file_id : str
         Error file identifier when available.
+    progress_completed : int
+        Completed request count for this batch.
+    progress_percent : float
+        Completed percentage for this batch.
     """
 
     status: str
     output_file_id: str
     error_file_id: str
+    progress_completed: int
+    progress_percent: float
 
 
 @dataclass(frozen=True)
@@ -437,6 +443,7 @@ class BaseProvider(ABC):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Normalize poll payload into a provider-independent snapshot.
@@ -445,6 +452,8 @@ class BaseProvider(ABC):
         ----------
         payload : dict[str, typing.Any]
             Provider poll payload.
+        requests_count : int
+            Total request count for the polled batch.
 
         Returns
         -------
@@ -454,11 +463,93 @@ class BaseProvider(ABC):
         status = self.extract_batch_status(payload=payload)
         output_file_id = await self.get_output_file_id_from_poll_response(payload=payload)
         error_file_id = await self.get_error_file_id_from_poll_response(payload=payload)
+        progress_completed, progress_percent = self.get_progress_from_poll(
+            payload=payload,
+            requests_count=requests_count,
+        )
+        normalized_completed = self._coerce_int(value=progress_completed)
+        normalized_requests_count = max(0, int(requests_count))
+        if normalized_requests_count > 0:
+            progress_percent = (normalized_completed / normalized_requests_count) * 100.0
+        else:
+            progress_percent = 0.0
         return PollSnapshot(
             status=status,
             output_file_id=str(object=output_file_id),
             error_file_id=str(object=error_file_id),
+            progress_completed=max(0, normalized_completed),
+            progress_percent=self._coerce_float(value=progress_percent),
         )
+
+    @staticmethod
+    def _coerce_int(*, value: t.Any) -> int:
+        """
+        Convert arbitrary values to integers with ``0`` fallback.
+
+        Parameters
+        ----------
+        value : typing.Any
+            Raw numeric candidate.
+
+        Returns
+        -------
+        int
+            Parsed integer value, or ``0`` when parsing fails.
+        """
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _coerce_float(*, value: t.Any) -> float:
+        """
+        Convert arbitrary values to floats with ``0.0`` fallback.
+
+        Parameters
+        ----------
+        value : typing.Any
+            Raw numeric candidate.
+
+        Returns
+        -------
+        float
+            Parsed float value, or ``0.0`` when parsing fails.
+        """
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def get_progress_from_poll(
+        self,
+        *,
+        payload: dict[str, t.Any],
+        requests_count: int,
+    ) -> tuple[int, float]:
+        """
+        Extract provider poll progress as ``(completed, percent)``.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Provider poll payload.
+        requests_count : int
+            Total request count for this batch.
+
+        Returns
+        -------
+        tuple[int, float]
+            Completed requests and completion percent.
+        """
+        request_counts = payload.get("request_counts") or {}
+        raw_completed = request_counts.get("completed", 0)
+        completed = max(0, self._coerce_int(value=raw_completed))
+        if requests_count > 0:
+            percent = (completed / requests_count) * 100.0
+        else:
+            percent = 0.0
+        return completed, percent
 
     def build_internal_headers(self, *, headers: dict[str, str]) -> dict[str, str]:
         """

@@ -195,11 +195,14 @@ class FakeOpenAIAPI:
         self._batch_poll_count[batch_id] = poll_count
         batch_info = self._batches[batch_id]
         status = "completed" if poll_count >= 1 else "in_progress"
+        total_requests = len(self._files.get(batch_info["input_file_id"], []))
+        completed_requests = total_requests if status == "completed" else 0
         return self._json_response(
             status_code=200,
             payload={
                 "id": batch_id,
                 "status": status,
+                "request_counts": {"completed": completed_requests},
                 "output_file_id": batch_info["output_file_id"],
             },
         )

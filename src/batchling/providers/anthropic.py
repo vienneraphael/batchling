@@ -52,11 +52,44 @@ class AnthropicProvider(BaseProvider):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Parse Anthropic poll payload into normalized snapshot.
         """
-        return await super().parse_poll_response(payload=payload)
+        return await super().parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
+
+    def get_progress_from_poll(
+        self,
+        *,
+        payload: dict[str, t.Any],
+        requests_count: int,
+    ) -> tuple[int, float]:
+        """
+        Extract Anthropic poll progress from ``request_counts.succeeded``.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Anthropic poll payload.
+        requests_count : int
+            Total request count for this batch.
+
+        Returns
+        -------
+        tuple[int, float]
+            Completed requests and completion percent.
+        """
+        request_counts = payload.get("request_counts") or {}
+        completed = max(0, self._coerce_int(value=request_counts.get("succeeded", 0)))
+        if requests_count > 0:
+            percent = (completed / requests_count) * 100.0
+        else:
+            percent = 0.0
+        return completed, percent
 
     def build_results_request_spec(
         self,

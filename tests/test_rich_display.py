@@ -70,6 +70,17 @@ def test_batcher_rich_display_computes_context_progress() -> None:
         "request_count": 3,
         "source": BatcherEventSource.POLL_START,
     }
+    polled_event: rich_display.BatcherEvent = {
+        "event_type": BatcherEventType.BATCH_POLLED,
+        "timestamp": 1.5,
+        "provider": "openai",
+        "batch_id": "batch-1",
+        "status": "in_progress",
+        "request_count": 3,
+        "progress_completed": 3,
+        "progress_percent": 100.0,
+        "source": BatcherEventSource.ACTIVE_POLL,
+    }
     terminal_event: rich_display.BatcherEvent = {
         "event_type": BatcherEventType.BATCH_TERMINAL,
         "timestamp": 2.0,
@@ -99,6 +110,7 @@ def test_batcher_rich_display_computes_context_progress() -> None:
     }
 
     display.on_event(processing_event)
+    display.on_event(polled_event)
     display.on_event(terminal_event)
     display.on_event(failed_batch_event)
     display.on_event(failed_terminal_event)
@@ -133,9 +145,21 @@ def test_batcher_rich_display_tracks_resumed_batch_progress() -> None:
         "status": "completed",
         "source": BatcherEventSource.RESUMED_POLL,
     }
+    polled_event: rich_display.BatcherEvent = {
+        "event_type": BatcherEventType.BATCH_POLLED,
+        "timestamp": 1.5,
+        "provider": "openai",
+        "batch_id": "batch-cached-1",
+        "status": "running",
+        "request_count": 2,
+        "progress_completed": 2,
+        "progress_percent": 100.0,
+        "source": BatcherEventSource.RESUMED_POLL,
+    }
 
     display.on_event(cache_event)
     display.on_event(cache_event)
+    display.on_event(polled_event)
     display.on_event(terminal_event)
 
     completed_samples, total_samples, percent = display._compute_progress()
@@ -229,6 +253,17 @@ def test_batcher_rich_display_request_metrics_line() -> None:
         "status": "completed",
         "source": BatcherEventSource.ACTIVE_POLL,
     }
+    polled_event_batch_1: rich_display.BatcherEvent = {
+        "event_type": BatcherEventType.BATCH_POLLED,
+        "timestamp": 1.5,
+        "provider": "openai",
+        "batch_id": "batch-1",
+        "status": "running",
+        "request_count": 3,
+        "progress_completed": 3,
+        "progress_percent": 100.0,
+        "source": BatcherEventSource.ACTIVE_POLL,
+    }
     processing_event_batch_2: rich_display.BatcherEvent = {
         "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 3.0,
@@ -258,12 +293,25 @@ def test_batcher_rich_display_request_metrics_line() -> None:
         "status": "completed",
         "source": BatcherEventSource.RESUMED_POLL,
     }
+    polled_event_batch_3: rich_display.BatcherEvent = {
+        "event_type": BatcherEventType.BATCH_POLLED,
+        "timestamp": 4.5,
+        "provider": "openai",
+        "batch_id": "batch-3",
+        "status": "running",
+        "request_count": 2,
+        "progress_completed": 2,
+        "progress_percent": 100.0,
+        "source": BatcherEventSource.RESUMED_POLL,
+    }
 
     display.on_event(processing_event_batch_1)
+    display.on_event(polled_event_batch_1)
     display.on_event(terminal_event_batch_1)
     display.on_event(processing_event_batch_2)
     display.on_event(cache_event_batch_3)
     display.on_event(cache_event_batch_3)
+    display.on_event(polled_event_batch_3)
     display.on_event(terminal_event_batch_3)
 
     total_samples, cached_samples, completed_samples, in_progress_samples = (
@@ -311,6 +359,17 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
         "status": "completed",
         "source": BatcherEventSource.ACTIVE_POLL,
     }
+    polled_event_batch_2: rich_display.BatcherEvent = {
+        "event_type": BatcherEventType.BATCH_POLLED,
+        "timestamp": 2.5,
+        "provider": "openai",
+        "batch_id": "batch-2",
+        "status": "running",
+        "request_count": 1,
+        "progress_completed": 1,
+        "progress_percent": 100.0,
+        "source": BatcherEventSource.ACTIVE_POLL,
+    }
     other_queue_event: rich_display.BatcherEvent = {
         "event_type": BatcherEventType.BATCH_PROCESSING,
         "timestamp": 4.0,
@@ -325,13 +384,14 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
 
     display.on_event(queue_event_batch_1)
     display.on_event(queue_event_batch_2)
+    display.on_event(polled_event_batch_2)
     display.on_event(terminal_event_batch_2)
     display.on_event(other_queue_event)
 
     queue_rows = display._compute_queue_batch_counts()
     assert queue_rows == [
         ("groq", "/openai/v1/chat/completions", "llama-3.1-8b-instant", 1, 0),
-        ("openai", "/v1/chat/completions", "model-a", 1, 1),
+        ("openai", "/v1/chat/completions", "model-a", 2, 1),
     ]
 
     table = display._build_queue_summary_table()
@@ -345,6 +405,42 @@ def test_batcher_rich_display_queue_table_progress_column() -> None:
     assert isinstance(progress_cells[1], Text)
     assert progress_cells[0].plain == "0/1 (0.0%)"
     assert progress_cells[1].plain == "1/2 (50.0%)"
+
+
+def test_batcher_rich_display_terminal_status_does_not_imply_completion() -> None:
+    """Test terminal events alone do not advance completed sample counts."""
+    display = rich_display.BatcherRichDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    display.on_event(
+        {
+            "event_type": BatcherEventType.BATCH_PROCESSING,
+            "timestamp": 1.0,
+            "provider": "openai",
+            "endpoint": "/v1/chat/completions",
+            "model": "model-a",
+            "queue_key": ("openai", "/v1/chat/completions", "model-a"),
+            "batch_id": "batch-1",
+            "request_count": 3,
+            "source": BatcherEventSource.POLL_START,
+        }
+    )
+    display.on_event(
+        {
+            "event_type": BatcherEventType.BATCH_TERMINAL,
+            "timestamp": 2.0,
+            "provider": "openai",
+            "batch_id": "batch-1",
+            "status": "completed",
+            "source": BatcherEventSource.ACTIVE_POLL,
+        }
+    )
+
+    completed_samples, total_samples, percent = display._compute_progress()
+    assert completed_samples == 0
+    assert total_samples == 3
+    assert percent == 0.0
 
 
 def test_batcher_rich_display_queue_table_empty_state() -> None:
@@ -365,7 +461,7 @@ def test_batcher_rich_display_queue_table_empty_state() -> None:
 def test_batcher_rich_display_queue_progress_pads_to_total_width() -> None:
     """Test queue progress keeps parenthesis anchor stable for large totals."""
     progress_text = rich_display.BatcherRichDisplay._format_queue_progress(
-        running=99,
+        total=100,
         completed=1,
     )
     assert progress_text.plain == "  1/100 (1.0%)"

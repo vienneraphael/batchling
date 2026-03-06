@@ -48,6 +48,12 @@ Typed source identifiers for lifecycle emissions:
 Dict-shaped lifecycle payload used by listeners. This preserves backward compatibility
 for consumers using `event.get(...)` or `event["event_type"]`.
 
+Poll events (`batch_polled`) may include sample-granular progress fields:
+
+- `request_count`
+- `progress_completed`
+- `progress_percent`
+
 ### Parse helpers
 
 - `parse_event_type(event=...) -> BatcherEventType | None`

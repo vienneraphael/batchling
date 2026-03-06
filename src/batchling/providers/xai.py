@@ -58,31 +58,67 @@ class XaiProvider(BaseProvider):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Parse XAI poll payload into normalized snapshot.
         """
+        return await super().parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
+
+    def extract_batch_status(self, *, payload: dict[str, t.Any]) -> str:
+        """
+        Extract XAI status from nested ``state`` counters.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            XAI poll payload.
+
+        Returns
+        -------
+        str
+            Normalized poll status.
+        """
         state = payload.get("state") or {}
-        num_pending = state.get("num_pending") or 0
-        num_completed = state.get("num_completed") or 0
-        if num_pending > 0:
-            if num_completed > 0:
-                return PollSnapshot(
-                    status="running",
-                    output_file_id="",
-                    error_file_id="",
-                )
-            return PollSnapshot(
-                status="pending",
-                output_file_id="",
-                error_file_id="",
-            )
+        pending_count = max(0, self._coerce_int(value=state.get("num_pending", 0)))
+        completed_count = max(0, self._coerce_int(value=state.get("num_completed", 0)))
+        if pending_count > 0:
+            if completed_count > 0:
+                return "running"
+            return "pending"
+        return "ended"
+
+    def get_progress_from_poll(
+        self,
+        *,
+        payload: dict[str, t.Any],
+        requests_count: int,
+    ) -> tuple[int, float]:
+        """
+        Extract XAI poll progress from ``state.success``.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            XAI poll payload.
+        requests_count : int
+            Total request count for this batch.
+
+        Returns
+        -------
+        tuple[int, float]
+            Completed requests and completion percent.
+        """
+        state = payload.get("state") or {}
+        completed = max(0, self._coerce_int(value=state.get("success", 0)))
+        if requests_count > 0:
+            percent = (completed / requests_count) * 100.0
         else:
-            return PollSnapshot(
-                status="ended",
-                output_file_id="",
-                error_file_id="",
-            )
+            percent = 0.0
+        return completed, percent
 
     def build_results_request_spec(
         self,

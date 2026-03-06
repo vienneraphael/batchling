@@ -24,7 +24,7 @@ class _TrackedBatch:
     endpoint: str = "-"
     model: str = "-"
     size: int = 0
-    completed: bool = False
+    completed_samples: int = 0
     terminal: bool = False
 
 
@@ -83,17 +83,20 @@ class BatchProgressState:
             return
 
         if event_type is BatcherEventType.BATCH_POLLED:
+            request_count = event.get("request_count")
+            if isinstance(request_count, int):
+                batch.size = max(batch.size, request_count)
+            progress_completed = event.get("progress_completed")
+            if isinstance(progress_completed, int):
+                batch.completed_samples = max(0, progress_completed)
             batch.terminal = False
             return
 
         if event_type is BatcherEventType.BATCH_TERMINAL:
-            status = str(object=event.get("status", "completed"))
-            batch.completed = self._status_counts_as_completed(status=status)
             batch.terminal = True
             return
 
         if event_type is BatcherEventType.BATCH_FAILED:
-            batch.completed = False
             batch.terminal = True
             return
 
@@ -101,7 +104,11 @@ class BatchProgressState:
             event_type is BatcherEventType.CACHE_HIT_ROUTED
             and source is BatcherEventSource.RESUMED_POLL
         ):
-            batch.size += 1
+            request_count = event.get("request_count")
+            if isinstance(request_count, int):
+                batch.size = max(batch.size, request_count)
+            else:
+                batch.size += 1
             self._cached_samples += 1
             batch.terminal = False
 
@@ -115,7 +122,9 @@ class BatchProgressState:
             ``(completed_samples, total_samples, percent)``.
         """
         total_samples = sum(batch.size for batch in self._batches.values())
-        completed_samples = sum(batch.size for batch in self._batches.values() if batch.completed)
+        completed_samples = sum(
+            self._completed_samples_for_batch(batch=batch) for batch in self._batches.values()
+        )
         if total_samples <= 0:
             return 0, 0, 0.0
         percent = (completed_samples / total_samples) * 100.0
@@ -131,29 +140,30 @@ class BatchProgressState:
             ``(total_samples, cached_samples, completed_samples, in_progress_samples)``.
         """
         total_samples = sum(batch.size for batch in self._batches.values())
-        completed_samples = sum(batch.size for batch in self._batches.values() if batch.completed)
+        completed_samples = sum(
+            self._completed_samples_for_batch(batch=batch) for batch in self._batches.values()
+        )
         in_progress_samples = sum(
-            batch.size for batch in self._batches.values() if not batch.terminal
+            max(batch.size - self._completed_samples_for_batch(batch=batch), 0)
+            for batch in self._batches.values()
         )
         return total_samples, self._cached_samples, completed_samples, in_progress_samples
 
     def compute_queue_batch_counts(self) -> list[tuple[str, str, str, int, int]]:
         """
-        Aggregate queue-level running and terminal batch counts.
+        Aggregate queue-level sample totals and completed samples.
 
         Returns
         -------
         list[tuple[str, str, str, int, int]]
-            Sorted rows as ``(provider, endpoint, model, running, completed)``.
+            Sorted rows as ``(provider, endpoint, model, total_samples, completed_samples)``.
         """
         counts_by_queue: dict[tuple[str, str, str], list[int]] = {}
         for batch in self._batches.values():
             queue_key = (batch.provider, batch.endpoint, batch.model)
             counters = counts_by_queue.setdefault(queue_key, [0, 0])
-            if batch.terminal:
-                counters[1] += 1
-            else:
-                counters[0] += 1
+            counters[0] += max(batch.size, 0)
+            counters[1] += self._completed_samples_for_batch(batch=batch)
 
         rows = [
             (provider, endpoint, model, counters[0], counters[1])
@@ -219,25 +229,23 @@ class BatchProgressState:
             batch.model = str(object=model)
 
     @staticmethod
-    def _status_counts_as_completed(*, status: str) -> bool:
+    def _completed_samples_for_batch(*, batch: _TrackedBatch) -> int:
         """
-        Determine whether a terminal status counts as completed samples.
+        Return normalized completed samples for one tracked batch.
 
         Parameters
         ----------
-        status : str
-            Terminal provider status.
+        batch : _TrackedBatch
+            Tracked batch state.
 
         Returns
         -------
-        bool
-            ``True`` when terminal state should contribute to completed samples.
+        int
+            Completed sample count capped by known batch size.
         """
-        lowered_status = status.lower()
-        negative_markers = ("fail", "error", "cancel", "expired", "timeout")
-        if any(marker in lowered_status for marker in negative_markers):
-            return False
-        return True
+        if batch.size <= 0:
+            return 0
+        return max(0, min(batch.completed_samples, batch.size))
 
 
 class DryRunSummaryState:

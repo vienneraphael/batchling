@@ -18,11 +18,15 @@ Event flow:
 1. `on_event(event)` updates progress state.
 2. display refresh rebuilds panel content from computed aggregates.
 
+Progress is poll-driven: `BatchProgressState` consumes
+`BATCH_POLLED.progress_completed` and tracked batch sizes. Terminal status events
+mark lifecycle boundaries but do not implicitly add completed samples.
+
 Panel composition:
 
 - aggregate progress bar (`completed/total`, percent, elapsed time)
 - request metrics line (total, cached, completed, in-progress)
-- queue summary table (`provider`, `endpoint`, `model`, queue progress)
+- queue summary table (`provider`, `endpoint`, `model`, queue sample progress)
 
 Queue progress cells are formatted as `completed/total (percent)`.
 

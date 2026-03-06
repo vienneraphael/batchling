@@ -304,12 +304,12 @@ class BatcherRichDisplay:
 
     def _compute_queue_batch_counts(self) -> list[tuple[str, str, str, int, int]]:
         """
-        Aggregate queue-level running and terminal batch counts.
+        Aggregate queue-level sample totals and completed samples.
 
         Returns
         -------
         list[tuple[str, str, str, int, int]]
-            Sorted rows as ``(provider, endpoint, model, running, completed)``.
+            Sorted rows as ``(provider, endpoint, model, total_samples, completed_samples)``.
         """
         return self._progress_state.compute_queue_batch_counts()
 
@@ -328,10 +328,10 @@ class BatcherRichDisplay:
                 provider=provider,
                 endpoint=endpoint,
                 model=model,
-                running=running,
-                completed=completed,
+                total_samples=total_samples,
+                completed=completed_samples,
             )
-            for provider, endpoint, model, running, completed in queue_rows
+            for provider, endpoint, model, total_samples, completed_samples in queue_rows
         ]
         return _build_queue_table(
             columns=_LIVE_QUEUE_COLUMNS,
@@ -352,7 +352,7 @@ class BatcherRichDisplay:
             "-",
             "-",
             "-",
-            self._format_queue_progress(running=0, completed=0),
+            self._format_queue_progress(total=0, completed=0),
         )
 
     def _format_queue_summary_row(
@@ -361,7 +361,7 @@ class BatcherRichDisplay:
         provider: str,
         endpoint: str,
         model: str,
-        running: int,
+        total_samples: int,
         completed: int,
     ) -> QueueRow:
         """
@@ -375,10 +375,10 @@ class BatcherRichDisplay:
             Queue endpoint path.
         model : str
             Queue model identifier.
-        running : int
-            Number of non-terminal batches.
+        total_samples : int
+            Total tracked samples in the queue.
         completed : int
-            Number of terminal batches.
+            Completed tracked samples in the queue.
 
         Returns
         -------
@@ -390,38 +390,39 @@ class BatcherRichDisplay:
             endpoint,
             model,
             self._format_queue_progress(
-                running=running,
+                total=total_samples,
                 completed=completed,
             ),
         )
 
     @staticmethod
-    def _format_queue_progress(*, running: int, completed: int) -> Text:
+    def _format_queue_progress(*, total: int, completed: int) -> Text:
         """
         Format one queue progress cell as ``completed/total (percent)``.
 
         Parameters
         ----------
-        running : int
-            Number of non-terminal batches.
+        total : int
+            Total tracked samples.
         completed : int
-            Number of terminal batches.
+            Completed tracked samples.
 
         Returns
         -------
         Text
             Formatted queue progress.
         """
-        total = running + completed
-        if total <= 0:
+        normalized_total = max(total, 0)
+        normalized_completed = max(min(completed, normalized_total), 0)
+        if normalized_total <= 0:
             percent = 0.0
         else:
-            percent = (completed / total) * 100.0
-        count_width = max(1, len(str(object=total)))
+            percent = (normalized_completed / normalized_total) * 100.0
+        count_width = max(1, len(str(object=normalized_total)))
         progress = Text()
-        progress.append(text=f"{completed:>{count_width}}", style="bold green")
+        progress.append(text=f"{normalized_completed:>{count_width}}", style="bold green")
         progress.append(text="/", style="white")
-        progress.append(text=f"{total:>{count_width}}", style="bold cyan")
+        progress.append(text=f"{normalized_total:>{count_width}}", style="bold cyan")
         progress.append(text=" (", style="white")
         progress.append(text=f"{percent:.1f}%", style="bold green")
         progress.append(text=")", style="white")

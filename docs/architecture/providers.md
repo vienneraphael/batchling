@@ -12,7 +12,25 @@ batch results.
 - Identify whether a URL belongs to a provider.
 - Submit provider batches via `process_batch()` (file-based or inline).
 - Normalize request URLs for provider batch endpoints.
+- Parse poll payload progress into normalized numeric values.
 - Convert JSONL batch result lines into `httpx.Response` objects for callers.
+
+Poll parsing now uses a shared provider contract:
+
+- `parse_poll_response(payload=..., requests_count=...)`
+- `get_progress_from_poll(payload=..., requests_count=...) -> (completed, percent)`
+
+`BaseProvider` exposes an OpenAI-style default implementation
+(`request_counts.completed`) and recomputes normalized percent from
+`completed / requests_count` in the final `PollSnapshot`.
+
+`PollSnapshot` now carries:
+
+- `status`
+- `output_file_id`
+- `error_file_id`
+- `progress_completed` (int)
+- `progress_percent` (float)
 
 ## Registry and lookup
 
@@ -47,6 +65,7 @@ The Anthropic provider implements:
 
 - inline batch submission to `/v1/messages/batches` (no file upload step).
 - provider-specific status polling field (`processing_status`).
+- progress extraction from `request_counts.succeeded`.
 - `x-api-key` passthrough via `build_api_headers()`.
 - `from_batch_result()` to decode batch output lines.
 
@@ -58,6 +77,7 @@ The Mistral provider reuses the file-based flow with provider-specific endpoints
 - `batch_endpoint = "/v1/batch/jobs"`
 - `file_upload_endpoint = "/v1/files"`
 - `file_content_endpoint = "/v1/files/{id}/content"`
+- progress extraction from `completed_requests`
 
 ## Together provider
 
@@ -70,6 +90,8 @@ batch response shapes:
 - `file_content_endpoint = "/v1/files/{id}/content"`
 - overrides batch file upload form fields (`file_name`, `purpose=batch-api`)
 - extracts batch id from nested response payload (`job.id`)
+- progress extraction from `progress` percent with
+  `floor(progress * requests_count / 100)` completed derivation
 
 ## Xai provider
 
@@ -81,6 +103,7 @@ The Xai provider uses a provider-specific batch lifecycle and response envelope:
   `/v1/batches/{batch_id}/requests`
 - poll status derived from nested state counters (`state.num_pending`,
   `state.num_completed`) and normalized to `pending` / `running` / `ended`
+- progress extraction from `state.success`
 - result retrieval from `/v1/batches/{batch_id}/results`
 - provider-specific result row key (`custom_id_field_name = "batch_request_id"`)
 
@@ -106,6 +129,7 @@ Common helpers now live on `BaseProvider` and can be reused by all providers:
 - `build_batch_poll_path()`
 - `build_batch_results_path()`
 - `extract_batch_status()`
+- `get_progress_from_poll()`
 - `get_output_file_id_from_poll_response()`
 - `encode_body()`
 

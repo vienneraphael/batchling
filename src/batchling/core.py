@@ -60,7 +60,9 @@ class _ActiveBatch:
     batch_id: str
     output_file_id: str
     error_file_id: str
+    requests_count: int
     requests: dict[str, _PendingRequest]  # custom_id -> request
+    max_progress_completed: int = 0
 
 
 @dataclass
@@ -78,7 +80,9 @@ class _ResumedBatch:
     provider: BaseProvider
     base_url: str
     api_headers: dict[str, str]
+    requests_count: int
     requests_by_custom_id: dict[str, list[_ResumedPendingRequest]]
+    max_progress_completed: int = 0
 
 
 @dataclass(frozen=True)
@@ -257,6 +261,7 @@ class Batcher:
         model: str,
         batch_id: str,
         custom_id: str,
+        request_count: int,
         source: t.Literal[BatcherEventSource.CACHE_DRY_RUN, BatcherEventSource.RESUMED_POLL],
     ) -> None:
         """
@@ -274,6 +279,8 @@ class Batcher:
             Provider batch identifier.
         custom_id : str
             Custom request identifier.
+        request_count : int
+            Total requests associated with the resumed provider batch.
         source : BatcherEventSource
             Event source for cache-hit routing.
         """
@@ -284,6 +291,7 @@ class Batcher:
             model=model,
             batch_id=batch_id,
             custom_id=custom_id,
+            request_count=request_count,
             source=source,
         )
 
@@ -476,6 +484,9 @@ class Batcher:
         provider: str,
         batch_id: str,
         status: str,
+        request_count: int,
+        progress_completed: int,
+        progress_percent: float,
         source: t.Literal[BatcherEventSource.ACTIVE_POLL, BatcherEventSource.RESUMED_POLL],
     ) -> None:
         """
@@ -489,6 +500,12 @@ class Batcher:
             Provider batch identifier.
         status : str
             Provider batch status.
+        request_count : int
+            Total request count for the polled batch.
+        progress_completed : int
+            Completed request count emitted for this poll snapshot.
+        progress_percent : float
+            Completion percent emitted for this poll snapshot.
         source : BatcherEventSource
             Event source.
         """
@@ -497,8 +514,47 @@ class Batcher:
             provider=provider,
             batch_id=batch_id,
             status=status,
+            request_count=request_count,
+            progress_completed=progress_completed,
+            progress_percent=progress_percent,
             source=source,
         )
+
+    def _apply_monotonic_progress_clamp(
+        self,
+        *,
+        requests_count: int,
+        reported_completed: int,
+        max_completed: int,
+    ) -> tuple[int, float, int]:
+        """
+        Enforce monotonic completed counts for one polled batch.
+
+        Parameters
+        ----------
+        requests_count : int
+            Total request count for the batch.
+        reported_completed : int
+            Completed count from provider payload.
+        max_completed : int
+            Highest completed count observed so far.
+
+        Returns
+        -------
+        tuple[int, float, int]
+            ``(clamped_completed, percent, next_max_completed)``.
+        """
+        normalized_requests_count = max(0, int(requests_count))
+        normalized_reported_completed = max(0, int(reported_completed))
+        normalized_max_completed = max(0, int(max_completed))
+        clamped_completed = max(normalized_reported_completed, normalized_max_completed)
+
+        next_max_completed = max(normalized_max_completed, clamped_completed)
+        if normalized_requests_count > 0:
+            percent = (clamped_completed / normalized_requests_count) * 100.0
+        else:
+            percent = 0.0
+        return clamped_completed, percent, next_max_completed
 
     def _emit_batch_terminal_event(
         self,
@@ -840,6 +896,7 @@ class Batcher:
             model=model_name,
             batch_id=cache_entry.batch_id,
             custom_id=cache_entry.custom_id,
+            request_count=cache_entry.request_count,
             source=cache_source,
         )
         if self._dry_run:
@@ -1097,6 +1154,7 @@ class Batcher:
                     provider=provider,
                     base_url=resume_context.base_url,
                     api_headers=resume_context.api_headers,
+                    requests_count=cache_entry.request_count,
                     requests_by_custom_id={},
                 )
                 self._resumed_batches[resume_key] = resumed_batch
@@ -1331,6 +1389,7 @@ class Batcher:
                 host=self._resolve_host(url=str(request.params["url"])),
                 batch_id=batch_id,
                 custom_id=request.custom_id,
+                request_count=len(requests),
                 created_at=created_at,
             )
             for request in requests
@@ -1410,6 +1469,7 @@ class Batcher:
                     batch_id=dry_run_batch_id,
                     output_file_id="",
                     error_file_id="",
+                    requests_count=len(requests),
                     requests={req.custom_id: req for req in requests},
                 )
                 self._active_batches.append(active_batch)
@@ -1479,6 +1539,7 @@ class Batcher:
                 batch_id=batch_submission.batch_id,
                 output_file_id="",
                 error_file_id="",
+                requests_count=len(requests),
                 requests={req.custom_id: req for req in requests},
             )
             self._active_batches.append(active_batch)
@@ -1517,6 +1578,7 @@ class Batcher:
         base_url: str,
         api_headers: dict[str, str],
         batch_id: str,
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Execute one provider batch poll request.
@@ -1531,6 +1593,8 @@ class Batcher:
             Provider API headers.
         batch_id : str
             Provider batch ID.
+        requests_count : int
+            Total request count associated with this batch ID.
 
         Returns
         -------
@@ -1547,7 +1611,10 @@ class Batcher:
             request_spec=poll_request_spec,
         )
         payload = response.json()
-        return await provider.parse_poll_response(payload=payload)
+        return await provider.parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
 
     async def _poll_batch(
         self,
@@ -1577,11 +1644,24 @@ class Batcher:
                 base_url=base_url,
                 api_headers=api_headers,
                 batch_id=active_batch.batch_id,
+                requests_count=active_batch.requests_count,
+            )
+            (
+                progress_completed,
+                progress_percent,
+                active_batch.max_progress_completed,
+            ) = self._apply_monotonic_progress_clamp(
+                requests_count=active_batch.requests_count,
+                reported_completed=poll_snapshot.progress_completed,
+                max_completed=active_batch.max_progress_completed,
             )
             self._emit_batch_polled_event(
                 provider=provider.name,
                 batch_id=active_batch.batch_id,
                 status=poll_snapshot.status,
+                request_count=active_batch.requests_count,
+                progress_completed=progress_completed,
+                progress_percent=progress_percent,
                 source=BatcherEventSource.ACTIVE_POLL,
             )
             active_batch.output_file_id = poll_snapshot.output_file_id
@@ -1638,11 +1718,24 @@ class Batcher:
                     base_url=resumed_batch.base_url,
                     api_headers=resumed_batch.api_headers,
                     batch_id=batch_id,
+                    requests_count=resumed_batch.requests_count,
+                )
+                (
+                    progress_completed,
+                    progress_percent,
+                    resumed_batch.max_progress_completed,
+                ) = self._apply_monotonic_progress_clamp(
+                    requests_count=resumed_batch.requests_count,
+                    reported_completed=poll_snapshot.progress_completed,
+                    max_completed=resumed_batch.max_progress_completed,
                 )
                 self._emit_batch_polled_event(
                     provider=provider.name,
                     batch_id=batch_id,
                     status=poll_snapshot.status,
+                    request_count=resumed_batch.requests_count,
+                    progress_completed=progress_completed,
+                    progress_percent=progress_percent,
                     source=BatcherEventSource.RESUMED_POLL,
                 )
                 if poll_snapshot.status in provider.batch_terminal_states:

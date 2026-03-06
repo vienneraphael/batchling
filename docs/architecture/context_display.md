@@ -23,6 +23,10 @@ display/report behavior.
 
 Both methods are idempotent at the behavior level and safe to call during cleanup paths.
 
+Fallback INFO logs are emitted on `BATCH_POLLED` and rely on poll-derived sample
+progress fields (`progress_completed`, `progress_percent`) aggregated by
+`BatchProgressState`.
+
 ## Boundaries
 
 - `BatchingContext` owns contextvar activation/reset and `batcher.close()` choreography.

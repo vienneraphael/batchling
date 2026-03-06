@@ -45,11 +45,15 @@ class GroqProvider(OpenAIProvider):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Parse Groq poll payload into normalized snapshot.
         """
-        return await super().parse_poll_response(payload=payload)
+        return await super().parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
 
     def build_results_request_spec(
         self,

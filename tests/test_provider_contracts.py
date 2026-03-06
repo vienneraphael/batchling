@@ -80,7 +80,7 @@ def test_build_resume_context_adds_internal_header(provider: t.Any) -> None:
 @pytest.mark.asyncio
 async def test_parse_poll_response_default_fields_for_openai_provider() -> None:
     """
-    Ensure default poll parser normalizes output and error IDs.
+    Ensure default poll parser normalizes IDs and computes progress from counts.
     """
     provider = OpenAIProvider()
     snapshot = await provider.parse_poll_response(
@@ -88,11 +88,95 @@ async def test_parse_poll_response_default_fields_for_openai_provider() -> None:
             "status": "completed",
             "output_file_id": "out-123",
             "error_file_id": "err-123",
-        }
+            "request_counts": {"completed": 3},
+        },
+        requests_count=6,
     )
     assert snapshot.status == "completed"
     assert snapshot.output_file_id == "out-123"
     assert snapshot.error_file_id == "err-123"
+    assert snapshot.progress_completed == 3
+    assert snapshot.progress_percent == 50.0
+
+
+@pytest.mark.asyncio
+async def test_parse_poll_response_progress_defaults_to_zero_for_invalid_numbers() -> None:
+    """
+    Ensure invalid progress payload values fallback to zero.
+    """
+    provider = OpenAIProvider()
+    snapshot = await provider.parse_poll_response(
+        payload={"request_counts": {"completed": "not-a-number"}},
+        requests_count=6,
+    )
+    assert snapshot.progress_completed == 0
+    assert snapshot.progress_percent == 0.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("provider", "payload", "requests_count", "expected_completed", "expected_percent"),
+    [
+        (
+            AnthropicProvider(),
+            {"request_counts": {"succeeded": 4}},
+            10,
+            4,
+            40.0,
+        ),
+        (
+            GeminiProvider(),
+            {"batchStats": {"successfulRequestCount": "5"}},
+            8,
+            5,
+            62.5,
+        ),
+        (
+            MistralProvider(),
+            {"completed_requests": 2},
+            4,
+            2,
+            50.0,
+        ),
+        (
+            XaiProvider(),
+            {"state": {"success": 7}},
+            7,
+            7,
+            100.0,
+        ),
+        (
+            TogetherProvider(),
+            {"progress": 33.3},
+            7,
+            2,
+            (2 / 7) * 100.0,
+        ),
+        (
+            TogetherProvider(),
+            {"progress": 150},
+            5,
+            5,
+            100.0,
+        ),
+    ],
+)
+async def test_parse_poll_response_provider_progress_mappings(
+    provider: t.Any,
+    payload: dict[str, t.Any],
+    requests_count: int,
+    expected_completed: int,
+    expected_percent: float,
+) -> None:
+    """
+    Ensure provider poll progress extraction follows provider-specific mapping rules.
+    """
+    snapshot = await provider.parse_poll_response(
+        payload=payload,
+        requests_count=requests_count,
+    )
+    assert snapshot.progress_completed == expected_completed
+    assert snapshot.progress_percent == pytest.approx(expected_percent)
 
 
 def test_decode_results_content_maps_custom_ids() -> None:
@@ -140,10 +224,12 @@ async def test_parse_poll_response_xai_state_mapping(
         Expected normalized poll status.
     """
     provider = XaiProvider()
-    snapshot = await provider.parse_poll_response(payload=payload)
+    snapshot = await provider.parse_poll_response(payload=payload, requests_count=3)
     assert snapshot.status == expected_status
     assert snapshot.output_file_id == ""
     assert snapshot.error_file_id == ""
+    assert snapshot.progress_completed == 0
+    assert snapshot.progress_percent == 0.0
 
 
 def test_decode_results_content_xai_maps_response_and_error_rows() -> None:

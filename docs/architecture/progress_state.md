@@ -7,7 +7,7 @@ rendering and fallback progress logging.
 
 - Maintain in-memory batch tracking keyed by `batch_id`.
 - Compute aggregate progress/request metrics for one batching context.
-- Aggregate queue-level running/completed batch counts.
+- Aggregate queue-level sample totals/completed samples.
 - Aggregate dry-run totals and queue-level estimates.
 
 ## `BatchProgressState`
@@ -21,8 +21,8 @@ and updates tracked batches using parsed lifecycle enums:
 Handled lifecycle behaviors include:
 
 - mark/resize batches on `BATCH_PROCESSING`
-- mark active polling on `BATCH_POLLED`
-- mark terminal success/failure on `BATCH_TERMINAL` and `BATCH_FAILED`
+- update completed counters from `BATCH_POLLED.progress_completed`
+- keep terminal markers on `BATCH_TERMINAL` and `BATCH_FAILED`
 - count resumed cache-hit samples on `CACHE_HIT_ROUTED` with
   `RESUMED_POLL` source
 
@@ -32,11 +32,17 @@ Computed outputs:
 - `compute_request_metrics()` ->
   `(total_samples, cached_samples, completed_samples, in_progress_samples)`
 - `compute_queue_batch_counts()` ->
-  rows `(provider, endpoint, model, running, completed)`
+  rows `(provider, endpoint, model, total_samples, completed_samples)`
 - `compute_elapsed_seconds()`
 
 Completion classification treats terminal statuses containing
-`fail/error/cancel/expired/timeout` as non-completed.
+`BatchProgressState` as poll-driven only: terminal status text does not
+implicitly mark completion.
+
+Batch totals are derived from tracked batch size (`request_count`), and
+in-progress samples are computed per batch as:
+
+- `max(total - completed, 0)`
 
 ## `DryRunSummaryState`
 

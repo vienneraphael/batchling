@@ -34,6 +34,8 @@ class CacheEntry:
         Provider batch identifier.
     custom_id : str
         Request identifier within the provider batch.
+    request_count : int
+        Total requests in the provider batch.
     created_at : float
         Unix timestamp when the cache row was created.
     """
@@ -45,6 +47,7 @@ class CacheEntry:
     host: str
     batch_id: str
     custom_id: str
+    request_count: int
     created_at: float
 
 
@@ -130,10 +133,34 @@ class RequestCacheStore:
                     host TEXT NOT NULL,
                     batch_id TEXT NOT NULL,
                     custom_id TEXT NOT NULL,
+                    request_count INTEGER NOT NULL DEFAULT 0,
                     created_at REAL NOT NULL
                 )
                 """
             )
+            table_columns = connection.execute("PRAGMA table_info(request_cache)").fetchall()
+            has_request_count = any(
+                str(column["name"]) == "request_count" for column in table_columns
+            )
+            if not has_request_count:
+                connection.execute(
+                    """
+                    ALTER TABLE request_cache
+                    ADD COLUMN request_count INTEGER NOT NULL DEFAULT 0
+                    """
+                )
+                connection.execute(
+                    """
+                    UPDATE request_cache
+                    SET request_count = (
+                        SELECT COUNT(*)
+                        FROM request_cache AS grouped
+                        WHERE grouped.provider = request_cache.provider
+                          AND grouped.host = request_cache.host
+                          AND grouped.batch_id = request_cache.batch_id
+                    )
+                    """
+                )
             connection.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_request_cache_created_at
@@ -165,11 +192,12 @@ class RequestCacheStore:
             host=str(row["host"]),
             batch_id=str(row["batch_id"]),
             custom_id=str(row["custom_id"]),
+            request_count=int(row["request_count"]),
             created_at=float(row["created_at"]),
         )
 
     @staticmethod
-    def _entry_values(*, entry: CacheEntry) -> tuple[str, str, str, str, str, str, str, float]:
+    def _entry_values(*, entry: CacheEntry) -> tuple[str, str, str, str, str, str, str, int, float]:
         """
         Convert cache entry to SQLite parameter tuple.
 
@@ -180,7 +208,7 @@ class RequestCacheStore:
 
         Returns
         -------
-        tuple[str, str, str, str, str, str, str, float]
+        tuple[str, str, str, str, str, str, str, int, float]
             Tuple ordered for ``INSERT`` statements.
         """
         return (
@@ -191,6 +219,7 @@ class RequestCacheStore:
             entry.host,
             entry.batch_id,
             entry.custom_id,
+            entry.request_count,
             entry.created_at,
         )
 
@@ -211,7 +240,16 @@ class RequestCacheStore:
         with self._connect() as connection:
             row = connection.execute(
                 """
-                SELECT request_hash, provider, endpoint, model, host, batch_id, custom_id, created_at
+                SELECT
+                    request_hash,
+                    provider,
+                    endpoint,
+                    model,
+                    host,
+                    batch_id,
+                    custom_id,
+                    request_count,
+                    created_at
                 FROM request_cache
                 WHERE request_hash = ?
                 """,
@@ -244,8 +282,16 @@ class RequestCacheStore:
             connection.executemany(
                 """
                 INSERT INTO request_cache (
-                    request_hash, provider, endpoint, model, host, batch_id, custom_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    request_hash,
+                    provider,
+                    endpoint,
+                    model,
+                    host,
+                    batch_id,
+                    custom_id,
+                    request_count,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(request_hash) DO UPDATE SET
                     provider=excluded.provider,
                     endpoint=excluded.endpoint,
@@ -253,6 +299,7 @@ class RequestCacheStore:
                     host=excluded.host,
                     batch_id=excluded.batch_id,
                     custom_id=excluded.custom_id,
+                    request_count=excluded.request_count,
                     created_at=excluded.created_at
                 """,
                 [self._entry_values(entry=entry) for entry in entries],

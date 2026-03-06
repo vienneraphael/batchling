@@ -1263,9 +1263,18 @@ async def test_poll_batch_once_uses_provider_request_spec_and_parser() -> None:
             headers={"Authorization": "Bearer override"},
         )
 
-    async def fake_parse_poll_response(*, payload: dict[str, t.Any]) -> PollSnapshot:
+    async def fake_parse_poll_response(
+        *, payload: dict[str, t.Any], requests_count: int
+    ) -> PollSnapshot:
         seen["payload"] = payload
-        return PollSnapshot(status="completed", output_file_id="out-1", error_file_id="")
+        seen["requests_count"] = requests_count
+        return PollSnapshot(
+            status="completed",
+            output_file_id="out-1",
+            error_file_id="",
+            progress_completed=2,
+            progress_percent=100.0,
+        )
 
     provider.build_poll_request_spec = fake_build_poll_request_spec  # type: ignore[method-assign]
     provider.parse_poll_response = fake_parse_poll_response  # type: ignore[method-assign]
@@ -1284,14 +1293,18 @@ async def test_poll_batch_once_uses_provider_request_spec_and_parser() -> None:
         base_url="https://api.openai.com",
         api_headers={"Authorization": "Bearer token"},
         batch_id="batch-1",
+        requests_count=2,
     )
 
     assert snapshot.status == "completed"
     assert snapshot.output_file_id == "out-1"
+    assert snapshot.progress_completed == 2
+    assert snapshot.progress_percent == 100.0
     assert seen["base_url"] == "https://api.openai.com"
     assert seen["request_url"] == "https://api.openai.com/poll/path"
     assert seen["request_auth"] == "Bearer override"
     assert seen["payload"]["status"] == "processing"
+    assert seen["requests_count"] == 2
 
 
 @pytest.mark.asyncio
@@ -1328,6 +1341,7 @@ async def test_attach_cached_request_uses_provider_resume_context() -> None:
             host="api.openai.com",
             batch_id="batch-1",
             custom_id="custom-1",
+            request_count=1,
             created_at=time.time(),
         ),
         request_hash="hash-1",
@@ -1338,6 +1352,7 @@ async def test_attach_cached_request_uses_provider_resume_context() -> None:
     resumed_batch = batcher._resumed_batches[resume_key]
     assert resumed_batch.base_url == "https://custom.example"
     assert resumed_batch.api_headers == {"X-Custom": "1"}
+    assert resumed_batch.requests_count == 1
 
     for task in list(batcher._resumed_poll_tasks):
         task.cancel()
@@ -1368,6 +1383,7 @@ async def test_resolve_batch_results_uses_provider_decoder() -> None:
         batch_id="batch-1",
         output_file_id="file-1",
         error_file_id="",
+        requests_count=1,
         requests={"custom-1": request},
     )
 
@@ -1858,6 +1874,7 @@ async def test_cache_route_failure_falls_back_to_fresh_submission(
                 host="api.openai.com",
                 batch_id="batch-missing",
                 custom_id="custom-missing",
+                request_count=1,
                 created_at=time.time(),
             )
         ]
@@ -1951,6 +1968,7 @@ async def test_cache_cleanup_removes_rows_older_than_retention(
         host="api.openai.com",
         batch_id="batch-stale",
         custom_id="custom-stale",
+        request_count=1,
         created_at=time.time() - (31 * 24 * 60 * 60),
     )
     _ = batcher._cache_store.upsert_many(entries=[stale_entry])
@@ -2044,6 +2062,13 @@ async def test_submit_emits_lifecycle_events(batcher: Batcher, provider: OpenAIP
     assert BatcherEventType.BATCH_POLLED in event_types
     assert BatcherEventType.BATCH_TERMINAL in event_types
 
+    polled_event = next(
+        event for event in events if parse_event_type(event=event) is BatcherEventType.BATCH_POLLED
+    )
+    assert polled_event.get("request_count") == 1
+    assert polled_event.get("progress_completed") == 1
+    assert polled_event.get("progress_percent") == 100.0
+
 
 @pytest.mark.asyncio
 async def test_dry_run_emits_terminal_without_poll(provider: OpenAIProvider) -> None:
@@ -2127,7 +2152,38 @@ async def test_cache_hit_emits_cache_hit_routed(
         and event.get("source") == BatcherEventSource.CACHE_DRY_RUN
         for event in events
     )
+    cache_hit_event = next(
+        event
+        for event in events
+        if parse_event_type(event=event) is BatcherEventType.CACHE_HIT_ROUTED
+    )
+    assert cache_hit_event.get("request_count") == 1
     await dry_run_batcher.close()
+
+
+def test_apply_monotonic_progress_clamp_is_monotonic() -> None:
+    """Test monotonic progress clamping never decreases completed count."""
+    batcher = Batcher(batch_size=2, batch_window_seconds=1.0, cache=False)
+
+    first = batcher._apply_monotonic_progress_clamp(
+        requests_count=10,
+        reported_completed=4,
+        max_completed=0,
+    )
+    second = batcher._apply_monotonic_progress_clamp(
+        requests_count=10,
+        reported_completed=2,
+        max_completed=first[2],
+    )
+    third = batcher._apply_monotonic_progress_clamp(
+        requests_count=10,
+        reported_completed=1,
+        max_completed=second[2],
+    )
+
+    assert first == (4, 40.0, 4)
+    assert second == (4, 40.0, 4)
+    assert third == (4, 40.0, 4)
 
 
 def test_fail_missing_results_emits_lifecycle_event() -> None:
@@ -2151,6 +2207,7 @@ def test_fail_missing_results_emits_lifecycle_event() -> None:
         batch_id="batch-1",
         output_file_id="file-1",
         error_file_id="",
+        requests_count=1,
         requests={"custom-1": request},
     )
 

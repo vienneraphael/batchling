@@ -58,6 +58,10 @@ class BatcherEvent(t.TypedDict, total=False):
         Provider batch status.
     request_count : int
         Number of requests in the event scope.
+    progress_completed : int
+        Completed requests emitted for one poll snapshot.
+    progress_percent : float
+        Completion percent emitted for one poll snapshot.
     pending_count : int
         Current queue pending size.
     custom_id : str
@@ -79,6 +83,8 @@ class BatcherEvent(t.TypedDict, total=False):
     batch_id: str
     status: str
     request_count: int
+    progress_completed: int
+    progress_percent: float
     pending_count: int
     custom_id: str
     source: str | BatcherEventSource

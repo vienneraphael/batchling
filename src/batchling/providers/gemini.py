@@ -182,11 +182,47 @@ class GeminiProvider(BaseProvider):
         self,
         *,
         payload: dict[str, t.Any],
+        requests_count: int,
     ) -> PollSnapshot:
         """
         Parse Gemini poll payload into normalized snapshot.
         """
-        return await super().parse_poll_response(payload=payload)
+        return await super().parse_poll_response(
+            payload=payload,
+            requests_count=requests_count,
+        )
+
+    def get_progress_from_poll(
+        self,
+        *,
+        payload: dict[str, t.Any],
+        requests_count: int,
+    ) -> tuple[int, float]:
+        """
+        Extract Gemini poll progress from ``batchStats.successfulRequestCount``.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Gemini poll payload.
+        requests_count : int
+            Total request count for this batch.
+
+        Returns
+        -------
+        tuple[int, float]
+            Completed requests and completion percent.
+        """
+        batch_stats = payload.get("batchStats") or {}
+        completed = max(
+            0,
+            self._coerce_int(value=batch_stats.get("successfulRequestCount", 0)),
+        )
+        if requests_count > 0:
+            percent = (completed / requests_count) * 100.0
+        else:
+            percent = 0.0
+        return completed, percent
 
     async def get_output_file_id_from_poll_response(
         self,
