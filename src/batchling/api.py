@@ -4,6 +4,8 @@ Exposes a `batchify` function that returns a BatchingContext that activates
 the active Batcher for the duration of a context manager.
 """
 
+import typing as t
+
 from batchling.context import BatchingContext
 from batchling.core import Batcher
 from batchling.hooks import install_hooks
@@ -14,6 +16,7 @@ def batchify(
     batch_size: int = 50,
     batch_window_seconds: float = 2.0,
     batch_poll_interval_seconds: float = 10.0,
+    completion_window: t.Literal["24h", "1h"] = "24h",
     dry_run: bool = False,
     cache: bool = True,
     live_display: bool = True,
@@ -31,6 +34,10 @@ def batchify(
         Submit a provider batch after this many seconds from the moment the first request is queued, even if size not reached.
     batch_poll_interval_seconds : float, optional
         Poll active batches for results every this many seconds.
+    completion_window : {"24h", "1h"}, optional
+        Provider batch completion window requested for submitted batches.<br>
+        ``"24h"`` is the default and only value accepted by most providers.<br>
+        ``"1h"`` is currently only supported by compatible providers such as Doubleword.
     dry_run : bool, optional
         If ``True``, intercept and batch requests without sending provider batches.<br>
         Use it to debug or before sending big jobs.<br>
@@ -65,6 +72,7 @@ def batchify(
         batch_size=batch_size,
         batch_window_seconds=batch_window_seconds,
         batch_poll_interval_seconds=batch_poll_interval_seconds,
+        completion_window=completion_window,
         dry_run=dry_run,
         cache=cache,
     )

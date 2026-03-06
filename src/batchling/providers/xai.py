@@ -316,6 +316,7 @@ class XaiProvider(BaseProvider):
         requests: t.Sequence[PendingRequestLike],
         client_factory: t.Callable[[], httpx.AsyncClient],
         queue_key: tuple[str, str, str],
+        completion_window: str,
     ) -> BatchSubmission:
         """
         Upload a JSONL file and create an OpenAI batch job.
@@ -328,6 +329,8 @@ class XaiProvider(BaseProvider):
             Async client factory for provider API calls.
         queue_key : tuple[str, str, str]
             Queue key associated with the current batch.
+        completion_window : str
+            Requested provider batch completion window.
 
         Returns
         -------
@@ -336,6 +339,7 @@ class XaiProvider(BaseProvider):
         """
         if not requests:
             raise ValueError("Cannot process an empty request batch")
+        del completion_window
 
         _, endpoint, _ = queue_key
         base_url = self._normalize_base_url(url=requests[0].params["url"])
