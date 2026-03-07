@@ -16,7 +16,9 @@ Whenever a cache hit is made, the corresponding request skips the batch submissi
 
 ## Cache retention
 
-By default, the cache is located in your home folder under: `$HOME/.cache/batchling`
+By default, the cache database is stored at: `$HOME/.cache/batchling/cache.sqlite3`
+
+If you want to use a custom location, set the `BATCHLING_CACHE_PATH` environment variable to the SQLite file path you want `batchling` to use.
 
 Cache is kept locally and automatically cleaned up once it's 30 days old.
 
