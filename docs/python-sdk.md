@@ -82,15 +82,14 @@ That's it! Update three lines of code and you save 50% off your workflow.
 ## Video Demo
 
 <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
-  <iframe
-    src="https://www.youtube-nocookie.com/embed/nRZSTLMSfuk"
-    title="batchling Python SDK walkthrough"
-    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
-    loading="lazy"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowfullscreen
-  ></iframe>
+  <video
+    controls
+    preload="metadata"
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+  >
+    <source src="../assets/videos/batchling_sdk.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
 </div>
 
 ## Next Steps
