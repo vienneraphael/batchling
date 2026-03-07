@@ -51,6 +51,12 @@ Compared to using standard endpoints directly, Batch API offers:
 
 </details>
 
+</br>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/vienneraphael/batchling/main/docs/assets/images/batchling_cli.gif" alt="batchling CLI demo" width="900" role="img">
+</p>
+
 ## Installation
 
 batchling is available on PyPI as `batchling`, install using either `pip`:
