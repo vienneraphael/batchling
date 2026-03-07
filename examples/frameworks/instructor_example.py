@@ -19,8 +19,8 @@ async def build_tasks() -> list:
     """Build Instructor requests."""
     client = instructor.from_provider("openai/gpt-5-nano", async_client=True)
     questions = [
-        "Extract: Daniel is a 25-year-old software engineer",
-        "Extract: Marie is a 26-year-old freelance in communication",
+        "Extract: Daniel is a 26-year-old software engineer",
+        "Extract: Marie is a 28-year-old brand strategist",
     ]
     return [
         client.create(response_model=Person, messages=[{"role": "user", "content": question}])
