@@ -71,7 +71,7 @@ async def main():
         generate_image(text=product_description)
         for product_description in new_product_descriptions
     ]
--   generated_images = asyncio.gather(*tasks)
+-   generated_images = await asyncio.gather(*tasks)
 +   async with batchify():
 +       generated_images = await asyncio.gather(*tasks)
     await update_product_db(generated_images=generated_images)
