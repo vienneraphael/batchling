@@ -52,6 +52,8 @@ authlib==1.6.8
     # via fastmcp
 babel==2.18.0
     # via mkdocs-material
+backports-tarfile==1.2.0 ; python_full_version < '3.12'
+    # via jaraco-context
 backrefs==6.1
     # via mkdocs-material
 beartype==0.22.9
@@ -232,6 +234,7 @@ idna==3.11
     #   yarl
 importlib-metadata==8.7.1
     # via
+    #   keyring
     #   litellm
     #   opentelemetry-api
 iniconfig==2.3.0
@@ -763,6 +766,7 @@ typing-extensions==4.15.0
     #   groq
     #   grpcio
     #   huggingface-hub
+    #   ipython
     #   langchain-core
     #   logfire
     #   mcp

@@ -567,7 +567,7 @@ class Batcher:
         provider: str,
         batch_id: str,
         status: str,
-        source: t.Literal[BatcherEventSource.ACTIVE_POLL, BatcherEventSource.RESUMED_POLL],
+        source: BatcherEventSource,
     ) -> None:
         """
         Emit one poll-scoped terminal lifecycle event.
