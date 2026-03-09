@@ -32,6 +32,7 @@ DISPLAY_NAME_OVERRIDES = {
     "langchain": "LangChain",
     "openai": "OpenAI",
     "litellm": "LiteLLM",
+    "dspy": "DSPy",
     "xai": "XAI",
 }
 PROVIDER_PRICING_NOTE_TITLE = "Check model support and batch pricing"

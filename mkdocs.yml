@@ -113,6 +113,7 @@ nav:
   - Frameworks:
       - Overview: frameworks.md
       # BEGIN AUTO-GENERATED FRAMEWORK NAV
+      - DSPy: frameworks/dspy.md
       - Instructor: frameworks/instructor.md
       - LangChain: frameworks/langchain.md
       - LiteLLM: frameworks/litellm.md

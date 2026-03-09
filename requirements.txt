@@ -16,6 +16,8 @@ aiohttp==3.13.3
     #   xai-sdk
 aiosignal==1.4.0
     # via aiohttp
+alembic==1.18.4
+    # via optuna
 annotated-types==0.7.0
     # via pydantic
 ansicon==1.89.0 ; sys_platform == 'win32'
@@ -25,6 +27,8 @@ anthropic==0.79.0
 anyio==4.11.0
     # via
     #   anthropic
+    #   asyncer
+    #   dspy
     #   google-genai
     #   groq
     #   httpx
@@ -42,6 +46,8 @@ argcomplete==3.6.3
     # via pydantic-ai-slim
 asttokens==3.0.0
     # via stack-data
+asyncer==0.0.8
+    # via dspy
 attrs==25.4.0
     # via
     #   aiohttp
@@ -69,7 +75,9 @@ botocore==1.42.52
     #   boto3
     #   s3transfer
 cachetools==7.0.1
-    # via py-key-value-aio
+    # via
+    #   dspy
+    #   py-key-value-aio
 caio==0.9.25
     # via aiofile
 certifi==2025.10.5
@@ -91,17 +99,22 @@ click==8.3.0
     #   together
     #   typer
     #   uvicorn
+cloudpickle==3.1.2
+    # via dspy
 cohere==5.20.6 ; sys_platform != 'emscripten'
     # via pydantic-ai-slim
 colorama==0.4.6
     # via
     #   click
+    #   colorlog
     #   griffe
     #   ipython
     #   mkdocs
     #   mkdocs-material
     #   pytest
     #   tqdm
+colorlog==6.10.1
+    # via optuna
 comm==0.2.3
     # via ipykernel
 complexipy==5.2.0
@@ -119,7 +132,9 @@ debugpy==1.8.17
 decorator==5.2.1
     # via ipython
 diskcache==5.6.3
-    # via instructor
+    # via
+    #   dspy
+    #   instructor
 distro==1.9.0
     # via
     #   anthropic
@@ -136,6 +151,7 @@ docstring-parser==0.17.0
     #   instructor
 docutils==0.22.4
     # via rich-rst
+dspy==3.1.3
 editor==1.7.0
     # via inquirer
 email-validator==2.3.0
@@ -172,6 +188,8 @@ fsspec==2026.2.0
     # via huggingface-hub
 genai-prices==0.0.54
     # via pydantic-ai-slim
+gepa==0.0.26
+    # via dspy
 ghp-import==2.1.0
     # via mkdocs
 google-auth==2.48.0
@@ -184,6 +202,8 @@ googleapis-common-protos==1.72.0
     # via
     #   opentelemetry-exporter-otlp-proto-http
     #   xai-sdk
+greenlet==3.3.2 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
+    # via sqlalchemy
 griffe==1.15.0
     # via
     #   mkdocstrings-python
@@ -282,6 +302,8 @@ jmespath==1.1.0
     # via
     #   boto3
     #   botocore
+json-repair==0.58.5
+    # via dspy
 jsonpatch==1.33
     # via langchain-core
 jsonpointer==3.0.0
@@ -330,13 +352,17 @@ langsmith==0.7.5
 libcst==1.8.6
     # via skylos
 litellm==1.81.9
-    # via skylos
+    # via
+    #   dspy
+    #   skylos
 logfire==4.24.0
     # via pydantic-ai-slim
 logfire-api==4.24.0
     # via
     #   pydantic-evals
     #   pydantic-graph
+mako==1.3.10
+    # via alembic
 markdown==3.10.1
     # via
     #   mkdocs
@@ -350,6 +376,7 @@ markupsafe==3.0.3
     # via
     #   flask
     #   jinja2
+    #   mako
     #   mkdocs
     #   mkdocs-autorefs
     #   mkdocstrings
@@ -402,8 +429,13 @@ networkx==3.6.1
     # via skylos
 nexus-rpc==1.2.0
     # via temporalio
+numpy==2.4.3
+    # via
+    #   dspy
+    #   optuna
 openai==2.21.0
     # via
+    #   dspy
     #   instructor
     #   langchain-openai
     #   litellm
@@ -449,8 +481,11 @@ opentelemetry-semantic-conventions==0.60b1
     #   opentelemetry-sdk
 opentelemetry-util-http==0.60b1
     # via opentelemetry-instrumentation-httpx
+optuna==4.7.0
+    # via dspy
 orjson==3.11.7
     # via
+    #   dspy
     #   langgraph-sdk
     #   langsmith
 ormsgpack==1.12.2
@@ -464,6 +499,7 @@ packaging==25.0
     #   langsmith
     #   mkdocs
     #   opentelemetry-instrumentation
+    #   optuna
     #   pytest
     #   xai-sdk
 paginate==0.5.7
@@ -522,6 +558,7 @@ pydantic==2.12.3
     #   ag-ui-protocol
     #   anthropic
     #   cohere
+    #   dspy
     #   fastmcp
     #   genai-prices
     #   google-genai
@@ -606,6 +643,7 @@ pyyaml==6.0.3
     #   mistralai
     #   mkdocs
     #   mkdocs-get-deps
+    #   optuna
     #   pydantic-evals
     #   pymdown-extensions
     #   pyyaml-env-tag
@@ -626,10 +664,13 @@ referencing==0.36.2
     #   jsonschema-path
     #   jsonschema-specifications
 regex==2026.1.15
-    # via tiktoken
+    # via
+    #   dspy
+    #   tiktoken
 requests==2.32.5
     # via
     #   cohere
+    #   dspy
     #   google-auth
     #   google-genai
     #   huggingface-hub
@@ -687,6 +728,10 @@ sniffio==1.3.1
     #   groq
     #   openai
     #   together
+sqlalchemy==2.0.48
+    # via
+    #   alembic
+    #   optuna
 sse-starlette==3.2.0
     # via mcp
 stack-data==0.6.3
@@ -702,6 +747,7 @@ temporalio==1.20.0
     # via pydantic-ai-slim
 tenacity==9.1.4
     # via
+    #   dspy
     #   google-genai
     #   instructor
     #   langchain-core
@@ -724,8 +770,10 @@ tornado==6.5.2
     #   jupyter-client
 tqdm==4.67.3
     # via
+    #   dspy
     #   huggingface-hub
     #   openai
+    #   optuna
     #   together
 traitlets==5.14.3
     # via
@@ -758,6 +806,7 @@ types-tqdm==4.67.3.20260205
 typing-extensions==4.15.0
     # via
     #   aiosignal
+    #   alembic
     #   anthropic
     #   anyio
     #   cohere
@@ -781,6 +830,7 @@ typing-extensions==4.15.0
     #   pydantic-core
     #   pytest-asyncio
     #   referencing
+    #   sqlalchemy
     #   starlette
     #   temporalio
     #   together
@@ -835,6 +885,7 @@ xmod==1.9.0
     #   runs
 xxhash==3.6.0
     # via
+    #   dspy
     #   langgraph
     #   langsmith
 yarl==1.22.0
