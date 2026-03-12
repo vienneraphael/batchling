@@ -415,7 +415,7 @@ class FakeVertexAPI:
         )
 
     def _handle_batch_status(self, *, request: httpx.Request) -> httpx.Response:
-        job_name = request.url.path.removeprefix("/v1/")
+        job_name = request.url.path.removeprefix("/v1/").removeprefix("/v1beta1/")
         job = self._jobs[job_name]
         return self._json_response(
             status_code=200,

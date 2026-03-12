@@ -38,6 +38,10 @@ class VertexProvider(BaseProvider):
 
     name = "vertex"
     hostname = "aiplatform.googleapis.com"
+    batchable_endpoints = (
+        "/v1/projects/{project}/locations/{location}/publishers/google/models/{model}:generateContent",
+        "/v1beta1/projects/{project}/locations/{location}/publishers/google/models/{model}:generateContent",
+    )
     output_file_field_name: str = "output_file_id"
     error_file_field_name: str = "error_file_id"
     batch_terminal_states: type[BatchTerminalStatesLike] = VertexBatchTerminalStates
@@ -46,7 +50,7 @@ class VertexProvider(BaseProvider):
     _regional_hostname_pattern = re.compile(pattern=r"^[a-z0-9-]+-aiplatform\.googleapis\.com$")
     _generate_content_endpoint_pattern = re.compile(
         pattern=(
-            r"^/v1/projects/(?P<project>[^/]+)/locations/(?P<location>[^/]+)/"
+            r"^/(?P<api_version>v1|v1beta1)/projects/(?P<project>[^/]+)/locations/(?P<location>[^/]+)/"
             r"publishers/google/models/(?P<model>[^/:]+):generateContent$"
         )
     )
@@ -168,7 +172,7 @@ class VertexProvider(BaseProvider):
             Relative poll path.
         """
         normalized_batch_id = batch_id.lstrip("/")
-        if normalized_batch_id.startswith("v1/"):
+        if normalized_batch_id.startswith(("v1/", "v1beta1/")):
             return f"/{normalized_batch_id}"
         return f"/v1/{normalized_batch_id}"
 
@@ -629,7 +633,8 @@ class VertexProvider(BaseProvider):
         """
         project = endpoint_match.group("project")
         location = endpoint_match.group("location")
-        path = f"/v1/projects/{project}/locations/{location}/batchPredictionJobs"
+        api_version = endpoint_match.group("api_version")
+        path = f"/{api_version}/projects/{project}/locations/{location}/batchPredictionJobs"
         payload = {
             "displayName": f"batchling-{model_name}-{request_id}",
             "model": f"publishers/google/models/{model_name}",
@@ -657,7 +662,7 @@ class VertexProvider(BaseProvider):
         name = response_json.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError("Vertex batch creation response missing job name")
-        return name
+        return f"{api_version}/{name}"
 
     async def _list_gcs_objects(
         self,

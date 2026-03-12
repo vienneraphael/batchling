@@ -1234,6 +1234,37 @@ def test_vertex_queue_key_extracts_model_from_endpoint() -> None:
     )
 
 
+def test_vertex_queue_key_extracts_model_from_v1beta1_endpoint() -> None:
+    """
+    Ensure queue partitioning for Vertex also supports v1beta1 request paths.
+
+    Returns
+    -------
+    None
+        This test asserts queue-key model extraction for the google-genai client path.
+    """
+    provider = VertexProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
+
+    queue_key = batcher._build_queue_key(
+        provider=provider,
+        endpoint=(
+            "/v1beta1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash-lite:generateContent"
+        ),
+        body=b'{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}',
+    )
+
+    assert queue_key == (
+        "vertex",
+        (
+            "/v1beta1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash-lite:generateContent"
+        ),
+        "gemini-2.5-flash-lite",
+    )
+
+
 def test_openai_default_batch_paths_remain_unchanged() -> None:
     """
     Ensure default provider batch path builders keep legacy behavior.

@@ -4,7 +4,8 @@
 
 The following endpoints are made batch-compatible by Vertex:
 
-- _No declared `batchable_endpoints` found in the provider file._
+- `/v1/projects/{project}/locations/{location}/publishers/google/models/{model}:generateContent`
+- `/v1beta1/projects/{project}/locations/{location}/publishers/google/models/{model}:generateContent`
 
 !!! warning "Check model support and batch pricing"
     Before sending batches, review the provider's official pricing page for supported models and batch pricing details.
