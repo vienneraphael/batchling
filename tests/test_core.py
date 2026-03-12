@@ -3,8 +3,10 @@ Tests for the Batcher class in batchling.core.
 """
 
 import asyncio
+import json
 import time
 import typing as t
+from urllib.parse import unquote
 
 import httpx
 import pytest
@@ -2009,6 +2011,71 @@ async def test_vertex_batch_resolves_results_across_multiple_jsonl_files(
     assert failure.json()["message"] == "forced failure"
 
     await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_vertex_fetch_results_accepts_plain_jsonl_filenames() -> None:
+    """Test Vertex result fetching accepts plain predictions/errors JSONL names."""
+    provider = VertexProvider()
+    result_prefix = (
+        "outputs/gemini-2.5-flash-lite/a9a7f995-71ca4fe59aa94eb4aa8f3f4845f2f3d7/"
+        "prediction-model-2026-03-12T18:34:33.257664Z"
+    )
+    prediction_object_name = f"{result_prefix}/predictions.jsonl"
+    error_object_name = f"{result_prefix}/errors.jsonl"
+    objects = {
+        prediction_object_name: json.dumps(
+            {
+                "key": "success-id",
+                "response": {
+                    "candidates": [
+                        {
+                            "content": {
+                                "role": "model",
+                                "parts": [{"text": "ok"}],
+                            }
+                        }
+                    ],
+                    "modelVersion": "gemini-test",
+                },
+            }
+        ),
+        error_object_name: json.dumps(
+            {
+                "key": "error-id",
+                "status": {
+                    "code": 13,
+                    "message": "forced failure",
+                },
+            }
+        ),
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/storage/v1/b/vertex-bucket/o":
+            return httpx.Response(
+                status_code=200,
+                json={
+                    "items": [{"name": object_name} for object_name in objects],
+                },
+            )
+
+        object_name = unquote(string=request.url.path.split("/o/", 1)[1])
+        return httpx.Response(status_code=200, text=objects[object_name])
+
+    responses_by_custom_id = await provider.fetch_results(
+        base_url="https://us-central1-aiplatform.googleapis.com",
+        api_headers={"Authorization": "Bearer token"},
+        batch_id="v1beta1/projects/demo-project/locations/us-central1/batchPredictionJobs/123",
+        result_locator="gs://vertex-bucket/" + result_prefix,
+        client_factory=lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+
+    assert sorted(responses_by_custom_id) == ["error-id", "success-id"]
+    assert responses_by_custom_id["success-id"].status_code == 200
+    assert responses_by_custom_id["success-id"].json()["modelVersion"] == "gemini-test"
+    assert responses_by_custom_id["error-id"].status_code == 500
+    assert responses_by_custom_id["error-id"].json()["message"] == "forced failure"
 
 
 @pytest.mark.asyncio

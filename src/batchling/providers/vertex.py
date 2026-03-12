@@ -440,8 +440,7 @@ class VertexProvider(BaseProvider):
         result_object_names = sorted(
             object_name
             for object_name in object_names
-            if object_name.endswith(".jsonl")
-            and posixpath.basename(object_name).startswith(("predictions_", "errors_"))
+            if self._is_result_jsonl_object_name(object_name=object_name)
         )
         if not result_object_names:
             raise ValueError("Vertex batch completed without JSONL result artifacts")
@@ -519,6 +518,29 @@ class VertexProvider(BaseProvider):
         return _GcsPrefix(
             bucket=bucket.strip(),
             prefix=normalized_prefix,
+        )
+
+    @staticmethod
+    def _is_result_jsonl_object_name(*, object_name: str) -> bool:
+        """
+        Check whether a GCS object is a Vertex JSONL result artifact.
+
+        Parameters
+        ----------
+        object_name : str
+            Candidate GCS object name.
+
+        Returns
+        -------
+        bool
+            ``True`` when the object stores Vertex predictions or errors.
+        """
+        if not object_name.endswith(".jsonl"):
+            return False
+
+        basename = posixpath.basename(object_name)
+        return basename in {"predictions.jsonl", "errors.jsonl"} or basename.startswith(
+            ("predictions_", "errors_")
         )
 
     @staticmethod
