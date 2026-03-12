@@ -13,7 +13,7 @@ batch results.
 - Submit provider batches via `process_batch()` (file-based or inline).
 - Normalize request URLs for provider batch endpoints.
 - Parse poll payload progress into normalized numeric values.
-- Convert JSONL batch result lines into `httpx.Response` objects for callers.
+- Fetch terminal batch outputs and convert them into `httpx.Response` objects for callers.
 
 Poll parsing now uses a shared provider contract:
 
@@ -131,7 +131,21 @@ Common helpers now live on `BaseProvider` and can be reused by all providers:
 - `extract_batch_status()`
 - `get_progress_from_poll()`
 - `get_output_file_id_from_poll_response()`
+- `get_result_locator_from_poll_response()`
+- `fetch_results()`
 - `encode_body()`
+
+## Vertex provider
+
+The Vertex provider implements a GCS-backed batch lifecycle for publisher Gemini models:
+
+- dynamic regional hostname matching for `*-aiplatform.googleapis.com`
+- publisher Gemini path matching for
+  `/v1/projects/{project}/locations/{location}/publishers/google/models/{model}:generateContent`
+- GCS JSONL staging configured by `batchify(vertex_gcs_prefix=...)`
+- batch job creation through Vertex `batchPredictionJobs`
+- progress extraction from `completionStats.successfulCount + failedCount`
+- provider-owned result fetching from the polled `outputInfo.gcsOutputDirectory`
 
 Provider configuration on `BaseProvider` includes:
 
