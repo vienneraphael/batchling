@@ -60,6 +60,7 @@ class _ActiveBatch:
     batch_id: str
     output_file_id: str
     error_file_id: str
+    result_locator: str
     requests_count: int
     requests: dict[str, _PendingRequest]  # custom_id -> request
     max_progress_completed: int = 0
@@ -120,6 +121,7 @@ class Batcher:
         completion_window: t.Literal["24h", "1h"] = "24h",
         dry_run: bool = False,
         cache: bool = True,
+        vertex_gcs_prefix: str | None = None,
     ):
         """
         Initialize the batcher.
@@ -138,6 +140,8 @@ class Batcher:
             If ``True``, simulate provider batch resolution without provider I/O.
         cache : bool
             If ``True``, enable persistent request cache lookups.
+        vertex_gcs_prefix : str | None
+            Optional GCS staging prefix used for Vertex batch jobs.
         """
         self._batch_size = batch_size
         self._batch_window_seconds = batch_window_seconds
@@ -145,6 +149,7 @@ class Batcher:
         self._dry_run = dry_run
         self._cache_enabled = cache
         self._cache_write_enabled = cache and not dry_run
+        self._vertex_gcs_prefix = vertex_gcs_prefix
 
         # Request collection
         self._pending_by_provider: dict[QueueKey, list[_PendingRequest]] = {}
@@ -186,6 +191,7 @@ class Batcher:
             dry_run=dry_run,
             cache_enabled=self._cache_enabled,
             cache_write_enabled=self._cache_write_enabled,
+            vertex_gcs_prefix=vertex_gcs_prefix,
             cache_path=(
                 self._cache_store.path.as_posix() if self._cache_store is not None else None
             ),
@@ -1486,6 +1492,7 @@ class Batcher:
                     batch_id=dry_run_batch_id,
                     output_file_id="",
                     error_file_id="",
+                    result_locator="",
                     requests_count=len(requests),
                     requests={req.custom_id: req for req in requests},
                 )
@@ -1540,6 +1547,7 @@ class Batcher:
                 client_factory=self._client_factory,
                 queue_key=queue_key,
                 completion_window=self._completion_window,
+                vertex_gcs_prefix=self._vertex_gcs_prefix,
             )
             self._emit_batch_processing_with_batch_id_event(
                 queue_key=queue_key,
@@ -1557,6 +1565,7 @@ class Batcher:
                 batch_id=batch_submission.batch_id,
                 output_file_id="",
                 error_file_id="",
+                result_locator="",
                 requests_count=len(requests),
                 requests={req.custom_id: req for req in requests},
             )
@@ -1684,6 +1693,7 @@ class Batcher:
             )
             active_batch.output_file_id = poll_snapshot.output_file_id
             active_batch.error_file_id = poll_snapshot.error_file_id
+            active_batch.result_locator = poll_snapshot.result_locator
 
             if poll_snapshot.status in provider.batch_terminal_states:
                 log_info(
@@ -1765,8 +1775,7 @@ class Batcher:
                     )
                     await self._resolve_cached_batch_results(
                         resume_key=resume_key,
-                        output_file_id=poll_snapshot.output_file_id,
-                        error_file_id=poll_snapshot.error_file_id,
+                        result_locator=poll_snapshot.result_locator,
                     )
                     return
 
@@ -1793,8 +1802,7 @@ class Batcher:
         self,
         *,
         resume_key: ResumedBatchKey,
-        output_file_id: str,
-        error_file_id: str,
+        result_locator: str,
     ) -> None:
         """
         Resolve pending cache-hit futures from provider batch outputs.
@@ -1803,10 +1811,8 @@ class Batcher:
         ----------
         resume_key : ResumedBatchKey
             Resumed batch key.
-        output_file_id : str
-            Provider output file ID.
-        error_file_id : str
-            Provider error file ID.
+        result_locator : str
+            Provider-defined result locator.
         """
         async with self._resumed_lock:
             resumed_batch = self._resumed_batches.get(resume_key)
@@ -1815,30 +1821,21 @@ class Batcher:
 
         _, _, batch_id = resume_key
         provider = resumed_batch.provider
-        file_id = output_file_id or error_file_id
         try:
-            results_request_spec = provider.build_results_request_spec(
+            responses_by_custom_id = await provider.fetch_results(
                 base_url=resumed_batch.base_url,
                 api_headers=resumed_batch.api_headers,
-                file_id=file_id,
                 batch_id=batch_id,
+                result_locator=result_locator,
+                client_factory=self._client_factory,
             )
-        except ValueError as error:
+        except (ValueError, httpx.HTTPError) as error:
             await self._fail_resumed_batch_requests(
                 resume_key=resume_key,
                 error=RuntimeError(str(object=error)),
                 invalidate_cache=True,
             )
             return
-
-        content = await self._download_batch_content(
-            base_url=resumed_batch.base_url,
-            request_spec=results_request_spec,
-        )
-        responses_by_custom_id = provider.decode_results_content(
-            batch_id=batch_id,
-            content=content,
-        )
 
         missing_hashes: set[str] = set()
         async with self._resumed_lock:
@@ -1925,15 +1922,15 @@ class Batcher:
         active_batch : _ActiveBatch
             Active batch metadata.
         """
-        file_id = active_batch.output_file_id or active_batch.error_file_id
         try:
-            results_request_spec = provider.build_results_request_spec(
+            responses_by_custom_id = await provider.fetch_results(
                 base_url=base_url,
                 api_headers=api_headers,
-                file_id=file_id,
                 batch_id=active_batch.batch_id,
+                result_locator=active_batch.result_locator,
+                client_factory=self._client_factory,
             )
-        except ValueError as error:
+        except (ValueError, httpx.HTTPError) as error:
             log_error(
                 logger=log,
                 event="Batch resolved without output file",
@@ -1952,16 +1949,7 @@ class Batcher:
             event="Downloading batch results",
             provider=provider.name,
             batch_id=active_batch.batch_id,
-            file_id=file_id,
-            results_path=results_request_spec.path,
-        )
-        content = await self._download_batch_content(
-            base_url=base_url,
-            request_spec=results_request_spec,
-        )
-        responses_by_custom_id = provider.decode_results_content(
-            batch_id=active_batch.batch_id,
-            content=content,
+            result_locator=active_batch.result_locator,
         )
         seen = set(responses_by_custom_id.keys())
         for custom_id, resolved_response in responses_by_custom_id.items():
@@ -1978,33 +1966,6 @@ class Batcher:
             request_count=len(active_batch.requests),
         )
         self._fail_missing_results(active_batch=active_batch, seen=seen)
-
-    async def _download_batch_content(
-        self,
-        *,
-        base_url: str,
-        request_spec: ProviderRequestSpec,
-    ) -> str:
-        """
-        Download batch results file content.
-
-        Parameters
-        ----------
-        base_url : str
-            Provider base URL.
-        request_spec : ProviderRequestSpec
-            Provider request specification for result download.
-
-        Returns
-        -------
-        str
-            Raw JSONL content.
-        """
-        response = await self._execute_provider_request(
-            base_url=base_url,
-            request_spec=request_spec,
-        )
-        return response.text
 
     async def _execute_provider_request(
         self,

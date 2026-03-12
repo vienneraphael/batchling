@@ -80,6 +80,8 @@ class PollSnapshot:
         Output file identifier when available.
     error_file_id : str
         Error file identifier when available.
+    result_locator : str
+        Provider-defined result locator used to fetch terminal batch outputs.
     progress_completed : int
         Completed request count for this batch.
     progress_percent : float
@@ -89,6 +91,7 @@ class PollSnapshot:
     status: str
     output_file_id: str
     error_file_id: str
+    result_locator: str
     progress_completed: int
     progress_percent: float
 
@@ -487,6 +490,7 @@ class BaseProvider(ABC):
         status = self.extract_batch_status(payload=payload)
         output_file_id = await self.get_output_file_id_from_poll_response(payload=payload)
         error_file_id = await self.get_error_file_id_from_poll_response(payload=payload)
+        result_locator = await self.get_result_locator_from_poll_response(payload=payload)
         progress_completed, progress_percent = self.get_progress_from_poll(
             payload=payload,
             requests_count=requests_count,
@@ -501,6 +505,7 @@ class BaseProvider(ABC):
             status=status,
             output_file_id=str(object=output_file_id),
             error_file_id=str(object=error_file_id),
+            result_locator=str(object=result_locator),
             progress_completed=max(0, normalized_completed),
             progress_percent=self._coerce_float(value=progress_percent),
         )
@@ -816,6 +821,29 @@ class BaseProvider(ABC):
         """
         return payload.get(self.error_file_field_name) or ""
 
+    async def get_result_locator_from_poll_response(
+        self,
+        *,
+        payload: dict[str, t.Any],
+    ) -> str:
+        """
+        Get the provider-defined terminal result locator from the poll response.
+
+        Parameters
+        ----------
+        payload : dict[str, typing.Any]
+            Provider poll payload.
+
+        Returns
+        -------
+        str
+            Result locator used to fetch batch outputs.
+        """
+        output_file_id = await self.get_output_file_id_from_poll_response(payload=payload)
+        if output_file_id:
+            return output_file_id
+        return await self.get_error_file_id_from_poll_response(payload=payload)
+
     def _get_batch_id_from_response(self, *, response_json: dict) -> str:
         """
         Get the batch ID from the response.
@@ -936,6 +964,7 @@ class BaseProvider(ABC):
         client_factory: t.Callable[[], httpx.AsyncClient],
         queue_key: tuple[str, str, str],
         completion_window: str,
+        vertex_gcs_prefix: str | None = None,
     ) -> BatchSubmission:
         """
         Upload a JSONL file and create an OpenAI batch job.
@@ -956,6 +985,7 @@ class BaseProvider(ABC):
         BatchSubmission
             Metadata required by the batch poller.
         """
+        del vertex_gcs_prefix
         if not requests:
             raise ValueError("Cannot process an empty request batch")
 
@@ -1018,6 +1048,63 @@ class BaseProvider(ABC):
             api_headers=api_headers,
             batch_id=batch_id,
         )
+
+    async def fetch_results(
+        self,
+        *,
+        base_url: str,
+        api_headers: dict[str, str],
+        batch_id: str,
+        result_locator: str,
+        client_factory: t.Callable[[], httpx.AsyncClient],
+    ) -> dict[str, httpx.Response]:
+        """
+        Fetch and decode terminal batch results.
+
+        Parameters
+        ----------
+        base_url : str
+            Provider base URL.
+        api_headers : dict[str, str]
+            Provider API headers.
+        batch_id : str
+            Provider batch identifier.
+        result_locator : str
+            Provider-defined result locator.
+        client_factory : typing.Callable[[], httpx.AsyncClient]
+            Async client factory for provider API calls.
+
+        Returns
+        -------
+        dict[str, httpx.Response]
+            Provider responses keyed by custom ID.
+        """
+        results_request_spec = self.build_results_request_spec(
+            base_url=base_url,
+            api_headers=api_headers,
+            file_id=result_locator or None,
+            batch_id=batch_id,
+        )
+        request_kwargs: dict[str, t.Any] = {
+            "url": f"{base_url}{results_request_spec.path}",
+            "headers": results_request_spec.headers,
+        }
+        if results_request_spec.json_body is not None:
+            request_kwargs["json"] = results_request_spec.json_body
+        if results_request_spec.content is not None:
+            request_kwargs["content"] = results_request_spec.content
+        if results_request_spec.files is not None:
+            request_kwargs["files"] = results_request_spec.files
+        if results_request_spec.data is not None:
+            request_kwargs["data"] = results_request_spec.data
+
+        async with client_factory() as client:
+            response = await client.request(
+                method=results_request_spec.method,
+                **request_kwargs,
+            )
+            response.raise_for_status()
+        return self.decode_results_content(batch_id=batch_id, content=response.text)
 
     def from_batch_result(self, result_item: dict[str, t.Any]) -> httpx.Response:
         """

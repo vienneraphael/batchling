@@ -119,4 +119,11 @@ def get_provider_for_batch_request(*, method: str, hostname: str, path: str) -> 
         for provider in candidates:
             if provider.is_batchable_request(method=method, hostname=hostname, path=path):
                 return provider
-        return None
+
+    for provider in PROVIDERS:
+        if provider in candidates:
+            continue
+        if provider.is_batchable_request(method=method, hostname=hostname, path=path):
+            return provider
+
+    return None

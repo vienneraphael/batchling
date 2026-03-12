@@ -20,6 +20,7 @@ def batchify(
     dry_run: bool = False,
     cache: bool = True,
     live_display: bool = True,
+    vertex_gcs_prefix: str | None = None,
 ) -> BatchingContext:
     """
     Context manager used to activate batching for a scoped context.<br>
@@ -51,6 +52,9 @@ def batchify(
         When ``True``, Rich panel rendering is attempted with terminal auto-detection.
         If terminal auto-detection disables Rich (non-TTY, ``TERM=dumb``, or ``CI``),
         progress is logged at ``INFO`` on polling events.
+    vertex_gcs_prefix : str | None, optional
+        Optional GCS prefix used to stage Vertex batch inputs and outputs.<br>
+        This setting is only used when requests are routed to the Vertex provider.
 
     Returns
     -------
@@ -75,6 +79,7 @@ def batchify(
         completion_window=completion_window,
         dry_run=dry_run,
         cache=cache,
+        vertex_gcs_prefix=vertex_gcs_prefix,
     )
 
     # 3. Return BatchingContext with no yielded target.

@@ -8,6 +8,7 @@ from batchling.providers import (
     get_provider_for_batch_request,
 )
 from batchling.providers.gemini import GeminiProvider
+from batchling.providers.vertex import VertexProvider
 
 
 def test_provider_registry_auto_discovers_modules() -> None:
@@ -196,6 +197,44 @@ def test_provider_lookup_rejects_non_batchable_gemini_path() -> None:
     assert provider is None
 
 
+def test_provider_lookup_resolves_vertex_dynamic_publisher_endpoint() -> None:
+    """
+    Ensure Vertex publisher Gemini endpoints are recognized as batchable.
+
+    Returns
+    -------
+    None
+        This test asserts dynamic endpoint matching.
+    """
+    provider = get_provider_for_batch_request(
+        method="POST",
+        hostname="us-central1-aiplatform.googleapis.com",
+        path=(
+            "/v1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash:generateContent"
+        ),
+    )
+    assert provider is not None
+    assert provider.name == "vertex"
+
+
+def test_provider_lookup_rejects_non_batchable_vertex_path() -> None:
+    """
+    Ensure Vertex non-publisher paths are not routed.
+
+    Returns
+    -------
+    None
+        This test asserts endpoint gating for Vertex requests.
+    """
+    provider = get_provider_for_batch_request(
+        method="POST",
+        hostname="us-central1-aiplatform.googleapis.com",
+        path="/v1/projects/demo-project/locations/us-central1/endpoints/123:predict",
+    )
+    assert provider is None
+
+
 def test_base_provider_supports_template_batchable_endpoint_matching() -> None:
     """
     Ensure template placeholders in ``batchable_endpoints`` are matched.
@@ -212,4 +251,28 @@ def test_base_provider_supports_template_batchable_endpoint_matching() -> None:
     )
     assert not gemini_provider.matches_batchable_endpoint(
         path="/v1beta/models/gemini-2.5-flash:batchGenerateContent"
+    )
+
+
+def test_vertex_provider_matches_regional_hostname_and_publisher_endpoint() -> None:
+    """
+    Ensure Vertex provider uses regional hostname and publisher endpoint matching.
+
+    Returns
+    -------
+    None
+        This test asserts Vertex-specific URL matching.
+    """
+    vertex_provider = VertexProvider()
+
+    assert vertex_provider.matches_url(hostname="us-central1-aiplatform.googleapis.com")
+    assert not vertex_provider.matches_url(hostname="aiplatform.googleapis.com")
+    assert vertex_provider.matches_batchable_endpoint(
+        path=(
+            "/v1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash:generateContent"
+        )
+    )
+    assert not vertex_provider.matches_batchable_endpoint(
+        path="/v1/projects/demo-project/locations/us-central1/endpoints/123:predict"
     )
