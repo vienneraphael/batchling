@@ -16,6 +16,7 @@ FRAMEWORKS_INDEX = DOCS_ROOT / "frameworks.md"
 PROVIDERS_SOURCE_DIR = REPO_ROOT / "src" / "batchling" / "providers"
 PROVIDER_EXAMPLES_DIR = REPO_ROOT / "examples" / "providers"
 PROVIDERS_DIR = DOCS_ROOT / "providers"
+PROVIDER_CREDENTIALS_DIR = PROVIDERS_DIR / "_credentials"
 PROVIDER_NOTES_DIR = PROVIDERS_DIR / "_notes"
 PROVIDER_OUTPUTS_DIR = PROVIDERS_DIR / "_outputs"
 PROVIDER_URLS_DIR = PROVIDERS_DIR / "_urls"
@@ -142,6 +143,26 @@ class Provider:
     def notes_filename(self) -> str:
         """Return the provider notes filename."""
         return f"{self.slug}.md"
+
+    @property
+    def credentials_filename(self) -> str:
+        """Return the provider credentials note filename."""
+        return f"{self.slug}.md"
+
+    @property
+    def credentials_path(self) -> Path:
+        """Return the provider credentials note file path."""
+        return PROVIDER_CREDENTIALS_DIR / self.credentials_filename
+
+    @property
+    def has_credentials_note(self) -> bool:
+        """Return whether a provider credentials note file exists."""
+        return self.credentials_path.exists()
+
+    @property
+    def credentials_snippet_path(self) -> str:
+        """Return the snippet include path for provider credentials notes."""
+        return f"docs/providers/_credentials/{self.credentials_filename}"
 
     @property
     def notes_path(self) -> Path:
@@ -424,9 +445,20 @@ def render_provider_page(*, provider: Provider) -> str:
                 "",
                 "## Example Usage",
                 "",
-                f'!!! note "{PROVIDER_API_KEY_NOTE_TITLE}"',
-                f"    {PROVIDER_API_KEY_NOTE_BODY.format(api_key_env_var=provider.api_key_env_var)}",
-                "",
+            ]
+        )
+        if provider.has_credentials_note:
+            lines.extend([f'--8<-- "{provider.credentials_snippet_path}"', ""])
+        else:
+            lines.extend(
+                [
+                    f'!!! note "{PROVIDER_API_KEY_NOTE_TITLE}"',
+                    f"    {PROVIDER_API_KEY_NOTE_BODY.format(api_key_env_var=provider.api_key_env_var)}",
+                    "",
+                ]
+            )
+        lines.extend(
+            [
                 f"Here's an example showing how to use `batchling` with {provider.display_name}:",
                 "",
             ]

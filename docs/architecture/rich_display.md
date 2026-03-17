@@ -29,6 +29,10 @@ Panel composition:
 - queue summary table (`provider`, `endpoint`, `model`, queue sample progress)
 
 Queue progress cells are formatted as `completed/total (percent)`.
+Vertex queue rows compact publisher-model endpoints down to
+`/v1/...:generateContent` / `/v1beta1/...:generateContent` display labels so
+the table does not spend most of its width on project and location path
+segments.
 
 ## `DryRunSummaryDisplay`
 

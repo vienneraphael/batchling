@@ -317,6 +317,7 @@ class XaiProvider(BaseProvider):
         client_factory: t.Callable[[], httpx.AsyncClient],
         queue_key: tuple[str, str, str],
         completion_window: str,
+        vertex_gcs_prefix: str | None = None,
     ) -> BatchSubmission:
         """
         Upload a JSONL file and create an OpenAI batch job.
@@ -337,6 +338,7 @@ class XaiProvider(BaseProvider):
         BatchSubmission
             Metadata required by the batch poller.
         """
+        del vertex_gcs_prefix
         if not requests:
             raise ValueError("Cannot process an empty request batch")
         del completion_window

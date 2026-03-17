@@ -3,8 +3,10 @@ Tests for the Batcher class in batchling.core.
 """
 
 import asyncio
+import json
 import time
 import typing as t
+from urllib.parse import unquote
 
 import httpx
 import pytest
@@ -28,7 +30,11 @@ from batchling.providers.doubleword import DoublewordProvider
 from batchling.providers.gemini import GeminiProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
-from tests.mocks.batching import make_openai_batch_transport
+from batchling.providers.vertex import VertexProvider
+from tests.mocks.batching import (
+    make_openai_batch_transport,
+    make_vertex_batch_transport,
+)
 
 QueueKey = tuple[str, str, str]
 
@@ -58,6 +64,19 @@ def mock_openai_api_transport() -> httpx.MockTransport:
         Mock transport for OpenAI batch endpoints.
     """
     return make_openai_batch_transport()
+
+
+@pytest.fixture
+def mock_vertex_api_transport() -> httpx.MockTransport:
+    """
+    Create a mock Vertex batch transport.
+
+    Returns
+    -------
+    httpx.MockTransport
+        Mock transport for Vertex batch endpoints and GCS staging.
+    """
+    return make_vertex_batch_transport()
 
 
 @pytest.fixture
@@ -1186,6 +1205,68 @@ def test_gemini_uses_distinct_submit_poll_and_results_paths() -> None:
     )
 
 
+def test_vertex_queue_key_extracts_model_from_endpoint() -> None:
+    """
+    Ensure queue partitioning for Vertex reads model from URL endpoint.
+
+    Returns
+    -------
+    None
+        This test asserts queue-key model extraction.
+    """
+    provider = VertexProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
+
+    queue_key = batcher._build_queue_key(
+        provider=provider,
+        endpoint=(
+            "/v1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash:generateContent"
+        ),
+        body=b'{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}',
+    )
+
+    assert queue_key == (
+        "vertex",
+        (
+            "/v1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash:generateContent"
+        ),
+        "gemini-2.5-flash",
+    )
+
+
+def test_vertex_queue_key_extracts_model_from_v1beta1_endpoint() -> None:
+    """
+    Ensure queue partitioning for Vertex also supports v1beta1 request paths.
+
+    Returns
+    -------
+    None
+        This test asserts queue-key model extraction for the google-genai client path.
+    """
+    provider = VertexProvider()
+    batcher = Batcher(batch_size=2, batch_window_seconds=10.0, dry_run=True, cache=False)
+
+    queue_key = batcher._build_queue_key(
+        provider=provider,
+        endpoint=(
+            "/v1beta1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash-lite:generateContent"
+        ),
+        body=b'{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}',
+    )
+
+    assert queue_key == (
+        "vertex",
+        (
+            "/v1beta1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash-lite:generateContent"
+        ),
+        "gemini-2.5-flash-lite",
+    )
+
+
 def test_openai_default_batch_paths_remain_unchanged() -> None:
     """
     Ensure default provider batch path builders keep legacy behavior.
@@ -1274,6 +1355,7 @@ async def test_poll_batch_once_uses_provider_request_spec_and_parser() -> None:
             status="completed",
             output_file_id="out-1",
             error_file_id="",
+            result_locator="out-1",
             progress_completed=2,
             progress_percent=100.0,
         )
@@ -1385,30 +1467,24 @@ async def test_resolve_batch_results_uses_provider_decoder() -> None:
         batch_id="batch-1",
         output_file_id="file-1",
         error_file_id="",
+        result_locator="file-1",
         requests_count=1,
         requests={"custom-1": request},
     )
 
-    def fake_build_results_request_spec(
+    async def fake_fetch_results(
         *,
         base_url: str,
         api_headers: dict[str, str],
-        file_id: str | None,
         batch_id: str,
-    ) -> ProviderRequestSpec:
+        result_locator: str,
+        client_factory,
+    ) -> dict[str, httpx.Response]:
+        del client_factory
         assert base_url == "https://api.openai.com"
         assert api_headers == {"Authorization": "Bearer token"}
-        assert file_id == "file-1"
         assert batch_id == "batch-1"
-        return ProviderRequestSpec(method="GET", path="/results/path", headers=api_headers)
-
-    def fake_decode_results_content(
-        *,
-        batch_id: str,
-        content: str,
-    ) -> dict[str, httpx.Response]:
-        assert batch_id == "batch-1"
-        assert content == "raw-content"
+        assert result_locator == "file-1"
         return {
             "custom-1": httpx.Response(
                 status_code=200,
@@ -1416,18 +1492,7 @@ async def test_resolve_batch_results_uses_provider_decoder() -> None:
             )
         }
 
-    async def fake_download_batch_content(
-        *,
-        base_url: str,
-        request_spec: ProviderRequestSpec,
-    ) -> str:
-        assert base_url == "https://api.openai.com"
-        assert request_spec.path == "/results/path"
-        return "raw-content"
-
-    provider.build_results_request_spec = fake_build_results_request_spec  # type: ignore[method-assign]
-    provider.decode_results_content = fake_decode_results_content  # type: ignore[method-assign]
-    batcher._download_batch_content = fake_download_batch_content  # type: ignore[method-assign]
+    provider.fetch_results = fake_fetch_results  # type: ignore[method-assign]
 
     await batcher._resolve_batch_results(
         base_url="https://api.openai.com",
@@ -1711,9 +1776,11 @@ async def test_process_batch_calls_provider_with_queue_key():
         client_factory,
         queue_key: QueueKey,
         completion_window: str,
+        vertex_gcs_prefix: str | None = None,
     ):
         del requests
         del client_factory
+        del vertex_gcs_prefix
         captured["queue_key"] = queue_key
         captured["completion_window"] = completion_window
         raise RuntimeError("provider call captured")
@@ -1832,6 +1899,251 @@ async def test_process_batch_uses_inline_submission_for_anthropic(monkeypatch):
     assert calls["queue_key"] == queue_key
     assert calls["completion_window"] == "24h"
     assert submission.batch_id == "msgbatch-123"
+
+
+@pytest.mark.asyncio
+async def test_vertex_submit_requires_gcs_prefix(
+    mock_vertex_api_transport: httpx.MockTransport,
+) -> None:
+    """Test Vertex batches fail clearly when the staging prefix is missing."""
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=0.1,
+        cache=False,
+    )
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_vertex_api_transport)
+    batcher._poll_interval_seconds = 0.01
+
+    with pytest.raises(
+        expected_exception=ValueError,
+        match=r"Vertex provider requires batchify\(vertex_gcs_prefix=\.\.\.\)",
+    ):
+        await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="us-central1-aiplatform.googleapis.com",
+            endpoint=(
+                "/v1/projects/demo-project/locations/us-central1/"
+                "publishers/google/models/gemini-2.5-flash:generateContent"
+            ),
+            provider=VertexProvider(),
+            headers={"Authorization": "Bearer token"},
+            body=b'{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}',
+        )
+
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_vertex_submit_rejects_invalid_gcs_prefix(
+    mock_vertex_api_transport: httpx.MockTransport,
+) -> None:
+    """Test Vertex batches validate the configured GCS prefix before submission."""
+    batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=0.1,
+        cache=False,
+        vertex_gcs_prefix="not-a-gs-uri",
+    )
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_vertex_api_transport)
+    batcher._poll_interval_seconds = 0.01
+
+    with pytest.raises(expected_exception=ValueError, match=r"must start with 'gs://'"):
+        await batcher.submit(
+            client_type="httpx",
+            method="POST",
+            url="us-central1-aiplatform.googleapis.com",
+            endpoint=(
+                "/v1/projects/demo-project/locations/us-central1/"
+                "publishers/google/models/gemini-2.5-flash:generateContent"
+            ),
+            provider=VertexProvider(),
+            headers={"Authorization": "Bearer token"},
+            body=b'{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}',
+        )
+
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_vertex_batch_resolves_results_across_multiple_jsonl_files(
+    mock_vertex_api_transport: httpx.MockTransport,
+) -> None:
+    """Test Vertex fetches and combines multiple prediction and error JSONL files."""
+    batcher = Batcher(
+        batch_size=3,
+        batch_window_seconds=0.1,
+        cache=False,
+        vertex_gcs_prefix="gs://vertex-bucket/batchling-tests",
+    )
+    batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_vertex_api_transport)
+    batcher._poll_interval_seconds = 0.01
+    provider = VertexProvider()
+
+    tasks = [
+        asyncio.create_task(
+            batcher.submit(
+                client_type="httpx",
+                method="POST",
+                url="us-central1-aiplatform.googleapis.com",
+                endpoint=(
+                    "/v1/projects/demo-project/locations/us-central1/"
+                    "publishers/google/models/gemini-2.5-flash:generateContent"
+                ),
+                provider=provider,
+                headers={"Authorization": "Bearer token"},
+                body=body,
+            )
+        )
+        for body in (
+            b'{"contents":[{"role":"user","parts":[{"text":"hi 1"}]}]}',
+            b'{"contents":[{"role":"user","parts":[{"text":"hi 2"}]}]}',
+            b'{"contents":[{"role":"user","parts":[{"text":"hi 3"}]}],"force_error":true}',
+        )
+    ]
+
+    success_1, success_2, failure = await asyncio.gather(*tasks)
+
+    assert success_1.status_code == 200
+    assert success_1.json()["modelVersion"] == "gemini-test"
+    assert success_2.status_code == 200
+    assert failure.status_code == 500
+    assert failure.json()["message"] == "forced failure"
+
+    await batcher.close()
+
+
+@pytest.mark.asyncio
+async def test_vertex_fetch_results_accepts_plain_jsonl_filenames() -> None:
+    """Test Vertex result fetching accepts plain predictions/errors JSONL names."""
+    provider = VertexProvider()
+    result_prefix = (
+        "outputs/gemini-2.5-flash-lite/a9a7f995-71ca4fe59aa94eb4aa8f3f4845f2f3d7/"
+        "prediction-model-2026-03-12T18:34:33.257664Z"
+    )
+    prediction_object_name = f"{result_prefix}/predictions.jsonl"
+    error_object_name = f"{result_prefix}/errors.jsonl"
+    objects = {
+        prediction_object_name: json.dumps(
+            {
+                "key": "success-id",
+                "response": {
+                    "candidates": [
+                        {
+                            "content": {
+                                "role": "model",
+                                "parts": [{"text": "ok"}],
+                            }
+                        }
+                    ],
+                    "modelVersion": "gemini-test",
+                },
+            }
+        ),
+        error_object_name: json.dumps(
+            {
+                "key": "error-id",
+                "status": {
+                    "code": 13,
+                    "message": "forced failure",
+                },
+            }
+        ),
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/storage/v1/b/vertex-bucket/o":
+            return httpx.Response(
+                status_code=200,
+                json={
+                    "items": [{"name": object_name} for object_name in objects],
+                },
+            )
+
+        object_name = unquote(string=request.url.path.split("/o/", 1)[1])
+        return httpx.Response(status_code=200, text=objects[object_name])
+
+    responses_by_custom_id = await provider.fetch_results(
+        base_url="https://us-central1-aiplatform.googleapis.com",
+        api_headers={"Authorization": "Bearer token"},
+        batch_id="v1beta1/projects/demo-project/locations/us-central1/batchPredictionJobs/123",
+        result_locator="gs://vertex-bucket/" + result_prefix,
+        client_factory=lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+
+    assert sorted(responses_by_custom_id) == ["error-id", "success-id"]
+    assert responses_by_custom_id["success-id"].status_code == 200
+    assert responses_by_custom_id["success-id"].json()["modelVersion"] == "gemini-test"
+    assert responses_by_custom_id["error-id"].status_code == 500
+    assert responses_by_custom_id["error-id"].json()["message"] == "forced failure"
+
+
+@pytest.mark.asyncio
+async def test_vertex_cache_hit_resumes_polling_without_staging_prefix_in_cache(
+    monkeypatch,
+    mock_vertex_api_transport: httpx.MockTransport,
+) -> None:
+    """Test Vertex cache-hit polling resolves from the polled output directory."""
+    writer_batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=0.1,
+        cache=True,
+        vertex_gcs_prefix="gs://vertex-bucket/batchling-tests",
+    )
+    writer_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_vertex_api_transport)
+    writer_batcher._poll_interval_seconds = 0.01
+    provider = VertexProvider()
+
+    first_result = await writer_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="us-central1-aiplatform.googleapis.com",
+        endpoint=(
+            "/v1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash:generateContent"
+        ),
+        provider=provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"contents":[{"role":"user","parts":[{"text":"cached"}]}]}',
+    )
+    assert first_result.status_code == 200
+    await writer_batcher.close()
+
+    reader_batcher = Batcher(
+        batch_size=1,
+        batch_window_seconds=0.1,
+        cache=True,
+        vertex_gcs_prefix="gs://different-bucket/ignored-for-resume",
+    )
+    reader_batcher._client_factory = lambda: httpx.AsyncClient(transport=mock_vertex_api_transport)
+    reader_batcher._poll_interval_seconds = 0.01
+    cached_provider = VertexProvider()
+
+    async def fail_process_batch(**kwargs):
+        del kwargs
+        raise AssertionError("cache-hit path should not submit a new Vertex batch")
+
+    monkeypatch.setattr(
+        target=cached_provider,
+        name="process_batch",
+        value=fail_process_batch,
+    )
+
+    second_result = await reader_batcher.submit(
+        client_type="httpx",
+        method="POST",
+        url="us-central1-aiplatform.googleapis.com",
+        endpoint=(
+            "/v1/projects/demo-project/locations/us-central1/"
+            "publishers/google/models/gemini-2.5-flash:generateContent"
+        ),
+        provider=cached_provider,
+        headers={"Authorization": "Bearer token"},
+        body=b'{"contents":[{"role":"user","parts":[{"text":"cached"}]}]}',
+    )
+
+    assert second_result.status_code == 200
+    await reader_batcher.close()
 
 
 @pytest.mark.asyncio
@@ -2032,7 +2344,14 @@ async def test_cache_fingerprint_uses_queue_model(
     call_count = 0
     original_process_batch = second_provider.process_batch
 
-    async def wrapped_process_batch(*, requests, client_factory, queue_key, completion_window):
+    async def wrapped_process_batch(
+        *,
+        requests,
+        client_factory,
+        queue_key,
+        completion_window,
+        vertex_gcs_prefix=None,
+    ):
         nonlocal call_count
         call_count += 1
         return await original_process_batch(
@@ -2040,6 +2359,7 @@ async def test_cache_fingerprint_uses_queue_model(
             client_factory=client_factory,
             queue_key=queue_key,
             completion_window=completion_window,
+            vertex_gcs_prefix=vertex_gcs_prefix,
         )
 
     monkeypatch.setattr(
@@ -2319,6 +2639,7 @@ def test_fail_missing_results_emits_lifecycle_event() -> None:
         batch_id="batch-1",
         output_file_id="file-1",
         error_file_id="",
+        result_locator="file-1",
         requests_count=1,
         requests={"custom-1": request},
     )

@@ -467,6 +467,29 @@ def test_batcher_rich_display_queue_progress_pads_to_total_width() -> None:
     assert progress_text.plain == "  1/100 (1.0%)"
 
 
+def test_format_queue_endpoint_for_display_compacts_vertex_endpoint() -> None:
+    """Test Vertex queue display hides project and location path segments."""
+    formatted_endpoint = rich_display._format_queue_endpoint_for_display(
+        provider="vertex",
+        endpoint=(
+            "/v1beta1/projects/demo-project/locations/us-central1/publishers/google/models/"
+            "gemini-2.5-flash-lite:generateContent"
+        ),
+    )
+
+    assert formatted_endpoint == "/v1beta1/...:generateContent"
+
+
+def test_format_queue_endpoint_for_display_leaves_other_providers_unchanged() -> None:
+    """Test non-Vertex queue displays keep their original endpoint labels."""
+    formatted_endpoint = rich_display._format_queue_endpoint_for_display(
+        provider="openai",
+        endpoint="/v1/chat/completions",
+    )
+
+    assert formatted_endpoint == "/v1/chat/completions"
+
+
 def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     """Test dry-run static summary tracks expected totals and queue estimates."""
     display = rich_display.DryRunSummaryDisplay(
@@ -544,6 +567,36 @@ def test_dry_run_summary_display_aggregates_totals_and_queues() -> None:
     assert queue_table.columns[0]._cells == ["groq", "openai"]
     assert queue_table.columns[3]._cells == ["1", "2"]
     assert queue_table.columns[4]._cells == ["1", "1"]
+
+
+def test_dry_run_summary_display_formats_vertex_endpoint_column() -> None:
+    """Test dry-run queue table shows compact Vertex endpoint labels."""
+    display = rich_display.DryRunSummaryDisplay(
+        console=Console(file=io.StringIO(), force_terminal=False),
+    )
+
+    display.on_event(
+        {
+            "event_type": BatcherEventType.BATCH_PROCESSING,
+            "source": BatcherEventSource.DRY_RUN,
+            "provider": "vertex",
+            "endpoint": (
+                "/v1/projects/demo-project/locations/us-central1/publishers/google/models/"
+                "gemini-2.5-flash-lite:generateContent"
+            ),
+            "model": "gemini-2.5-flash-lite",
+            "queue_key": (
+                "vertex",
+                "/v1/projects/demo-project/locations/us-central1/publishers/google/models/"
+                "gemini-2.5-flash-lite:generateContent",
+                "gemini-2.5-flash-lite",
+            ),
+            "request_count": 2,
+        }
+    )
+
+    queue_table = display._build_queue_summary_table()
+    assert queue_table.columns[1]._cells == ["/v1/...:generateContent"]
 
 
 def test_dry_run_summary_display_queue_table_layout() -> None:

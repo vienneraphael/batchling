@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 import typing as t
@@ -20,6 +21,13 @@ from batchling.progress_state import BatchProgressState, DryRunSummaryState
 
 QueueCell: t.TypeAlias = str | Text
 QueueRow: t.TypeAlias = tuple[QueueCell, ...]
+
+_VERTEX_ENDPOINT_DISPLAY_PATTERN = re.compile(
+    (
+        r"^/(?P<api_version>v1(?:beta1)?)/projects/[^/]+/locations/[^/]+/"
+        r"publishers/google/models/[^:]+:(?P<method>[^/]+)$"
+    )
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +120,34 @@ def _build_queue_table(
     for row in rows:
         table.add_row(*row)
     return table
+
+
+def _format_queue_endpoint_for_display(*, provider: str, endpoint: str) -> str:
+    """
+    Format one queue endpoint label for the Rich queue tables.
+
+    Parameters
+    ----------
+    provider : str
+        Queue provider identifier.
+    endpoint : str
+        Queue endpoint path.
+
+    Returns
+    -------
+    str
+        Display-oriented endpoint label.
+    """
+    if provider != "vertex":
+        return endpoint
+
+    endpoint_match = _VERTEX_ENDPOINT_DISPLAY_PATTERN.fullmatch(string=endpoint)
+    if endpoint_match is None:
+        return endpoint
+
+    api_version = endpoint_match.group("api_version")
+    method = endpoint_match.group("method")
+    return f"/{api_version}/...:{method}"
 
 
 class BatcherRichDisplay:
@@ -387,7 +423,7 @@ class BatcherRichDisplay:
         """
         return (
             provider,
-            endpoint,
+            _format_queue_endpoint_for_display(provider=provider, endpoint=endpoint),
             model,
             self._format_queue_progress(
                 total=total_samples,
@@ -568,7 +604,7 @@ class DryRunSummaryDisplay:
         """
         return (
             provider,
-            endpoint,
+            _format_queue_endpoint_for_display(provider=provider, endpoint=endpoint),
             model,
             str(object=expected_requests),
             str(object=expected_batches),

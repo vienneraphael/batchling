@@ -12,6 +12,7 @@ from batchling.providers.groq import GroqProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
 from batchling.providers.together import TogetherProvider
+from batchling.providers.vertex import VertexProvider
 from batchling.providers.xai import XaiProvider
 
 
@@ -26,6 +27,7 @@ from batchling.providers.xai import XaiProvider
         TogetherProvider(),
         DoublewordProvider(),
         XaiProvider(),
+        VertexProvider(),
     ],
 )
 def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
@@ -58,6 +60,7 @@ def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
         TogetherProvider(),
         DoublewordProvider(),
         XaiProvider(),
+        VertexProvider(),
     ],
 )
 def test_build_resume_context_adds_internal_header(provider: t.Any) -> None:
@@ -69,10 +72,10 @@ def test_build_resume_context_adds_internal_header(provider: t.Any) -> None:
     provider : typing.Any
         Provider instance under test.
     """
-    context = provider.build_resume_context(
-        host="api.openai.com",
-        headers={"Authorization": "Bearer token"},
+    host = (
+        "us-central1-aiplatform.googleapis.com" if provider.name == "vertex" else "api.openai.com"
     )
+    context = provider.build_resume_context(host=host, headers={"Authorization": "Bearer token"})
     assert context.base_url.startswith("https://")
     assert context.api_headers["x-batchling-internal"] == "1"
 
@@ -132,6 +135,13 @@ async def test_parse_poll_response_progress_defaults_to_zero_for_invalid_numbers
             62.5,
         ),
         (
+            VertexProvider(),
+            {"completionStats": {"successfulCount": 3, "failedCount": "2"}},
+            8,
+            5,
+            62.5,
+        ),
+        (
             MistralProvider(),
             {"completed_requests": 2},
             4,
@@ -179,6 +189,26 @@ async def test_parse_poll_response_provider_progress_mappings(
     assert snapshot.progress_percent == pytest.approx(expected_percent)
 
 
+@pytest.mark.asyncio
+async def test_parse_poll_response_vertex_sets_result_locator() -> None:
+    """
+    Ensure Vertex poll payload exposes its GCS output directory as result locator.
+    """
+    provider = VertexProvider()
+    snapshot = await provider.parse_poll_response(
+        payload={
+            "state": "JOB_STATE_SUCCEEDED",
+            "completionStats": {"successfulCount": 1, "failedCount": 0},
+            "outputInfo": {"gcsOutputDirectory": "gs://bucket/output/prefix"},
+        },
+        requests_count=1,
+    )
+    assert snapshot.status == "JOB_STATE_SUCCEEDED"
+    assert snapshot.output_file_id == ""
+    assert snapshot.error_file_id == ""
+    assert snapshot.result_locator == "gs://bucket/output/prefix"
+
+
 def test_decode_results_content_maps_custom_ids() -> None:
     """
     Ensure provider decoders map custom IDs to ``httpx.Response`` values.
@@ -198,6 +228,14 @@ def test_decode_results_content_maps_custom_ids() -> None:
     )
     assert "req-2" in gemini_results
     assert isinstance(gemini_results["req-2"], httpx.Response)
+
+    vertex_provider = VertexProvider()
+    vertex_results = vertex_provider.decode_results_content(
+        batch_id="batch-vertex",
+        content='{"key":"req-3","response":{"ok":true}}\n',
+    )
+    assert "req-3" in vertex_results
+    assert isinstance(vertex_results["req-3"], httpx.Response)
 
 
 @pytest.mark.asyncio
