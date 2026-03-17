@@ -15,8 +15,7 @@ The Batch API docs for Vertex can be found on the following URL:
 
 ## Example Usage
 
-!!! note "API key required"
-    Set `VERTEX_API_KEY` in `.env` or ensure it is already loaded in your environment variables before running batches.
+--8<-- "docs/providers/_credentials/vertex.md"
 
 Here's an example showing how to use `batchling` with Vertex:
 

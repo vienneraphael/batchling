@@ -93,6 +93,67 @@ def test_render_provider_page_skips_notes_when_file_is_missing(tmp_path: Path) -
     assert '--8<-- "docs/providers/_notes/openai.md"' not in content
 
 
+def test_render_provider_page_uses_credentials_override_when_present(tmp_path: Path) -> None:
+    """
+    Ensure provider credentials overrides replace the default API key note.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory used to stage provider credential notes.
+
+    Returns
+    -------
+    None
+        This test asserts credentials override placement and precedence.
+    """
+    module = load_generator_module()
+    credentials_dir = tmp_path / "_credentials"
+    credentials_dir.mkdir(parents=True, exist_ok=True)
+    credential_file = credentials_dir / "vertex.md"
+    credential_file.write_text(
+        data='!!! note "Environment required"\n    Set `VERTEX_PROJECT_ID`.\n',
+        encoding="utf-8",
+    )
+    module.PROVIDER_CREDENTIALS_DIR = credentials_dir
+
+    provider = module.Provider(slug="vertex", batchable_endpoints=("/v1/publisher/models",))
+    content = module.render_provider_page(provider=provider)
+
+    credentials_include = '--8<-- "docs/providers/_credentials/vertex.md"'
+
+    assert credentials_include in content
+    assert '!!! note "API key required"' not in content
+    assert "Set `VERTEX_API_KEY`" not in content
+
+
+def test_render_provider_page_uses_default_api_key_note_without_override(tmp_path: Path) -> None:
+    """
+    Ensure providers without credential overrides keep the generated API key note.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory used as provider credential note root.
+
+    Returns
+    -------
+    None
+        This test asserts fallback behavior.
+    """
+    module = load_generator_module()
+    credentials_dir = tmp_path / "_credentials"
+    credentials_dir.mkdir(parents=True, exist_ok=True)
+    module.PROVIDER_CREDENTIALS_DIR = credentials_dir
+
+    provider = module.Provider(slug="openai", batchable_endpoints=("/v1/responses",))
+    content = module.render_provider_page(provider=provider)
+
+    assert '!!! note "API key required"' in content
+    assert "Set `OPENAI_API_KEY`" in content
+    assert '--8<-- "docs/providers/_credentials/openai.md"' not in content
+
+
 def test_render_provider_page_always_includes_pricing_note() -> None:
     """
     Ensure the pricing note is rendered even when no example exists.
