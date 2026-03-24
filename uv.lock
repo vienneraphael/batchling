@@ -374,7 +374,7 @@ dev = [
     { name = "ipykernel", specifier = ">=7.0.1" },
     { name = "langchain", specifier = ">=1.2.10" },
     { name = "langchain-openai", specifier = ">=1.1.10" },
-    { name = "litellm", specifier = ">=1.81.9" },
+    { name = "litellm", specifier = "<=1.82.6" },
     { name = "mistralai", specifier = ">=1.12.2" },
     { name = "mkdocs-material", specifier = ">=9.7.1" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.3" },
