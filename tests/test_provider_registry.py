@@ -27,7 +27,8 @@ def test_provider_registry_auto_discovers_modules() -> None:
         if file_path.name not in {"__init__.py", "base.py"}
     }
     discovered_modules = {
-        provider.__class__.__module__.split(sep=".")[-1] for provider in providers_module.PROVIDERS
+        provider.__class__.__module__.split(sep=".")[-1]
+        for provider in providers_module.PROVIDERS
     }
 
     assert discovered_modules
@@ -45,8 +46,13 @@ def test_provider_registry_contains_only_concrete_provider_instances() -> None:
         This test asserts registry instance types.
     """
     assert providers_module.PROVIDERS
-    assert all(isinstance(provider, BaseProvider) for provider in providers_module.PROVIDERS)
-    assert all(provider.__class__ is not BaseProvider for provider in providers_module.PROVIDERS)
+    assert all(
+        isinstance(provider, BaseProvider) for provider in providers_module.PROVIDERS
+    )
+    assert all(
+        provider.__class__ is not BaseProvider
+        for provider in providers_module.PROVIDERS
+    )
 
 
 def test_provider_lookup_still_resolves_openai() -> None:
@@ -101,6 +107,41 @@ def test_provider_lookup_resolves_xai() -> None:
     )
     assert provider is not None
     assert provider.name == "xai"
+
+
+def test_provider_lookup_does_not_batch_sference_responses() -> None:
+    """
+    Ensure sference responses are not routed through the inline batch API.
+
+    Returns
+    -------
+    None
+        This test asserts responses are excluded from batchable endpoints.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="api.sference.com",
+        path="/v1/responses",
+        method="POST",
+    )
+    assert provider is None
+
+
+def test_provider_lookup_resolves_sference_chat_completions() -> None:
+    """
+    Ensure hostname lookup resolves the sference provider for chat completions.
+
+    Returns
+    -------
+    None
+        This test asserts hostname-to-provider mapping.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="api.sference.com",
+        path="/v1/chat/completions",
+        method="POST",
+    )
+    assert provider is not None
+    assert provider.name == "sference"
 
 
 def test_provider_lookup_requires_exact_hostname_match() -> None:

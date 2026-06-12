@@ -10,6 +10,7 @@ The following providers are supported by `batchling`:
 - [Groq](providers/groq.md)
 - [Mistral](providers/mistral.md)
 - [OpenAI](providers/openai.md)
+- [Sference](providers/sference.md)
 - [Together](providers/together.md)
 - [Vertex](providers/vertex.md)
 - [XAI](providers/xai.md)
