@@ -1360,8 +1360,8 @@ async def test_poll_batch_once_uses_provider_request_spec_and_parser() -> None:
             progress_percent=100.0,
         )
 
-    provider.build_poll_request_spec = fake_build_poll_request_spec  # type: ignore[method-assign]
-    provider.parse_poll_response = fake_parse_poll_response  # type: ignore[method-assign]
+    provider.build_poll_request_spec = fake_build_poll_request_spec  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
+    provider.parse_poll_response = fake_parse_poll_response  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen["request_url"] = str(object=request.url)
@@ -1411,7 +1411,7 @@ async def test_attach_cached_request_uses_provider_resume_context() -> None:
             api_headers={"X-Custom": "1"},
         )
 
-    provider.build_resume_context = fake_build_resume_context  # type: ignore[method-assign]
+    provider.build_resume_context = fake_build_resume_context  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
 
     await batcher._attach_cached_request(
         provider=provider,
@@ -1492,7 +1492,7 @@ async def test_resolve_batch_results_uses_provider_decoder() -> None:
             )
         }
 
-    provider.fetch_results = fake_fetch_results  # type: ignore[method-assign]
+    provider.fetch_results = fake_fetch_results  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
 
     await batcher._resolve_batch_results(
         base_url="https://api.openai.com",
@@ -1737,7 +1737,7 @@ async def test_submit_requests_passes_queue_key_to_process_batch():
         captured["request_queue_key"] = requests[0].queue_key
         called_event.set()
 
-    batcher._process_batch = fake_process_batch  # type: ignore[method-assign]
+    batcher._process_batch = fake_process_batch  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
     queue_key = _queue_key(provider_name=provider.name)
     await batcher._submit_requests(queue_key=queue_key, requests=[request])
     await asyncio.wait_for(called_event.wait(), timeout=1.0)
@@ -1785,7 +1785,7 @@ async def test_process_batch_calls_provider_with_queue_key():
         captured["completion_window"] = completion_window
         raise RuntimeError("provider call captured")
 
-    provider.process_batch = fake_process_batch  # type: ignore[method-assign]
+    provider.process_batch = fake_process_batch  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
     await batcher._process_batch(queue_key=queue_key, requests=[request])
 
     assert captured["queue_key"] == queue_key

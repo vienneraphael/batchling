@@ -135,4 +135,4 @@ async def test_batchify_idempotent_hooks(reset_hooks):
 async def test_batchify_rejects_target_keyword(reset_hooks, reset_context):
     """Test that legacy target keyword is rejected."""
     with pytest.raises(expected_exception=TypeError, match="unexpected keyword argument 'target'"):
-        _ = batchify(target=object(), batch_size=10)  # type: ignore[call-arg]
+        _ = batchify(target=object(), batch_size=10)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
