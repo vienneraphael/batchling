@@ -27,8 +27,7 @@ def test_provider_registry_auto_discovers_modules() -> None:
         if file_path.name not in {"__init__.py", "base.py"}
     }
     discovered_modules = {
-        provider.__class__.__module__.split(sep=".")[-1]
-        for provider in providers_module.PROVIDERS
+        provider.__class__.__module__.split(sep=".")[-1] for provider in providers_module.PROVIDERS
     }
 
     assert discovered_modules
@@ -46,13 +45,8 @@ def test_provider_registry_contains_only_concrete_provider_instances() -> None:
         This test asserts registry instance types.
     """
     assert providers_module.PROVIDERS
-    assert all(
-        isinstance(provider, BaseProvider) for provider in providers_module.PROVIDERS
-    )
-    assert all(
-        provider.__class__ is not BaseProvider
-        for provider in providers_module.PROVIDERS
-    )
+    assert all(isinstance(provider, BaseProvider) for provider in providers_module.PROVIDERS)
+    assert all(provider.__class__ is not BaseProvider for provider in providers_module.PROVIDERS)
 
 
 def test_provider_lookup_still_resolves_openai() -> None:

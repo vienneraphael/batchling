@@ -76,13 +76,9 @@ def test_build_resume_context_adds_internal_header(provider: t.Any) -> None:
         Provider instance under test.
     """
     host = (
-        "us-central1-aiplatform.googleapis.com"
-        if provider.name == "vertex"
-        else "api.openai.com"
+        "us-central1-aiplatform.googleapis.com" if provider.name == "vertex" else "api.openai.com"
     )
-    context = provider.build_resume_context(
-        host=host, headers={"Authorization": "Bearer token"}
-    )
+    context = provider.build_resume_context(host=host, headers={"Authorization": "Bearer token"})
     assert context.base_url.startswith("https://")
     assert context.api_headers["x-batchling-internal"] == "1"
 
@@ -110,9 +106,7 @@ async def test_parse_poll_response_default_fields_for_openai_provider() -> None:
 
 
 @pytest.mark.asyncio
-async def test_parse_poll_response_progress_defaults_to_zero_for_invalid_numbers() -> (
-    None
-):
+async def test_parse_poll_response_progress_defaults_to_zero_for_invalid_numbers() -> None:
     """
     Ensure invalid progress payload values fallback to zero.
     """
