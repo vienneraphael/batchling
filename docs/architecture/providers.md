@@ -107,6 +107,20 @@ The Xai provider uses a provider-specific batch lifecycle and response envelope:
 - result retrieval from `/v1/batches/{batch_id}/results`
 - provider-specific result row key (`custom_id_field_name = "batch_request_id"`)
 
+## sference provider
+
+The sference provider reuses the OpenAI provider implementation with inline batch
+submission to ``POST /v1/batches`` (no ``/v1/files`` upload step):
+
+- `hostname = "api.sference.com"`
+- `is_file_based = False`
+- `batchable_endpoints = ("/v1/chat/completions",)` — sference inline batches execute
+  chat-completion bodies only; `/v1/responses` is not batchable via `/v1/batches`
+- `supported_completion_windows = ("24h",)` — sference batches currently expose a
+  `24h` SLA window only
+- poll via `GET /v1/batches/{batch_id}`; results via `GET /v1/batches/{batch_id}/results.jsonl`
+- inherits OpenAI terminal states and default JSONL result decoding
+
 ## Doubleword provider
 
 The Doubleword provider reuses the OpenAI provider implementation and only changes:

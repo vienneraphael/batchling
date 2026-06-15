@@ -11,6 +11,7 @@ from batchling.providers.gemini import GeminiProvider
 from batchling.providers.groq import GroqProvider
 from batchling.providers.mistral import MistralProvider
 from batchling.providers.openai import OpenAIProvider
+from batchling.providers.sference import SferenceProvider
 from batchling.providers.together import TogetherProvider
 from batchling.providers.vertex import VertexProvider
 from batchling.providers.xai import XaiProvider
@@ -28,6 +29,7 @@ from batchling.providers.xai import XaiProvider
         DoublewordProvider(),
         XaiProvider(),
         VertexProvider(),
+        SferenceProvider(),
     ],
 )
 def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
@@ -61,6 +63,7 @@ def test_build_poll_request_spec_returns_get(provider: t.Any) -> None:
         DoublewordProvider(),
         XaiProvider(),
         VertexProvider(),
+        SferenceProvider(),
     ],
 )
 def test_build_resume_context_adds_internal_header(provider: t.Any) -> None:
@@ -236,6 +239,58 @@ def test_decode_results_content_maps_custom_ids() -> None:
     )
     assert "req-3" in vertex_results
     assert isinstance(vertex_results["req-3"], httpx.Response)
+
+
+@pytest.mark.asyncio
+async def test_sference_build_inline_batch_payload_includes_window() -> None:
+    """
+    Ensure inline batch payloads include the sference SLA window field.
+    """
+    provider = SferenceProvider()
+    payload = await provider.build_inline_batch_payload(
+        jsonl_lines=[{"custom_id": "req-1", "body": {"model": "demo", "messages": []}}],
+        completion_window="24h",
+    )
+    assert payload == {
+        "window": "24h",
+        "requests": [{"custom_id": "req-1", "body": {"model": "demo", "messages": []}}],
+    }
+
+
+def test_sference_build_batch_results_path_uses_batch_id() -> None:
+    """
+    Ensure sference downloads results from the inline batch results route.
+    """
+    provider = SferenceProvider()
+    assert provider.build_batch_results_path(file_id=None, batch_id="batch-123") == (
+        "/v1/batches/batch-123/results.jsonl"
+    )
+
+
+def test_sference_from_batch_result_decodes_result_json() -> None:
+    """
+    Ensure sference batch rows decode from ``result_json`` / ``error_json``.
+    """
+    provider = SferenceProvider()
+    success = provider.from_batch_result(
+        result_item={
+            "custom_id": "req-1",
+            "status": "completed",
+            "result_json": {"object": "chat.completion", "choices": []},
+            "error_json": None,
+        },
+    )
+    assert success.status_code == 200
+
+    failure = provider.from_batch_result(
+        result_item={
+            "custom_id": "req-2",
+            "status": "failed",
+            "result_json": None,
+            "error_json": {"detail": "boom"},
+        },
+    )
+    assert failure.status_code == 500
 
 
 @pytest.mark.asyncio

@@ -103,6 +103,41 @@ def test_provider_lookup_resolves_xai() -> None:
     assert provider.name == "xai"
 
 
+def test_provider_lookup_does_not_batch_sference_responses() -> None:
+    """
+    Ensure sference responses are not routed through the inline batch API.
+
+    Returns
+    -------
+    None
+        This test asserts responses are excluded from batchable endpoints.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="api.sference.com",
+        path="/v1/responses",
+        method="POST",
+    )
+    assert provider is None
+
+
+def test_provider_lookup_resolves_sference_chat_completions() -> None:
+    """
+    Ensure hostname lookup resolves the sference provider for chat completions.
+
+    Returns
+    -------
+    None
+        This test asserts hostname-to-provider mapping.
+    """
+    provider = get_provider_for_batch_request(
+        hostname="api.sference.com",
+        path="/v1/chat/completions",
+        method="POST",
+    )
+    assert provider is not None
+    assert provider.name == "sference"
+
+
 def test_provider_lookup_requires_exact_hostname_match() -> None:
     """
     Ensure provider lookup does not match hostname suffixes or subdomains.
